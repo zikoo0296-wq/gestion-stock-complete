@@ -80,6 +80,7 @@
             <div class="nav-buttons">
                 <button class="nav-btn active" onclick="showPage('dashboard')">🏠 Dashboard</button>
                 <button class="nav-btn" onclick="showPage('products')">📦 Produits</button>
+                <button class="nav-btn" onclick="showPage('stores')">🏪 Points de Vente</button>
                 <button class="nav-btn" onclick="showPage('movements')">📊 Entrées/Sorties</button>
                 <button class="nav-btn" onclick="showPage('returns')">🔄 Retours</button>
             </div>
@@ -139,16 +140,33 @@
                     </div>
                 </div>
                 <div style="overflow-x: auto;">
-                    <table>
+                    <table id="products-table">
                         <thead>
                             <tr>
-                                <th><input type="checkbox" id="select-all-delete"></th>
-                                <th>Image</th><th>Nom Réel</th><th>Nom Convention</th><th>Référence</th><th>Marque</th><th>Quantité</th><th>Actions</th>
+                                <th><input type="checkbox" id="select-all-delete-initial"></th>
+                                <th>Image</th><th>Nom Réel</th><th>Nom Convention</th><th>Référence</th><th>Marque</th><th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="products-table"></tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+
+        <div id="stores-page" class="hidden">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🏪 Gestion des Points de Vente</div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="add-store-btn">➕ Ajouter Point de Vente</button>
+                        <label class="btn btn-success">
+                            📤 Importer Stocks Excel
+                            <input type="file" id="import-stores-file" accept=".xlsx,.xls">
+                        </label>
+                        <button class="btn btn-purple" id="export-stores-btn">📥 Exporter Stocks</button>
+                    </div>
+                </div>
+                <div id="stores-container"></div>
             </div>
         </div>
 
@@ -280,12 +298,18 @@
         let products = JSON.parse(localStorage.getItem('products')) || [];
         let movements = JSON.parse(localStorage.getItem('movements')) || [];
         let returns = JSON.parse(localStorage.getItem('returns')) || [];
+        let stores = JSON.parse(localStorage.getItem('stores')) || [
+            { id: 1, name: 'Al Baraka', stocks: {} },
+            { id: 2, name: 'Roche Noire', stocks: {} },
+            { id: 3, name: 'Centre Ville', stocks: {} }
+        ];
         let editingId = null;
 
         function saveData() {
             localStorage.setItem('products', JSON.stringify(products));
             localStorage.setItem('movements', JSON.stringify(movements));
             localStorage.setItem('returns', JSON.stringify(returns));
+            localStorage.setItem('stores', JSON.stringify(stores));
         }
 
         function showPage(page) {
@@ -295,6 +319,7 @@
             event.target.classList.add('active');
             if (page === 'dashboard') updateDashboard();
             if (page === 'products') renderProducts();
+            if (page === 'stores') renderStores();
             if (page === 'movements') renderMovementProducts();
             if (page === 'returns') renderReturns();
         }
@@ -347,41 +372,365 @@
                 const ref = String(p.reference || '').toLowerCase();
                 return rn.includes(searchTerm) || ref.includes(searchTerm);
             });
-            document.getElementById('products-table').innerHTML = filtered.map(p => {
-                let imgHtml = '<div class="product-img-error">📷</div>';
-                if (p.image) {
-                    imgHtml = `<img src="${p.image}" class="product-img" alt="${p.realName}" 
-                        onerror="console.error('Image failed:', '${p.image}'); this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="product-img-error" style="display:none;">📷</div>`;
-                }
-                return `
-                <tr>
-                    <td><input type="checkbox" class="delete-check" data-id="${p.id}"></td>
-                    <td>${imgHtml}</td>
-                    <td>${p.realName || '—'}</td>
-                    <td>${p.conventionalName || '—'}</td>
-                    <td>${p.reference || '—'}</td>
-                    <td>${p.brand || '—'}</td>
-                    <td><span class="badge ${p.quantity < 10 ? 'badge-danger' : 'badge-success'}">${p.quantity}</span></td>
-                    <td>
-                        <button class="action-btn" onclick="editProduct(${p.id})">✏️</button>
-                        <button class="action-btn delete" onclick="deleteProduct(${p.id})">🗑️</button>
-                    </td>
-                </tr>
-            `}).join('');
+            
+            // Générer les colonnes dynamiquement selon les points de vente
+            let storeHeaders = '';
+            stores.forEach(store => {
+                storeHeaders += `<th>QTY ${store.name}</th>`;
+            });
+            
+            document.getElementById('products-table').innerHTML = `
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="select-all-delete"></th>
+                        <th>Image</th>
+                        <th>Nom Réel</th>
+                        <th>Nom Convention</th>
+                        <th>Référence</th>
+                        <th>Marque</th>
+                        ${storeHeaders}
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filtered.map(p => {
+                        let imgHtml = '<div class="product-img-error">📷</div>';
+                        if (p.image) {
+                            imgHtml = `<img src="${p.image}" class="product-img" alt="${p.realName}" 
+                                onerror="console.error('Image failed:', '${p.image}'); this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="product-img-error" style="display:none;">📷</div>`;
+                        }
+                        
+                        // Générer les colonnes de quantité par point de vente
+                        let storeQtys = '';
+                        stores.forEach(store => {
+                            const qty = store.stocks[p.id] || 0;
+                            storeQtys += `<td><span class="badge ${qty < 10 ? 'badge-danger' : 'badge-success'}">${qty}</span></td>`;
+                        });
+                        
+                        return `
+                        <tr>
+                            <td><input type="checkbox" class="delete-check" data-id="${p.id}"></td>
+                            <td>${imgHtml}</td>
+                            <td>${p.realName || '—'}</td>
+                            <td>${p.conventionalName || '—'}</td>
+                            <td>${p.reference || '—'}</td>
+                            <td>${p.brand || '—'}</td>
+                            ${storeQtys}
+                            <td>
+                                <button class="action-btn" onclick="editProduct(${p.id})">✏️</button>
+                                <button class="action-btn delete" onclick="deleteProduct(${p.id})">🗑️</button>
+                            </td>
+                        </tr>
+                    `}).join('')}
+                </tbody>
+            `;
+            
+            // Réattacher l'événement select-all
+            document.getElementById('select-all-delete').addEventListener('change', function() {
+                document.querySelectorAll('.delete-check').forEach(cb => cb.checked = this.checked);
+            });
         }
 
         document.getElementById('search-input').addEventListener('input', renderProducts);
-        document.getElementById('select-all-delete').addEventListener('change', function() {
-            document.querySelectorAll('.delete-check').forEach(cb => cb.checked = this.checked);
-        });
 
         function deleteProduct(id) {
             if (confirm('Supprimer ce produit ?')) {
                 products = products.filter(p => p.id !== id);
                 saveData();
                 renderProducts();
+                function renderStores() {
+            const container = document.getElementById('stores-container');
+            container.innerHTML = stores.map(store => {
+                const storeProducts = products.map(p => {
+                    const qty = store.stocks[p.id] || 0;
+                    return { ...p, storeQty: qty };
+                });
+                const totalStock = storeProducts.reduce((s, p) => s + p.storeQty, 0);
+                
+                return `
+                    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid #2563eb;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="font-size: 1.2rem; font-weight: bold;">🏪 ${store.name}</h3>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span style="background: #dbeafe; color: #1e40af; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600;">
+                                    Stock Total: ${totalStock}
+                                </span>
+                                <button class="btn btn-danger" onclick="deleteStore(${store.id})" style="padding: 0.5rem;">🗑️</button>
+                            </div>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Produit</th>
+                                        <th>Référence</th>
+                                        <th>Quantité dans ce point</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${storeProducts.map(p => `
+                                        <tr>
+                                            <td>${p.realName}</td>
+                                            <td>${p.reference || '—'}</td>
+                                            <td>
+                                                <span class="badge ${p.storeQty < 10 ? 'badge-danger' : 'badge-success'}">
+                                                    ${p.storeQty}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-primary" onclick="updateStoreStock(${store.id}, ${p.id})" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                                                    ✏️ Modifier
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function addStore() {
+            console.log('=== FONCTION addStore() APPELÉE ===');
+            
+            const name = prompt('Nom du nouveau point de vente:');
+            console.log('Nom entré:', name);
+            
+            if (!name || !name.trim()) {
+                console.log('Annulé: nom vide');
+                return;
+            }
+            
+            const storeName = name.trim();
+            console.log('Nom traité:', storeName);
+            
+            // Vérifier si existe déjà
+            const exists = stores.find(s => s.name.toLowerCase() === storeName.toLowerCase());
+            if (exists) {
+                console.log('ERREUR: PDV existe déjà');
+                alert('❌ Ce point de vente existe déjà !');
+                return;
+            }
+            
+            const newStore = {
+                id: Date.now(),
+                name: storeName,
+                stocks: {}
+            };
+            
+            console.log('Création du PDV:', newStore);
+            stores.push(newStore);
+            console.log('Stores après ajout:', stores);
+            
+            saveData();
+            console.log('Données sauvegardées');
+            
+            renderStores();
+            console.log('Interface Points de vente rafraîchie');
+            
+            renderProducts();
+            console.log('Tableau produits rafraîchi');
+            
+            alert(`✅ Point de vente "${storeName}" ajouté avec succès !`);
+            console.log('=== FIN addStore() ===');
+        }
+
+        // S'assurer que le bouton est bien attaché après le chargement
+        setTimeout(() => {
+            const addBtn = document.getElementById('add-store-btn');
+            if (addBtn) {
+                console.log('Bouton add-store-btn trouvé, attaching event...');
+                addBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('CLICK sur bouton Ajouter PDV');
+                    addStore();
+                });
+            } else {
+                console.error('ERREUR: Bouton add-store-btn non trouvé !');
+            }
+        }, 100);
+        
+        document.getElementById('export-stores-btn').addEventListener('click', function() {
+            const data = products.map(p => {
+                const row = {
+                    'Produit': p.realName,
+                    'Référence': p.reference || ''
+                };
+                stores.forEach(store => {
+                    row[store.name] = store.stocks[p.id] || 0;
+                });
+                return row;
+            });
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Stocks Points de Vente');
+            XLSX.writeFile(wb, `stocks_points_vente_${new Date().toISOString().split('T')[0]}.xlsx`);
+        });
+
+        function deleteStore(storeId) {
+            const store = stores.find(s => s.id === storeId);
+            if (!store) return;
+            if (!confirm(`Supprimer le point de vente "${store.name}" ?\n\nToutes les quantités de ce point seront perdues !`)) return;
+            
+            console.log('Suppression du point de vente:', store.name);
+            
+            stores = stores.filter(s => s.id !== storeId);
+            saveData();
+            renderStores();
+            renderProducts(); // Rafraîchir les produits pour enlever la colonne
+            
+            alert('✅ Point de vente supprimé !');
+        }
+
+        function updateStoreStock(storeId, productId) {
+            const store = stores.find(s => s.id === storeId);
+            const product = products.find(p => p.id === productId);
+            if (!store || !product) return;
+            
+            const currentQty = store.stocks[productId] || 0;
+            const newQty = prompt(`Nouvelle quantité pour "${product.realName}" dans "${store.name}":\n\n(Quantité actuelle: ${currentQty})`, currentQty);
+            
+            if (newQty === null) return;
+            const qty = parseInt(newQty);
+            if (isNaN(qty) || qty < 0) {
+                alert('❌ Quantité invalide');
+                return;
+            }
+            
+            console.log(`Mise à jour: ${product.realName} = ${qty} dans ${store.name}`);
+            
+            store.stocks[productId] = qty;
+            saveData();
+            renderStores();
+            renderProducts(); // Rafraîchir les produits pour voir le changement
+            
+            alert(`✅ Stock mis à jour !\n\n${product.realName} = ${qty} dans ${store.name}`);
+        }
+
+        document.getElementById('import-stores-file').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            try {
+                const data = await file.arrayBuffer();
+                const wb = XLSX.read(data);
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws);
+                
+                if (rows.length === 0) throw new Error('Fichier vide');
+                
+                console.log('=== IMPORT MULTI-PDV ===');
+                console.log('Première ligne:', rows[0]);
+                
+                // Détecter les colonnes QTY qui correspondent aux points de vente
+                const headers = Object.keys(rows[0]);
+                console.log('Toutes les colonnes:', headers);
+                
+                // Trouver toutes les colonnes qui commencent par "QTY "
+                const qtyColumns = headers.filter(h => h.startsWith('QTY '));
+                console.log('Colonnes QTY trouvées:', qtyColumns);
+                
+                if (qtyColumns.length === 0) {
+                    throw new Error('Aucune colonne "QTY [Nom PDV]" trouvée.\n\nFormat attendu: QTY ROCHE NOIRE, QTY AL BARAKA, etc.');
+                }
+                
+                // Extraire les noms des points de vente
+                const storeNames = qtyColumns.map(col => col.replace('QTY ', '').trim());
+                console.log('Points de vente détectés:', storeNames);
+                
+                // Créer ou trouver chaque point de vente
+                const storesMap = {};
+                storeNames.forEach(storeName => {
+                    let store = stores.find(s => s.name.toLowerCase() === storeName.toLowerCase());
+                    if (!store) {
+                        store = {
+                            id: Date.now() + Math.random(),
+                            name: storeName,
+                            stocks: {}
+                        };
+                        stores.push(store);
+                        console.log('Nouveau PDV créé:', storeName);
+                    }
+                    storesMap[storeName] = store;
+                });
+                
+                let newProductsCount = 0;
+                let updatedProductsCount = 0;
+                
+                // Traiter chaque ligne du fichier Excel
+                for (let row of rows) {
+                    const realName = row['Real Name'] || row['Nom Réel'];
+                    if (!realName) continue;
+                    
+                    const reference = row['Référence'] || row['Reference'] || '';
+                    
+                    console.log(`\n--- Traitement: ${realName} ---`);
+                    
+                    // Chercher si le produit existe
+                    let product = products.find(p => 
+                        p.realName === realName || 
+                        (reference && p.reference === reference)
+                    );
+                    
+                    if (!product) {
+                        // Créer le nouveau produit
+                        const imageUrl = formatImageUrl(row['IMAGE'] || row['Image'] || '');
+                        product = {
+                            id: Date.now() + Math.random(),
+                            image: imageUrl,
+                            realName: realName,
+                            conventionalName: row['Conventional Name'] || '',
+                            barcode: row['Barcode'] || '',
+                            repetitionBarcode: row['Repetition'] || '',
+                            category: row['Category'] || '',
+                            brand: row['Brand'] || '',
+                            reference: reference,
+                            quantity: 0,
+                            createdAt: new Date().toISOString()
+                        };
+                        products.push(product);
+                        newProductsCount++;
+                        console.log('Nouveau produit créé:', realName);
+                    } else {
+                        console.log('Produit existant:', realName);
+                    }
+                    
+                    // Mettre à jour les quantités pour chaque point de vente
+                    storeNames.forEach((storeName, index) => {
+                        const qtyColumn = qtyColumns[index];
+                        const qty = parseInt(row[qtyColumn]) || 0;
+                        const store = storesMap[storeName];
+                        store.stocks[product.id] = qty;
+                        console.log(`  ${storeName}: ${qty}`);
+                    });
+                    
+                    updatedProductsCount++;
+                }
+                
+                saveData();
+                renderStores();
+                renderProducts();
                 updateDashboard();
+                
+                console.log('=== FIN IMPORT ===');
+                
+                alert(`✅ Import réussi !\n\n` +
+                      `📦 ${newProductsCount} nouveaux produits\n` +
+                      `🔄 ${updatedProductsCount} produits traités\n` +
+                      `🏪 ${storeNames.length} points de vente: ${storeNames.join(', ')}`);
+                      
+            } catch (err) {
+                console.error('ERREUR IMPORT:', err);
+                alert('❌ Erreur lors de l\'importation:\n\n' + err.message);
+            }
+            e.target.value = '';
+        });
+
+        updateDashboard();
             }
         }
 
@@ -533,29 +882,83 @@
             document.getElementById('client-name-group').style.display = this.value === 'Vente' ? 'block' : 'none';
         });
 
-        document.getElementById('validate-movement-btn').addEventListener('click', function() {
+        document.getElementById('validate-movement-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('=== DÉBUT VALIDATION MOUVEMENT ===');
+            
             const type = document.getElementById('movement-type').value;
             const reason = document.getElementById('movement-reason').value;
             const clientName = document.getElementById('client-name').value;
-            const selected = Array.from(document.querySelectorAll('.product-check:checked'));
             
-            if (selected.length === 0) return alert('⚠️ Sélectionnez des produits');
-            if (!reason) return alert('⚠️ Sélectionnez une raison');
-            if (reason === 'Vente' && !clientName.trim()) return alert('⚠️ Entrez le nom du client');
+            console.log('Type:', type);
+            console.log('Raison:', reason);
+            console.log('Client:', clientName);
+            
+            const selected = Array.from(document.querySelectorAll('.product-check:checked'));
+            console.log('Produits cochés:', selected.length);
+            
+            if (selected.length === 0) {
+                console.log('ERREUR: Aucun produit sélectionné');
+                alert('⚠️ Veuillez sélectionner au moins un produit');
+                return;
+            }
+            
+            if (!reason) {
+                console.log('ERREUR: Aucune raison');
+                alert('⚠️ Veuillez sélectionner une raison');
+                return;
+            }
+            
+            if (reason === 'Vente' && !clientName.trim()) {
+                console.log('ERREUR: Pas de nom client');
+                alert('⚠️ Veuillez entrer le nom du client');
+                return;
+            }
 
             const toProcess = [];
+            let hasError = false;
+            
             for (let cb of selected) {
                 const id = parseInt(cb.dataset.id);
                 const product = products.find(p => p.id === id);
-                const qty = parseInt(document.getElementById(`qty-${id}`).value) || 0;
-                if (qty <= 0) return alert(`⚠️ Quantité invalide pour ${product.realName}`);
-                if (type === 'out' && product.quantity < qty) return alert(`❌ Stock insuffisant pour ${product.realName}\nStock: ${product.quantity}, Demandé: ${qty}`);
+                const qtyInput = document.getElementById(`qty-${id}`);
+                const qty = parseInt(qtyInput.value) || 0;
+                
+                console.log(`Produit: ${product.realName}, Qty demandée: ${qty}, Stock: ${product.quantity}`);
+                
+                if (qty <= 0) {
+                    alert(`⚠️ Quantité invalide pour ${product.realName}`);
+                    hasError = true;
+                    break;
+                }
+                
+                if (type === 'out' && product.quantity < qty) {
+                    alert(`❌ Stock insuffisant pour ${product.realName}\nStock disponible: ${product.quantity}\nQuantité demandée: ${qty}`);
+                    hasError = true;
+                    break;
+                }
+                
                 toProcess.push({ product, qty });
             }
 
+            if (hasError) {
+                console.log('ARRÊT: Erreur détectée');
+                return;
+            }
+            
+            console.log('Traitement de', toProcess.length, 'produits...');
+
             toProcess.forEach(({ product, qty }) => {
-                if (type === 'in') product.quantity += qty;
-                else product.quantity -= qty;
+                console.log(`Modification: ${product.realName} ${type === 'in' ? '+' : '-'}${qty}`);
+                
+                if (type === 'in') {
+                    product.quantity += qty;
+                } else {
+                    product.quantity -= qty;
+                }
+                
                 movements.push({
                     id: Date.now() + Math.random(),
                     productId: product.id,
@@ -568,16 +971,23 @@
                 });
             });
 
+            console.log('Sauvegarde des données...');
             saveData();
+            
+            console.log('Réinitialisation du formulaire...');
             document.getElementById('movement-type').value = 'in';
             document.getElementById('movement-reason').value = '';
             document.getElementById('client-name').value = '';
             document.getElementById('client-name-group').style.display = 'none';
             document.querySelectorAll('.product-check').forEach(cb => cb.checked = false);
             document.getElementById('select-all-movement').checked = false;
+            
+            console.log('Rafraîchissement de l\'interface...');
             renderMovementProducts();
             updateDashboard();
-            alert(`✅ Mouvement enregistré !\n${toProcess.length} produit(s) traité(s)`);
+            
+            console.log('=== FIN VALIDATION MOUVEMENT ===');
+            alert(`✅ Mouvement enregistré avec succès !\n${toProcess.length} produit(s) traité(s)`);
         });
 
         function renderReturns() {
