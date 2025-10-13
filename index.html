@@ -469,7 +469,7 @@
         <div id="products-page" class="hidden">
             <div class="card">
                 <div class="card-header">
-                    <input type="text" class="search-input" id="search-input" placeholder="🔍 Rechercher un produit...">
+                    <input type="text" class="search-input" id="search-input" placeholder="🔍 Rechercher par Nom Réel ou Référence..." onkeyup="renderProducts()">
                     <div class="btn-group">
                         <button class="btn btn-primary" onclick="openModal()">➕ Ajouter</button>
                         <label class="btn btn-success">
@@ -477,6 +477,7 @@
                             <input type="file" id="import-file" accept=".xlsx,.xls" onchange="handleImport(event)">
                         </label>
                         <button class="btn btn-purple" onclick="handleExport()">📥 Exporter</button>
+                        <button class="btn" onclick="deleteSelectedProducts()" style="background: #ef4444; color: white;">🗑️ Supprimer Sélection</button>
                     </div>
                 </div>
 
@@ -494,6 +495,7 @@
                     <table>
                         <thead>
                             <tr>
+                                <th><input type="checkbox" onchange="selectAllForDelete(this)"></th>
                                 <th>Image</th>
                                 <th>Nom Réel</th>
                                 <th>Nom Convention</th>
@@ -535,9 +537,15 @@
                         <label class="form-label">Nom du Client</label>
                         <input type="text" id="client-name" class="form-input" placeholder="Entrer le nom du client">
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-primary" onclick="submitMovement()" style="width: 100%; height: 42px;">
+                            ✅ Valider le Mouvement
+                        </button>
+                    </div>
                 </div>
 
-                <div style="overflow-x: auto; margin-bottom: 1rem;">
+                <div style="overflow-x: auto;">
                     <table>
                         <thead>
                             <tr>
@@ -550,8 +558,6 @@
                         <tbody id="movement-products"></tbody>
                     </table>
                 </div>
-
-                <button class="btn btn-primary" onclick="submitMovement()">✅ Valider le Mouvement</button>
             </div>
         </div>
 
@@ -694,13 +700,12 @@
         }
 
         function renderProducts() {
-            const searchTerm = document.getElementById('search-input').value.toLowerCase();
-            const filtered = products.filter(p => 
-                p.realName?.toLowerCase().includes(searchTerm) ||
-                p.conventionalName?.toLowerCase().includes(searchTerm) ||
-                p.reference?.toLowerCase().includes(searchTerm) ||
-                p.barcode?.toLowerCase().includes(searchTerm)
-            );
+            const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+            const filtered = products.filter(p => {
+                const realName = (p.realName || '').toLowerCase();
+                const reference = (p.reference || '').toLowerCase();
+                return realName.includes(searchTerm) || reference.includes(searchTerm);
+            });
 
             const tbody = document.getElementById('products-table');
             tbody.innerHTML = filtered.map(p => {
@@ -715,6 +720,7 @@
                 
                 return `
                 <tr>
+                    <td><input type="checkbox" class="delete-check" data-id="${p.id}"></td>
                     <td>${imageHtml}</td>
                     <td>${p.realName}</td>
                     <td>${p.conventionalName || '—'}</td>
@@ -727,6 +733,29 @@
                     </td>
                 </tr>
             `}).join('');
+        }
+
+        function selectAllForDelete(checkbox) {
+            document.querySelectorAll('.delete-check').forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+        }
+
+        function deleteSelectedProducts() {
+            const selectedIds = Array.from(document.querySelectorAll('.delete-check:checked'))
+                .map(cb => parseInt(cb.dataset.id));
+            
+            if (selectedIds.length === 0) {
+                alert('⚠️ Veuillez sélectionner au moins un produit à supprimer');
+                return;
+            }
+
+            if (confirm(`Êtes-vous sûr de vouloir supprimer ${selectedIds.length} produit(s) ?`)) {
+                products = products.filter(p => !selectedIds.includes(p.id));
+                saveData();
+                renderProducts();
+                alert(`✅ ${selectedIds.length} produit(s) supprimé(s) avec succès !`);
+            }
         }
 
         document.getElementById('search-input').addEventListener('input', renderProducts);
