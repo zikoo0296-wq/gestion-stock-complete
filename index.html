@@ -740,8 +740,8 @@
         function renderProducts() {
             const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
             const filtered = products.filter(p => {
-                const realName = (p.realName || '').toLowerCase();
-                const reference = (p.reference || '').toLowerCase();
+                const realName = String(p.realName || '').toLowerCase();
+                const reference = String(p.reference || '').toLowerCase();
                 return realName.includes(searchTerm) || reference.includes(searchTerm);
             });
 
@@ -760,7 +760,7 @@
                 <tr>
                     <td><input type="checkbox" class="delete-check" data-id="${p.id}"></td>
                     <td>${imageHtml}</td>
-                    <td>${p.realName}</td>
+                    <td>${p.realName || '—'}</td>
                     <td>${p.conventionalName || '—'}</td>
                     <td>${p.reference || '—'}</td>
                     <td>${p.brand || '—'}</td>
