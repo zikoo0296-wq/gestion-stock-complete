@@ -866,3 +866,164 @@
                 </tr>
             `).join('');
         }
+
+        function selectAllProducts(checkbox) {
+            document.querySelectorAll('.product-check').forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+        }
+
+        function toggleClientName() {
+            const reason = document.getElementById('movement-reason').value;
+            const clientGroup = document.getElementById('client-name-group');
+            clientGroup.style.display = reason === 'Vente' ? 'block' : 'none';
+        }
+
+        function submitMovement() {
+            const type = document.getElementById('movement-type').value;
+            const reason = document.getElementById('movement-reason').value;
+            const clientName = document.getElementById('client-name').value;
+
+            const selectedProducts = Array.from(document.querySelectorAll('.product-check:checked'));
+            
+            if (selectedProducts.length === 0) {
+                alert('⚠️ Veuillez sélectionner au moins un produit');
+                return;
+            }
+
+            if (!reason) {
+                alert('⚠️ Veuillez sélectionner une raison');
+                return;
+            }
+
+            if (reason === 'Vente' && !clientName.trim()) {
+                alert('⚠️ Veuillez entrer le nom du client pour une vente');
+                return;
+            }
+
+            let hasError = false;
+
+            selectedProducts.forEach(checkbox => {
+                const id = parseInt(checkbox.dataset.id);
+                const product = products.find(p => p.id === id);
+                const qty = parseInt(document.getElementById(`qty-${id}`).value) || 0;
+
+                if (qty <= 0) {
+                    alert(`⚠️ Quantité invalide pour ${product.realName}`);
+                    hasError = true;
+                    return;
+                }
+
+                if (type === 'out' && product.quantity < qty) {
+                    alert(`❌ Stock insuffisant pour ${product.realName}`);
+                    hasError = true;
+                    return;
+                }
+            });
+
+            if (hasError) return;
+
+            selectedProducts.forEach(checkbox => {
+                const id = parseInt(checkbox.dataset.id);
+                const product = products.find(p => p.id === id);
+                const qty = parseInt(document.getElementById(`qty-${id}`).value);
+
+                if (type === 'in') {
+                    product.quantity += qty;
+                } else {
+                    product.quantity -= qty;
+                }
+
+                movements.push({
+                    id: Date.now() + Math.random(),
+                    productId: id,
+                    productName: product.realName,
+                    type: type,
+                    reason: reason,
+                    quantity: qty,
+                    clientName: reason === 'Vente' ? clientName : '',
+                    date: new Date().toISOString()
+                });
+            });
+
+            saveData();
+            
+            document.getElementById('movement-type').value = 'in';
+            document.getElementById('movement-reason').value = '';
+            document.getElementById('client-name').value = '';
+            document.getElementById('client-name-group').style.display = 'none';
+            
+            renderMovementProducts();
+            alert('✅ Mouvement enregistré avec succès !');
+        }
+
+        function renderReturns() {
+            const sales = movements.filter(m => m.reason === 'Vente');
+            
+            const salesTable = document.getElementById('sales-table');
+            salesTable.innerHTML = sales.map(sale => `
+                <tr>
+                    <td>${new Date(sale.date).toLocaleDateString()}</td>
+                    <td>${sale.productName}</td>
+                    <td>${sale.clientName}</td>
+                    <td>${sale.quantity}</td>
+                    <td>
+                        <button class="btn btn-orange" onclick="handleReturn(${sale.id})" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                            🔄 Retour
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            const returnsTable = document.getElementById('returns-table');
+            returnsTable.innerHTML = returns.map(ret => `
+                <tr>
+                    <td>${new Date(ret.date).toLocaleDateString()}</td>
+                    <td>${ret.productName}</td>
+                    <td>${ret.clientName}</td>
+                    <td>${ret.quantity}</td>
+                    <td>${ret.reason}</td>
+                </tr>
+            `).join('');
+        }
+
+        function handleReturn(saleId) {
+            const sale = movements.find(m => m.id === saleId);
+            if (!sale) return;
+
+            const returnQty = parseInt(prompt(`Quantité à retourner (max: ${sale.quantity}):`));
+            
+            if (!returnQty || returnQty <= 0 || returnQty > sale.quantity) {
+                alert('❌ Quantité invalide');
+                return;
+            }
+
+            const returnReason = prompt('Raison du retour:');
+            if (!returnReason) return;
+
+            const product = products.find(p => p.id === sale.productId);
+            if (product) {
+                product.quantity += returnQty;
+
+                returns.push({
+                    id: Date.now(),
+                    saleId: saleId,
+                    productId: sale.productId,
+                    productName: sale.productName,
+                    clientName: sale.clientName,
+                    quantity: returnQty,
+                    reason: returnReason,
+                    date: new Date().toISOString()
+                });
+
+                saveData();
+                renderReturns();
+                alert('✅ Retour enregistré avec succès !');
+            }
+        }
+
+        // Initialisation
+        updateDashboard();
+    </script>
+</body>
+</html>
