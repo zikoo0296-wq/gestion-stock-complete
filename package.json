@@ -1,0 +1,43 @@
+{
+  "name": "gestion-stock-pro",
+  "version": "1.0.0",
+  "description": "Application professionnelle de gestion de stock",
+  "main": "index.js",
+  "scripts": {
+    "install-all": "cd backend && npm install",
+    "start": "cd backend && npm start",
+    "dev": "cd backend && npm run dev",
+    "init-db": "cd backend && npm run init-db",
+    "backup": "cd backend && node backup-database.js backup",
+    "restore": "cd backend && node backup-database.js restore",
+    "test": "cd backend && node test-api.js",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:build": "docker-compose up -d --build",
+    "docker:init": "docker-compose exec backend node init-database.js",
+    "setup": "chmod +x install.sh && ./install.sh",
+    "help": "node -e \"console.log('\\n🏪 GESTION DE STOCK PRO - SCRIPTS DISPONIBLES\\n\\n📦 Installation:\\n  npm run install-all  - Installer les dépendances\\n  npm run setup        - Installation automatique complète\\n  npm run init-db      - Initialiser la base de données\\n\\n🚀 Développement:\\n  npm start            - Démarrer le backend\\n  npm run dev          - Démarrer en mode dev (nodemon)\\n  npm test             - Tester l\\'API\\n\\n💾 Sauvegardes:\\n  npm run backup       - Créer une sauvegarde\\n  npm run restore      - Restaurer une sauvegarde\\n\\n🐳 Docker:\\n  npm run docker:up    - Démarrer avec Docker\\n  npm run docker:down  - Arrêter Docker\\n  npm run docker:logs  - Voir les logs\\n  npm run docker:build - Reconstruire les images\\n  npm run docker:init  - Initialiser la BDD (Docker)\\n')\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/votre-utilisateur/gestion-stock.git"
+  },
+  "keywords": [
+    "stock",
+    "inventory",
+    "management",
+    "postgresql",
+    "nodejs",
+    "express"
+  ],
+  "author": "Votre Nom",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
