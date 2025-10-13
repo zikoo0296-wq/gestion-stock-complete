@@ -317,13 +317,26 @@
         function formatImageUrl(url) {
             if (!url) return '';
             url = String(url).trim();
+            
+            // Si c'est une URL Google Drive
             if (url.includes('drive.google.com')) {
                 let fileId = '';
+                
+                // Extraire l'ID de différents formats
+                // Format 1: /file/d/ID/view
                 const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+                // Format 2: ?id=ID ou &id=ID
                 const match2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                
                 fileId = match1 ? match1[1] : (match2 ? match2[1] : '');
-                if (fileId) return `https://drive.google.com/uc?export=view&id=${fileId}`;
+                
+                if (fileId) {
+                    // Essayer plusieurs formats qui fonctionnent avec Google Drive
+                    // Format le plus fiable pour les images publiques
+                    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+                }
             }
+            
             return url;
         }
 
@@ -334,10 +347,17 @@
                 const ref = String(p.reference || '').toLowerCase();
                 return rn.includes(searchTerm) || ref.includes(searchTerm);
             });
-            document.getElementById('products-table').innerHTML = filtered.map(p => `
+            document.getElementById('products-table').innerHTML = filtered.map(p => {
+                let imgHtml = '<div class="product-img-error">📷</div>';
+                if (p.image) {
+                    imgHtml = `<img src="${p.image}" class="product-img" alt="${p.realName}" 
+                        onerror="console.error('Image failed:', '${p.image}'); this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="product-img-error" style="display:none;">📷</div>`;
+                }
+                return `
                 <tr>
                     <td><input type="checkbox" class="delete-check" data-id="${p.id}"></td>
-                    <td>${p.image ? `<img src="${p.image}" class="product-img" onerror="this.onerror=null; this.outerHTML='<div class=\\'product-img-error\\'>📷</div>';">` : '<div class="product-img-error">📷</div>'}</td>
+                    <td>${imgHtml}</td>
                     <td>${p.realName || '—'}</td>
                     <td>${p.conventionalName || '—'}</td>
                     <td>${p.reference || '—'}</td>
@@ -348,7 +368,7 @@
                         <button class="action-btn delete" onclick="deleteProduct(${p.id})">🗑️</button>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         document.getElementById('search-input').addEventListener('input', renderProducts);
