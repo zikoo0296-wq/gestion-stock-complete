@@ -746,6 +746,7 @@
                 products = products.filter(p => p.id !== id);
                 saveData();
                 renderProducts();
+                updateDashboard();
                 alert('✅ Produit supprimé avec succès !');
             }
         }
@@ -763,6 +764,7 @@
                 products = products.filter(p => !selectedIds.includes(p.id));
                 saveData();
                 renderProducts();
+                updateDashboard();
                 alert(`✅ ${selectedIds.length} produit(s) supprimé(s) avec succès !`);
             }
         }
@@ -827,6 +829,7 @@
 
             saveData();
             renderProducts();
+            updateDashboard();
             closeModal();
             alert('✅ Produit enregistré avec succès !');
         }
@@ -937,6 +940,7 @@
                 console.log('Import terminé:', importCount, 'produits importés');
                 saveData();
                 renderProducts();
+                updateDashboard();
 
                 setTimeout(() => {
                     progressBar.classList.add('hidden');
@@ -1066,6 +1070,29 @@
                 });
             });
 
+            selectedProducts.forEach(checkbox => {
+                const id = parseInt(checkbox.dataset.id);
+                const product = products.find(p => p.id === id);
+                const qty = parseInt(document.getElementById(`qty-${id}`).value);
+
+                if (type === 'in') {
+                    product.quantity += qty;
+                } else {
+                    product.quantity -= qty;
+                }
+
+                movements.push({
+                    id: Date.now() + Math.random(),
+                    productId: id,
+                    productName: product.realName,
+                    type: type,
+                    reason: reason,
+                    quantity: qty,
+                    clientName: reason === 'Vente' ? clientName : '',
+                    date: new Date().toISOString()
+                });
+            });
+
             saveData();
             
             document.getElementById('movement-type').value = 'in';
@@ -1074,6 +1101,7 @@
             document.getElementById('client-name-group').style.display = 'none';
             
             renderMovementProducts();
+            updateDashboard();
             alert('✅ Mouvement enregistré avec succès !');
         }
 
@@ -1134,10 +1162,24 @@
                     quantity: returnQty,
                     reason: returnReason,
                     date: new Date().toISOString()
+            const product = products.find(p => p.id === sale.productId);
+            if (product) {
+                product.quantity += returnQty;
+
+                returns.push({
+                    id: Date.now(),
+                    saleId: saleId,
+                    productId: sale.productId,
+                    productName: sale.productName,
+                    clientName: sale.clientName,
+                    quantity: returnQty,
+                    reason: returnReason,
+                    date: new Date().toISOString()
                 });
 
                 saveData();
                 renderReturns();
+                updateDashboard();
                 alert('✅ Retour enregistré avec succès !');
             }
         }
