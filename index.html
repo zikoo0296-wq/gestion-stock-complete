@@ -741,6 +741,15 @@
             });
         }
 
+        function deleteProduct(id) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
+                products = products.filter(p => p.id !== id);
+                saveData();
+                renderProducts();
+                alert('✅ Produit supprimé avec succès !');
+            }
+        }
+
         function deleteSelectedProducts() {
             const selectedIds = Array.from(document.querySelectorAll('.delete-check:checked'))
                 .map(cb => parseInt(cb.dataset.id));
