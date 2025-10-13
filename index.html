@@ -379,10 +379,11 @@
                 storeHeaders += `<th>QTY ${store.name}</th>`;
             });
             
-            document.getElementById('products-table').innerHTML = `
+            const tableElement = document.getElementById('products-table');
+            tableElement.innerHTML = `
                 <thead>
                     <tr>
-                        <th><input type="checkbox" id="select-all-delete"></th>
+                        <th><input type="checkbox" id="select-all-delete-dynamic"></th>
                         <th>Image</th>
                         <th>Nom Réel</th>
                         <th>Nom Convention</th>
@@ -397,7 +398,7 @@
                         let imgHtml = '<div class="product-img-error">📷</div>';
                         if (p.image) {
                             imgHtml = `<img src="${p.image}" class="product-img" alt="${p.realName}" 
-                                onerror="console.error('Image failed:', '${p.image}'); this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                onerror="console.error('Image failed'); this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                 <div class="product-img-error" style="display:none;">📷</div>`;
                         }
                         
@@ -418,19 +419,35 @@
                             <td>${p.brand || '—'}</td>
                             ${storeQtys}
                             <td>
-                                <button class="action-btn" onclick="editProduct(${p.id})">✏️</button>
-                                <button class="action-btn delete" onclick="deleteProduct(${p.id})">🗑️</button>
+                                <button class="action-btn" onclick="window.editProductFunc(${p.id})">✏️</button>
+                                <button class="action-btn delete" onclick="window.deleteProductFunc(${p.id})">🗑️</button>
                             </td>
                         </tr>
                     `}).join('')}
                 </tbody>
             `;
             
-            // Réattacher l'événement select-all
-            document.getElementById('select-all-delete').addEventListener('change', function() {
-                document.querySelectorAll('.delete-check').forEach(cb => cb.checked = this.checked);
-            });
+            // Réattacher l'événement select-all après le rendu
+            setTimeout(() => {
+                const selectAllCheckbox = document.getElementById('select-all-delete-dynamic');
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.addEventListener('change', function() {
+                        document.querySelectorAll('.delete-check').forEach(cb => cb.checked = this.checked);
+                    });
+                }
+            }, 100);
         }
+
+        // Exposer les fonctions globalement
+        window.editProductFunc = function(id) {
+            console.log('Edit product:', id);
+            editProduct(id);
+        };
+
+        window.deleteProductFunc = function(id) {
+            console.log('Delete product:', id);
+            deleteProduct(id);
+        };
 
         document.getElementById('search-input').addEventListener('input', renderProducts);
 
@@ -555,20 +572,28 @@
         }, 100);
         
         document.getElementById('export-stores-btn').addEventListener('click', function() {
+            console.log('Export des stocks...');
             const data = products.map(p => {
                 const row = {
-                    'Produit': p.realName,
-                    'Référence': p.reference || ''
+                    'IMAGE': p.image || '',
+                    'Real Name': p.realName,
+                    'Conventional Name': p.conventionalName || '',
+                    'Référence': p.reference || '',
+                    'Barcode': p.barcode || '',
+                    'Repetition': p.repetitionBarcode || '',
+                    'Category': p.category || '',
+                    'Brand': p.brand || ''
                 };
                 stores.forEach(store => {
-                    row[store.name] = store.stocks[p.id] || 0;
+                    row[`QTY ${store.name}`] = store.stocks[p.id] || 0;
                 });
                 return row;
             });
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Stocks Points de Vente');
-            XLSX.writeFile(wb, `stocks_points_vente_${new Date().toISOString().split('T')[0]}.xlsx`);
+            XLSX.utils.book_append_sheet(wb, ws, 'Stocks');
+            XLSX.writeFile(wb, `stocks_tous_pdv_${new Date().toISOString().split('T')[0]}.xlsx`);
+            console.log('Export terminé');
         });
 
         function deleteStore(storeId) {
