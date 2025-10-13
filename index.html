@@ -857,6 +857,8 @@
             const file = e.target.files[0];
             if (!file) return;
 
+            console.log('Fichier sélectionné:', file.name, 'Taille:', file.size, 'bytes');
+
             try {
                 const progressBar = document.getElementById('import-progress');
                 const progressFill = document.getElementById('progress-fill');
@@ -864,52 +866,82 @@
                 
                 progressBar.classList.remove('hidden');
                 progressFill.style.width = '0%';
+                progressText.textContent = 'Lecture du fichier...';
 
                 const data = await file.arrayBuffer();
-                const workbook = XLSX.read(data);
+                console.log('Fichier lu, taille:', data.byteLength);
+                
+                progressText.textContent = 'Analyse du fichier...';
+                
+                const workbook = XLSX.read(data, { type: 'array' });
+                console.log('Workbook créé, sheets:', workbook.SheetNames);
+                
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                console.log('Worksheet sélectionné:', workbook.SheetNames[0]);
+                
                 const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                console.log('Données extraites:', jsonData.length, 'lignes');
+                console.log('Premier élément:', jsonData[0]);
+
+                if (jsonData.length === 0) {
+                    throw new Error('Le fichier Excel est vide ou le format est incorrect');
+                }
+
+                progressText.textContent = 'Import en cours...';
+                let importCount = 0;
 
                 for (let i = 0; i < jsonData.length; i++) {
                     const row = jsonData[i];
                     
-                    const imageUrl = formatImageUrl(row['IMAGE'] || '');
+                    // Vérifier si la ligne a au moins un nom
+                    if (!row['Real Name'] && !row['Nom Réel']) {
+                        console.warn('Ligne ignorée (pas de nom):', i + 1);
+                        continue;
+                    }
+                    
+                    const imageUrl = formatImageUrl(row['IMAGE'] || row['Image'] || '');
                     
                     products.push({
-                        id: Date.now() + i,
+                        id: Date.now() + i + Math.random(),
                         image: imageUrl,
-                        realName: row['Real Name'] || '',
-                        conventionalName: row['Conventional Name'] || '',
-                        barcode: row['Barcode'] || '',
-                        repetitionBarcode: row['Repetition Barcode'] || '',
-                        category: row['Category'] || '',
-                        brand: row['Brand'] || '',
-                        reference: row['Référence'] || '',
-                        quantity: parseInt(row['Selling Price']) || 0,
+                        realName: row['Real Name'] || row['Nom Réel'] || '',
+                        conventionalName: row['Conventional Name'] || row['Nom Conventionnel'] || '',
+                        barcode: row['Barcode'] || row['Code-barres'] || '',
+                        repetitionBarcode: row['Repetition Barcode'] || row['Répétition Code-barres'] || '',
+                        category: row['Category'] || row['Catégorie'] || '',
+                        brand: row['Brand'] || row['Marque'] || '',
+                        reference: row['Référence'] || row['Reference'] || '',
+                        quantity: parseInt(row['Selling Price'] || row['Prix de Vente'] || row['Quantité'] || 0),
                         createdAt: new Date().toISOString()
                     });
 
+                    importCount++;
                     const percent = Math.round(((i + 1) / jsonData.length) * 100);
                     progressFill.style.width = percent + '%';
-                    progressText.textContent = `${i + 1} / ${jsonData.length} (${percent}%)`;
+                    progressText.textContent = `Traité: ${i + 1} / ${jsonData.length} (${percent}%)`;
 
-                    if (i % 50 === 0) {
+                    if (i % 100 === 0) {
                         await new Promise(resolve => setTimeout(resolve, 10));
                     }
                 }
 
+                console.log('Import terminé:', importCount, 'produits importés');
                 saveData();
                 renderProducts();
 
                 setTimeout(() => {
                     progressBar.classList.add('hidden');
-                    alert(`✅ ${jsonData.length} produits importés avec succès !`);
+                    alert(`✅ ${importCount} produits importés avec succès !`);
                 }, 500);
 
             } catch (error) {
-                console.error('Erreur import:', error);
+                console.error('ERREUR DÉTAILLÉE:', error);
+                console.error('Message:', error.message);
+                console.error('Stack:', error.stack);
+                
                 document.getElementById('import-progress').classList.add('hidden');
-                alert('❌ Erreur lors de l\'importation du fichier Excel');
+                
+                alert(`❌ Erreur lors de l'importation:\n\n${error.message}\n\nDétails dans la console (F12)`);
             }
 
             e.target.value = '';
