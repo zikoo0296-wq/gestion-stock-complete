@@ -247,6 +247,21 @@
             height: 50px;
             object-fit: cover;
             border-radius: 8px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+        }
+
+        .product-img-error {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f3f4f6;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            color: #9ca3af;
+            font-size: 0.75rem;
         }
 
         .action-btn {
@@ -688,9 +703,19 @@
             );
 
             const tbody = document.getElementById('products-table');
-            tbody.innerHTML = filtered.map(p => `
+            tbody.innerHTML = filtered.map(p => {
+                let imageHtml = '';
+                if (p.image) {
+                    imageHtml = `<img src="${p.image}" class="product-img" alt="${p.realName}" 
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="product-img-error" style="display:none;">📷</div>`;
+                } else {
+                    imageHtml = '<div class="product-img-error">📷</div>';
+                }
+                
+                return `
                 <tr>
-                    <td>${p.image ? `<img src="${p.image}" class="product-img" alt="${p.realName}">` : '—'}</td>
+                    <td>${imageHtml}</td>
                     <td>${p.realName}</td>
                     <td>${p.conventionalName || '—'}</td>
                     <td>${p.reference || '—'}</td>
@@ -701,7 +726,7 @@
                         <button class="action-btn delete" onclick="deleteProduct(${p.id})">🗑️</button>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         document.getElementById('search-input').addEventListener('input', renderProducts);
@@ -776,6 +801,29 @@
             }
         }
 
+        function formatImageUrl(url) {
+            if (!url) return '';
+            
+            // Convertir les URLs Google Drive au bon format
+            if (url.includes('drive.google.com')) {
+                // Extraire l'ID du fichier
+                let fileId = '';
+                
+                if (url.includes('/file/d/')) {
+                    fileId = url.match(/\/file\/d\/([^\/]+)/)?.[1];
+                } else if (url.includes('id=')) {
+                    fileId = url.match(/id=([^&]+)/)?.[1];
+                }
+                
+                if (fileId) {
+                    // Format qui fonctionne mieux pour l'affichage
+                    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w200`;
+                }
+            }
+            
+            return url;
+        }
+
         async function handleImport(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -796,9 +844,11 @@
                 for (let i = 0; i < jsonData.length; i++) {
                     const row = jsonData[i];
                     
+                    const imageUrl = formatImageUrl(row['IMAGE'] || '');
+                    
                     products.push({
                         id: Date.now() + i,
-                        image: row['IMAGE'] || '',
+                        image: imageUrl,
                         realName: row['Real Name'] || '',
                         conventionalName: row['Conventional Name'] || '',
                         barcode: row['Barcode'] || '',
