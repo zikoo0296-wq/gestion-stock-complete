@@ -478,206 +478,106 @@
 
             try {
                 const data = await file.arrayBuffer();
-                
-                // Parser Excel RAPIDE
-                const wb = XLSX.read(data, {
-                    cellFormula: false,
-                    cellHTML: false,
-                    cellStyles: false,
-                    sheetStubs: false,
-                    dense: true
-                });
-                
-                const allRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {
-                    raw: false,
-                    defval: '',
-                    blankrows: false
-                });
+                const wb = XLSX.read(data);
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-                console.log('Total lignes Excel:', allRows.length);
-                console.log('Colonnes détectées:', Object.keys(allRows[0]));
-                console.log('Première ligne exemple:', allRows[0]);
-
-                // FILTRER lignes vides - vérifier plusieurs colonnes
-                const rows = allRows.filter(r => {
-                    // Une ligne est valide SI elle a une référence ET un nom
-                    const hasRef = r['Référence'] && r['Référence'].toString().trim() && 
-                                  !r['Référence'].toString().includes('drive.google.com');
-                    const hasName = r['Real Name'] && r['Real Name'].toString().trim() && 
-                                   !r['Real Name'].toString().includes('drive.google.com');
-                    return hasRef && hasName;
-                });
-
-                console.log(`Produits filtrés: ${rows.length}`);
+                console.log('TOTAL LIGNES:', rows.length);
+                console.log('COLONNES:', Object.keys(rows[0]));
+                console.log('LIGNE 1:', rows[0]);
+                console.log('LIGNE 2:', rows[1]);
+                console.log('LIGNE 3:', rows[2]);
 
                 if (rows.length === 0) { 
-                    showToast('Aucun produit trouvé', 'error'); 
+                    showToast('Fichier vide', 'error'); 
                     closeImportModal(); 
                     return; 
                 }
 
-                txt.textContent = `${rows.length} produits détectés`;
-                fill.style.width = '20%';
+                txt.textContent = `${rows.length} lignes trouvées`;
+                fill.style.width = '30%';
 
-                // Détecter colonnes PDV (QTY suivi d'un nom)
+                // Colonnes PDV
                 const cols = Object.keys(rows[0]);
-                const pdvCols = cols.filter(c => {
-                    const upper = c.toUpperCase();
-                    return upper.includes('QTY') || upper.startsWith('QTÉ');
-                });
+                const pdvCols = cols.filter(c => c.includes('QTY'));
                 
-                console.log('Colonnes PDV trouvées:', pdvCols);
-                
-                // Créer PDV
                 pdvCols.forEach(c => {
-                    let n = c.replace(/QTY/gi, '').replace(/QTÉ/gi, '').trim();
+                    const n = c.replace(/QTY/gi, '').trim();
                     if (n && !pointsVente.find(p => p.name === n)) {
                         pointsVente.push({ 
-                            id: `pdv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, 
+                            id: Date.now() + '_' + Math.random(), 
                             name: n, 
                             products: [] 
                         });
-                        console.log('PDV créé:', n);
                     }
                 });
 
-                txt.textContent = 'Traitement...';
-                fill.style.width = '30%';
+                txt.textContent = 'Import...';
+                fill.style.width = '50%';
 
-                // TRAITEMENT ULTRA-RAPIDE
-                const batchSize = 500;
-                const allData = [];
-                
-                for (let i = 0; i < rows.length; i += batchSize) {
-                    const batch = rows.slice(i, i + batchSize);
+                // SIMPLE ET RAPIDE
+                let imported = 0;
+                rows.forEach((r, i) => {
+                    const name = r['Real Name'] || r['Nom'] || '';
+                    const ref = r['Référence'] || r['Reference'] || '';
                     
-                    batch.forEach((r, idx) => {
-                        // IMAGE - chercher dans toutes les colonnes
-                        let img = '';
-                        
-                        // Vérifier colonne IMAGE
-                        if (r['IMAGE'] && r['IMAGE'].toString().trim()) {
-                            img = r['IMAGE'].toString().trim();
-                        }
-                        // Si pas dans IMAGE, chercher dans Real Name si c'est une URL
-                        else if (r['Real Name'] && r['Real Name'].toString().includes('drive.google.com')) {
-                            img = r['Real Name'].toString().trim();
-                        }
-                        // Chercher dans Référence
-                        else if (r['Référence'] && r['Référence'].toString().includes('drive.google.com')) {
-                            img = r['Référence'].toString().trim();
-                        }
-                        
-                        // Convertir URL Google Drive
-                        if (img && img.includes('drive.google.com')) {
-                            const m = img.match(/\/d\/([^/\?]+)/) || img.match(/[?&]id=([^&]+)/);
-                            if (m) img = `https://drive.google.com/uc?export=view&id=${m[1]}`;
-                        }
+                    if (!name && !ref) return;
 
-                        // Real Name - chercher dans les colonnes
-                        let name = '';
-                        if (r['Real Name'] && !r['Real Name'].toString().includes('drive.google.com')) {
-                            name = r['Real Name'].toString().trim();
-                        } else if (r['Conventional Name'] && !r['Conventional Name'].toString().includes('drive.google.com')) {
-                            name = r['Conventional Name'].toString().trim();
-                        }
-
-                        // Référence - OBLIGATOIRE, ne jamais générer
-                        let ref = '';
-                        if (r['Référence'] && !r['Référence'].toString().includes('drive.google.com')) {
-                            ref = r['Référence'].toString().trim();
-                        }
-                        
-                        // Si pas de référence valide, IGNORER ce produit
-                        if (!ref) {
-                            console.warn(`Produit ignoré (pas de référence): ligne ${i + idx + 2}`);
-                            return;
-                        }
-                        
-                        if (!name) {
-                            console.warn(`Produit sans nom, utilise référence: ${ref}`);
-                            name = ref;
-                        }
-
-                        // Calculer quantité totale
-                        let totalQty = 0;
-                        const pdvQtys = {};
-                        
-                        pdvCols.forEach(c => {
-                            const val = r[c];
-                            const q = val ? parseInt(val.toString().replace(/[^\d]/g, '')) || 0 : 0;
-                            totalQty += q;
-                            const n = c.replace(/QTY/gi, '').replace(/QTÉ/gi, '').trim();
-                            if (n) pdvQtys[n] = q;
-                        });
-
-                        allData.push({
-                            prod: {
-                                image: img,
-                                name: name,
-                                conventionalName: (r['Conventional Name'] || '').toString().trim(),
-                                reference: ref,
-                                barcode: (r['Barcode'] || r['Code-barres'] || '').toString().trim(),
-                                category: (r['Category'] || r['Catégorie'] || '').toString().trim(),
-                                brand: (r['Brand'] || r['Marque'] || '').toString().trim(),
-                                price: parseFloat((r['Selling Price'] || r['Prix'] || '0').toString().replace(/[^\d.]/g, '')) || 0,
-                                quantity: totalQty
-                            },
-                            ref,
-                            pdvQtys
-                        });
-                    });
-
-                    const percent = 30 + Math.round(((i + batch.length) / rows.length) * 60);
-                    fill.style.width = percent + '%';
-                    txt.textContent = `${i + batch.length}/${rows.length}`;
-                    
-                    await new Promise(r => setTimeout(r, 1));
-                }
-
-                console.log('Produits traités:', allData.length);
-                
-                txt.textContent = 'Sauvegarde...';
-                fill.style.width = '90%';
-
-                // Mise à jour RAPIDE
-                allData.forEach(({ prod, ref, pdvQtys }) => {
-                    const idx = products.findIndex(p => p.reference === ref);
-                    if (idx >= 0) {
-                        products[idx] = { ...prod, image: prod.image || products[idx].image };
-                    } else {
-                        products.push(prod);
+                    let img = r['IMAGE'] || '';
+                    if (img && img.includes('drive.google.com')) {
+                        const m = img.match(/[?&]id=([^&]+)/);
+                        if (m) img = `https://drive.google.com/uc?export=view&id=${m[1]}`;
                     }
 
-                    // MAJ PDV
-                    Object.entries(pdvQtys).forEach(([pdvName, qty]) => {
+                    let qty = 0;
+                    const pdvQtys = {};
+                    pdvCols.forEach(c => {
+                        const q = parseInt(r[c]) || 0;
+                        qty += q;
+                        const n = c.replace(/QTY/gi, '').trim();
+                        if (n) pdvQtys[n] = q;
+                    });
+
+                    const prod = {
+                        image: img,
+                        name: name || ref,
+                        conventionalName: r['Conventional Name'] || '',
+                        reference: ref || `REF_${i}`,
+                        barcode: r['Barcode'] || '',
+                        category: r['Category'] || '',
+                        brand: r['Brand'] || '',
+                        price: parseFloat(r['Selling Price'] || r['Prix']) || 0,
+                        quantity: qty
+                    };
+
+                    products.push(prod);
+
+                    Object.entries(pdvQtys).forEach(([pdvName, q]) => {
                         const pdv = pointsVente.find(p => p.name === pdvName);
-                        if (pdv && qty > 0) {
+                        if (pdv && q > 0) {
                             if (!pdv.products) pdv.products = [];
-                            const pi = pdv.products.findIndex(p => p.reference === ref);
-                            if (pi >= 0) pdv.products[pi].quantity = qty;
-                            else pdv.products.push({ reference: ref, quantity: qty });
+                            pdv.products.push({ reference: prod.reference, quantity: q });
                         }
                     });
+
+                    imported++;
                 });
 
                 save();
                 savePDV();
                 
                 fill.style.width = '100%';
-                txt.textContent = `✓ ${allData.length} importés !`;
-                console.log('Import terminé:', allData.length, 'produits');
-                showToast(`${allData.length} produits importés`, 'success');
+                txt.textContent = `✓ ${imported} importés !`;
+                console.log('IMPORTÉS:', imported);
+                showToast(`${imported} produits`, 'success');
                 
                 setTimeout(() => {
                     closeImportModal();
-                    if (currentPage === 'products') renderProducts();
+                    renderProducts();
                 }, 1000);
 
             } catch (err) {
                 console.error('ERREUR:', err);
-                txt.textContent = '❌ ' + err.message;
-                showToast('Erreur: ' + err.message, 'error');
+                alert('ERREUR: ' + err.message);
             }
         }
 
