@@ -50,7 +50,8 @@
         .badge-danger { background: #fee2e2; color: #991b1b; }
         .badge-in { background: #d1fae5; color: #065f46; }
         .badge-out { background: #fee2e2; color: #991b1b; }
-        .product-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; background: #f3f4f6; border: 1px solid #e5e7eb; }
+        .product-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; background: #f3f4f6; border: 1px solid #e5e7eb; cursor: pointer; transition: transform 0.2s; }
+        .product-img:hover { transform: scale(1.05); }
         .product-img-error { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 8px; border: 1px solid #e5e7eb; color: #9ca3af; font-size: 1.5rem; }
         .action-btn { padding: 0.5rem; border: none; background: transparent; cursor: pointer; color: #666; transition: color 0.3s; font-size: 1.2rem; }
         .action-btn:hover { color: #2563eb; }
@@ -71,11 +72,43 @@
         .hidden { display: none; }
         input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
         input[type="file"] { display: none; }
+        
+        /* Toast Notifications */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 400px; }
+        .toast { background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 12px; animation: slideIn 0.3s ease; border-left: 4px solid; min-width: 300px; }
+        .toast.success { border-color: #10b981; }
+        .toast.error { border-color: #ef4444; }
+        .toast.warning { border-color: #f59e0b; }
+        .toast.info { border-color: #3b82f6; }
+        .toast-icon { font-size: 24px; }
+        .toast-content { flex: 1; }
+        .toast-title { font-weight: 600; margin-bottom: 2px; }
+        .toast-message { font-size: 0.9rem; color: #666; }
+        .toast-close { cursor: pointer; font-size: 20px; color: #999; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        /* Image Viewer */
+        .image-viewer { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        .image-viewer.active { display: flex; }
+        .image-viewer-content { position: relative; max-width: 90%; max-height: 90%; }
+        .image-viewer-img { max-width: 100%; max-height: 90vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+        .image-viewer-close { position: absolute; top: -40px; right: 0; background: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; color: #333; }
+        
+        /* Custom Confirm Dialog */
+        .confirm-dialog { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9998; align-items: center; justify-content: center; }
+        .confirm-dialog.active { display: flex; }
+        .confirm-content { background: white; border-radius: 16px; padding: 2rem; max-width: 400px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .confirm-icon { font-size: 48px; margin-bottom: 1rem; }
+        .confirm-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 0.5rem; }
+        .confirm-message { color: #666; margin-bottom: 2rem; }
+        .confirm-buttons { display: flex; gap: 1rem; justify-content: center; }
+        
         @media (max-width: 768px) {
             .navbar-content { flex-direction: column; }
             .stats-grid { grid-template-columns: 1fr; }
             .card-header { flex-direction: column; align-items: stretch; }
             .search-input { max-width: 100%; }
+            .toast-container { left: 10px; right: 10px; max-width: none; }
         }
     </style>
 </head>
@@ -88,6 +121,30 @@
     </nav>
 
     <div class="container" id="app-container"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Image Viewer -->
+    <div class="image-viewer" id="image-viewer">
+        <div class="image-viewer-content">
+            <button class="image-viewer-close" id="close-image-viewer">✖</button>
+            <img class="image-viewer-img" id="viewer-img" src="" alt="">
+        </div>
+    </div>
+
+    <!-- Confirm Dialog -->
+    <div class="confirm-dialog" id="confirm-dialog">
+        <div class="confirm-content">
+            <div class="confirm-icon" id="confirm-icon">⚠️</div>
+            <div class="confirm-title" id="confirm-title">Confirmation</div>
+            <div class="confirm-message" id="confirm-message">Êtes-vous sûr ?</div>
+            <div class="confirm-buttons">
+                <button class="btn btn-danger" id="confirm-yes">Oui</button>
+                <button class="btn" id="confirm-no" style="background:#e5e7eb;">Annuler</button>
+            </div>
+        </div>
+    </div>
 
     <div id="product-modal" class="modal">
         <div class="modal-content">
@@ -179,6 +236,75 @@
             }
             return url;
         }
+
+        // === TOAST NOTIFICATIONS ===
+        function showToast(title, message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            
+            toast.innerHTML = `
+                <div class="toast-icon">${icons[type]}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <div class="toast-close">×</div>
+            `;
+            
+            container.appendChild(toast);
+            
+            toast.querySelector('.toast-close').onclick = () => toast.remove();
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // === IMAGE VIEWER ===
+        function openImageViewer(src) {
+            document.getElementById('viewer-img').src = src;
+            document.getElementById('image-viewer').classList.add('active');
+        }
+
+        function closeImageViewer() {
+            document.getElementById('image-viewer').classList.remove('active');
+        }
+
+        document.getElementById('close-image-viewer').onclick = closeImageViewer;
+        document.getElementById('image-viewer').onclick = (e) => {
+            if (e.target.id === 'image-viewer') closeImageViewer();
+        };
+
+        // === CUSTOM CONFIRM ===
+        let confirmCallback = null;
+
+        function showConfirm(title, message, onConfirm, icon = '⚠️') {
+            document.getElementById('confirm-icon').textContent = icon;
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            document.getElementById('confirm-dialog').classList.add('active');
+            confirmCallback = onConfirm;
+        }
+
+        document.getElementById('confirm-yes').onclick = () => {
+            document.getElementById('confirm-dialog').classList.remove('active');
+            if (confirmCallback) confirmCallback();
+            confirmCallback = null;
+        };
+
+        document.getElementById('confirm-no').onclick = () => {
+            document.getElementById('confirm-dialog').classList.remove('active');
+            confirmCallback = null;
+        };
 
         // === NAVIGATION ===
         function renderNav() {
@@ -323,12 +449,43 @@
             });
             
             const tbody = document.getElementById('products-tbody');
+            if (!tbody) return;
+            
             tbody.innerHTML = filtered.map(p => {
                 let imgHtml = '<div class="product-img-error">📷</div>';
                 if (p.image) {
-                    imgHtml = `<img src="${p.image}" class="product-img" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
+                    imgHtml = `<img src="${p.image}" class="product-img" data-src="${p.image}" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
                         <div class="product-img-error" style="display:none;">📷</div>`;
                 }
+                
+                const storesQty = APP.stores.map(s => {
+                    const qty = s.stocks[p.id] || 0;
+                    return `<td><span class="badge ${qty < 10 ? 'badge-danger' : 'badge-success'}">${qty}</span></td>`;
+                }).join('');
+                
+                return `
+                    <tr data-product-id="${p.id}">
+                        <td><input type="checkbox" class="product-check" data-id="${p.id}"></td>
+                        <td>${imgHtml}</td>
+                        <td>${p.realName || '—'}</td>
+                        <td>${p.reference || '—'}</td>
+                        <td>${p.brand || '—'}</td>
+                        ${storesQty}
+                        <td>
+                            <button class="action-btn btn-edit-product" data-id="${p.id}">✏️</button>
+                            <button class="action-btn delete btn-delete-product" data-id="${p.id}">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // Attacher événements images
+            setTimeout(() => {
+                document.querySelectorAll('.product-img[data-src]').forEach(img => {
+                    img.onclick = () => openImageViewer(img.dataset.src);
+                });
+            }, 100);
+        }}
                 
                 const storesQty = APP.stores.map(s => {
                     const qty = s.stocks[p.id] || 0;
@@ -353,6 +510,8 @@
         }
 
         function attachProductsEvents() {
+            console.log('=== ATTACH PRODUCTS EVENTS ===');
+            
             // Recherche
             const searchInput = document.getElementById('search-products');
             if (searchInput) {
@@ -364,47 +523,75 @@
             // Select all
             const selectAll = document.getElementById('select-all');
             if (selectAll) {
-                selectAll.onchange = () => {
-                    document.querySelectorAll('.product-check').forEach(cb => cb.checked = selectAll.checked);
+                selectAll.onchange = function() {
+                    console.log('Select all:', this.checked);
+                    document.querySelectorAll('.product-check').forEach(cb => {
+                        cb.checked = this.checked;
+                    });
                 };
             }
             
             // Bouton ajouter
             const btnAdd = document.getElementById('btn-add-product');
             if (btnAdd) {
-                btnAdd.onclick = () => openProductModal();
+                btnAdd.onclick = () => {
+                    console.log('Bouton Ajouter cliqué');
+                    openProductModal();
+                };
             }
             
             // Boutons éditer
-            document.querySelectorAll('.btn-edit-product').forEach(btn => {
-                btn.onclick = () => {
-                    const id = parseInt(btn.dataset.id);
-                    const product = APP.products.find(p => p.id === id);
-                    if (product) openProductModal(product);
-                };
-            });
-            
-            // Boutons supprimer
-            document.querySelectorAll('.btn-delete-product').forEach(btn => {
-                btn.onclick = () => {
-                    const id = parseInt(btn.dataset.id);
-                    deleteProduct(id);
-                };
-            });
+            setTimeout(() => {
+                document.querySelectorAll('.btn-edit-product').forEach(btn => {
+                    btn.onclick = function() {
+                        console.log('Edit product:', this.dataset.id);
+                        const id = parseInt(this.dataset.id);
+                        const product = APP.products.find(p => p.id === id);
+                        if (product) openProductModal(product);
+                    };
+                });
+                
+                // Boutons supprimer
+                document.querySelectorAll('.btn-delete-product').forEach(btn => {
+                    btn.onclick = function() {
+                        console.log('Delete product:', this.dataset.id);
+                        const id = parseInt(this.dataset.id);
+                        deleteProduct(id);
+                    };
+                });
+            }, 100);
             
             // Supprimer sélection
             const btnDeleteSelected = document.getElementById('btn-delete-selected');
             if (btnDeleteSelected) {
-                btnDeleteSelected.onclick = () => {
+                btnDeleteSelected.onclick = function() {
+                    console.log('=== DELETE SELECTED ===');
+                    
                     const checked = document.querySelectorAll('.product-check:checked');
                     const ids = Array.from(checked).map(cb => parseInt(cb.dataset.id));
-                    if (ids.length === 0) return alert('⚠️ Sélectionnez des produits');
-                    if (confirm(`Supprimer ${ids.length} produit(s) ?`)) {
-                        APP.products = APP.products.filter(p => !ids.includes(p.id));
-                        save();
-                        render();
-                        alert(`✅ ${ids.length} produit(s) supprimé(s)`);
+                    
+                    console.log('Produits cochés:', ids.length);
+                    console.log('IDs:', ids);
+                    
+                    if (ids.length === 0) {
+                        showToast('Attention', 'Veuillez sélectionner au moins un produit', 'warning');
+                        return;
                     }
+                    
+                    showConfirm(
+                        'Supprimer les produits',
+                        `Voulez-vous vraiment supprimer ${ids.length} produit(s) ?`,
+                        () => {
+                            console.log('Confirmation OK, suppression...');
+                            const before = APP.products.length;
+                            APP.products = APP.products.filter(p => !ids.includes(p.id));
+                            console.log('Produits avant:', before, 'après:', APP.products.length);
+                            save();
+                            render();
+                            showToast('Succès', `${ids.length} produit(s) supprimé(s)`, 'success');
+                        },
+                        '🗑️'
+                    );
                 };
             }
             
@@ -422,12 +609,29 @@
         }
 
         function deleteProduct(id) {
-            if (confirm('Supprimer ce produit ?')) {
-                APP.products = APP.products.filter(p => p.id !== id);
-                save();
-                render();
-                alert('✅ Produit supprimé');
+            console.log('=== DELETE SINGLE PRODUCT ===');
+            console.log('ID:', id);
+            
+            const product = APP.products.find(p => p.id === id);
+            if (!product) {
+                console.error('Produit non trouvé');
+                return;
             }
+            
+            showConfirm(
+                'Supprimer le produit',
+                `Voulez-vous vraiment supprimer "${product.realName}" ?`,
+                () => {
+                    console.log('Confirmation OK, suppression...');
+                    const before = APP.products.length;
+                    APP.products = APP.products.filter(p => p.id !== id);
+                    console.log('Produits avant:', before, 'après:', APP.products.length);
+                    save();
+                    render();
+                    showToast('Succès', 'Produit supprimé', 'success');
+                },
+                '🗑️'
+            );
         }
 
         function openProductModal(product = null) {
@@ -636,43 +840,61 @@
             const btnAdd = document.getElementById('btn-add-store');
             if (btnAdd) {
                 btnAdd.onclick = () => {
+                    console.log('=== ADD STORE ===');
+                    
                     const name = prompt('Nom du point de vente:');
-                    if (!name || !name.trim()) return;
+                    if (!name || !name.trim()) {
+                        console.log('Annulé: nom vide');
+                        return;
+                    }
                     
                     const responsable = prompt('Nom du responsable:');
-                    if (!responsable || !responsable.trim()) return;
+                    if (!responsable || !responsable.trim()) {
+                        console.log('Annulé: responsable vide');
+                        return;
+                    }
                     
-                    APP.stores.push({
+                    const newStore = {
                         id: Date.now(),
                         name: name.trim(),
                         responsable: responsable.trim(),
                         stocks: {}
-                    });
+                    };
+                    
+                    console.log('Nouveau PDV:', newStore);
+                    APP.stores.push(newStore);
                     
                     save();
                     render();
-                    alert(`✅ PDV "${name}" ajouté!`);
+                    showToast('Succès', `PDV "${name}" ajouté !`, 'success');
                 };
             }
             
-            document.querySelectorAll('.btn-delete-store').forEach(btn => {
-                btn.onclick = () => {
-                    const id = parseInt(btn.dataset.id);
-                    const store = APP.stores.find(s => s.id === id);
-                    if (!store) return;
-                    
-                    if (confirm(`Supprimer "${store.name}" ?`)) {
-                        APP.stores = APP.stores.filter(s => s.id !== id);
-                        save();
-                        render();
-                        alert('✅ PDV supprimé');
-                    }
-                };
-            });
+            setTimeout(() => {
+                document.querySelectorAll('.btn-delete-store').forEach(btn => {
+                    btn.onclick = function() {
+                        const id = parseInt(this.dataset.id);
+                        const store = APP.stores.find(s => s.id === id);
+                        if (!store) return;
+                        
+                        showConfirm(
+                            'Supprimer le PDV',
+                            `Voulez-vous vraiment supprimer "${store.name}" ?`,
+                            () => {
+                                APP.stores = APP.stores.filter(s => s.id !== id);
+                                save();
+                                render();
+                                showToast('Succès', 'PDV supprimé', 'success');
+                            },
+                            '🗑️'
+                        );
+                    };
+                });
+            }, 100);
             
             const importFile = document.getElementById('import-stores');
             if (importFile) {
-                importFile.onchange = handleImportProducts; // Même fonction
+                importFile.onchange = handleImportProducts;
             }
         }
 
@@ -723,7 +945,11 @@
         }
 
         function attachMovementsEvents() {
+            console.log('=== ATTACH MOVEMENTS EVENTS ===');
+            
             const tbody = document.getElementById('movements-tbody');
+            if (!tbody) return;
+            
             tbody.innerHTML = APP.products.map(p => {
                 const totalStock = APP.stores.reduce((sum, s) => sum + (s.stocks[p.id] || 0), 0);
                 return `
@@ -738,47 +964,86 @@
             
             const selectAll = document.getElementById('select-all-movements');
             if (selectAll) {
-                selectAll.onchange = () => {
-                    document.querySelectorAll('.movement-check').forEach(cb => cb.checked = selectAll.checked);
+                selectAll.onchange = function() {
+                    document.querySelectorAll('.movement-check').forEach(cb => {
+                        cb.checked = this.checked;
+                    });
                 };
             }
             
             const reasonSelect = document.getElementById('movement-reason');
             if (reasonSelect) {
-                reasonSelect.onchange = () => {
-                    document.getElementById('client-group').style.display = 
-                        reasonSelect.value === 'Vente' ? 'block' : 'none';
+                reasonSelect.onchange = function() {
+                    const clientGroup = document.getElementById('client-group');
+                    if (clientGroup) {
+                        clientGroup.style.display = this.value === 'Vente' ? 'block' : 'none';
+                    }
                 };
             }
             
             const btnValidate = document.getElementById('btn-validate-movement');
             if (btnValidate) {
-                btnValidate.onclick = () => {
+                btnValidate.onclick = function() {
+                    console.log('=== VALIDATE MOVEMENT ===');
+                    
                     const type = document.getElementById('movement-type').value;
                     const reason = document.getElementById('movement-reason').value;
                     const clientName = document.getElementById('client-name').value;
                     
-                    if (!reason) return alert('⚠️ Sélectionnez une raison');
-                    if (reason === 'Vente' && !clientName.trim()) return alert('⚠️ Entrez le nom du client');
+                    console.log('Type:', type, 'Raison:', reason, 'Client:', clientName);
+                    
+                    if (!reason) {
+                        showToast('Attention', 'Veuillez sélectionner une raison', 'warning');
+                        return;
+                    }
+                    
+                    if (reason === 'Vente' && !clientName.trim()) {
+                        showToast('Attention', 'Veuillez entrer le nom du client', 'warning');
+                        return;
+                    }
                     
                     const checked = document.querySelectorAll('.movement-check:checked');
-                    if (checked.length === 0) return alert('⚠️ Sélectionnez des produits');
+                    console.log('Produits cochés:', checked.length);
+                    
+                    if (checked.length === 0) {
+                        showToast('Attention', 'Veuillez sélectionner au moins un produit', 'warning');
+                        return;
+                    }
                     
                     const toProcess = [];
+                    let hasError = false;
+                    
                     for (let cb of checked) {
                         const id = parseInt(cb.dataset.id);
                         const product = APP.products.find(p => p.id === id);
-                        const qty = parseInt(document.getElementById(`qty-${id}`).value) || 0;
+                        const qtyInput = document.getElementById(`qty-${id}`);
+                        const qty = parseInt(qtyInput.value) || 0;
                         
-                        if (qty <= 0) return alert(`⚠️ Quantité invalide pour ${product.realName}`);
+                        console.log(`Produit: ${product.realName}, Qty: ${qty}`);
                         
-                        const totalStock = APP.stores.reduce((sum, s) => sum + (s.stocks[p.id] || 0), 0);
+                        if (qty <= 0) {
+                            showToast('Erreur', `Quantité invalide pour ${product.realName}`, 'error');
+                            hasError = true;
+                            break;
+                        }
+                        
+                        const totalStock = APP.stores.reduce((sum, s) => sum + (s.stocks[product.id] || 0), 0);
+                        
                         if (type === 'out' && totalStock < qty) {
-                            return alert(`❌ Stock insuffisant pour ${product.realName}`);
+                            showToast('Erreur', `Stock insuffisant pour ${product.realName}`, 'error');
+                            hasError = true;
+                            break;
                         }
                         
                         toProcess.push({ product, qty });
                     }
+                    
+                    if (hasError) {
+                        console.log('Erreur détectée, arrêt');
+                        return;
+                    }
+                    
+                    console.log('Traitement de', toProcess.length, 'produits');
                     
                     toProcess.forEach(({ product, qty }) => {
                         APP.movements.push({
@@ -795,7 +1060,7 @@
                     
                     save();
                     render();
-                    alert(`✅ ${toProcess.length} mouvement(s) enregistré(s)`);
+                    showToast('Succès', `${toProcess.length} mouvement(s) enregistré(s)`, 'success');
                 };
             }
         }
@@ -847,40 +1112,49 @@
         }
 
         function attachReturnsEvents() {
-            document.querySelectorAll('.btn-return').forEach(btn => {
-                btn.onclick = () => {
-                    const id = parseFloat(btn.dataset.id);
-                    const sale = APP.movements.find(m => m.id === id);
-                    if (!sale) return;
-                    
-                    const qty = parseInt(prompt(`Quantité à retourner (max: ${sale.quantity}):`));
-                    if (!qty || qty <= 0 || qty > sale.quantity) return alert('❌ Quantité invalide');
-                    
-                    const reason = prompt('Raison du retour:');
-                    if (!reason || !reason.trim()) return alert('❌ Entrez une raison');
-                    
-                    APP.returns.push({
-                        id: Date.now(),
-                        saleId: sale.id,
-                        productId: sale.productId,
-                        productName: sale.productName,
-                        clientName: sale.clientName,
-                        quantity: qty,
-                        reason: reason.trim(),
-                        date: new Date().toISOString()
-                    });
-                    
-                    save();
-                    render();
-                    alert(`✅ Retour enregistré: ${qty} ${sale.productName}`);
-                };
-            });
+            setTimeout(() => {
+                document.querySelectorAll('.btn-return').forEach(btn => {
+                    btn.onclick = function() {
+                        const id = parseFloat(this.dataset.id);
+                        const sale = APP.movements.find(m => m.id === id);
+                        if (!sale) return;
+                        
+                        const qty = parseInt(prompt(`Quantité à retourner (max: ${sale.quantity}):`));
+                        if (!qty || qty <= 0 || qty > sale.quantity) {
+                            showToast('Erreur', 'Quantité invalide', 'error');
+                            return;
+                        }
+                        
+                        const reason = prompt('Raison du retour:');
+                        if (!reason || !reason.trim()) {
+                            showToast('Erreur', 'Veuillez entrer une raison', 'error');
+                            return;
+                        }
+                        
+                        APP.returns.push({
+                            id: Date.now(),
+                            saleId: sale.id,
+                            productId: sale.productId,
+                            productName: sale.productName,
+                            clientName: sale.clientName,
+                            quantity: qty,
+                            reason: reason.trim(),
+                            date: new Date().toISOString()
+                        });
+                        
+                        save();
+                        render();
+                        showToast('Succès', `Retour enregistré: ${qty} ${sale.productName}`, 'success');
+                    };
+                });
+            }, 100);
         }
 
         // === INIT ===
         renderNav();
         render();
         console.log('✅ Application prête');
+        showToast('Bienvenue', 'Application de gestion de stock chargée !', 'info');
     </script>
 </body>
 </html>
