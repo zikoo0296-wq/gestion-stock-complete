@@ -391,6 +391,8 @@
 
         function filterDashboardProducts(search) {
             const searchLower = search.toLowerCase().trim();
+            console.log('Recherche dashboard:', searchLower);
+            
             const filtered = products.filter(p => 
                 (p.quantity || 0) < 10 && (
                     p.name.toLowerCase().includes(searchLower) ||
@@ -399,7 +401,13 @@
                     (p.barcode || '').toLowerCase().includes(searchLower)
                 )
             );
-            document.getElementById('dashboard-alerts-body').innerHTML = renderDashboardAlerts(filtered);
+            
+            console.log('Résultats trouvés:', filtered.length);
+            
+            const tbody = document.getElementById('dashboard-alerts-body');
+            if (tbody) {
+                tbody.innerHTML = renderDashboardAlerts(filtered);
+            }
         }
 
         // ============ PRODUCTS PAGE ============
@@ -575,15 +583,25 @@
         }
 
         function filterProducts(search) {
+            const searchLower = search.toLowerCase().trim();
+            console.log('Recherche produits:', searchLower);
+            
             const filtered = products.filter(p => 
-                p.name.toLowerCase().includes(search.toLowerCase()) ||
-                p.reference.toLowerCase().includes(search.toLowerCase()) ||
-                (p.barcode || '').toLowerCase().includes(search.toLowerCase()) ||
-                (p.category || '').toLowerCase().includes(search.toLowerCase()) ||
-                (p.brand || '').toLowerCase().includes(search.toLowerCase())
+                p.name.toLowerCase().includes(searchLower) ||
+                p.reference.toLowerCase().includes(searchLower) ||
+                (p.barcode || '').toLowerCase().includes(searchLower) ||
+                (p.category || '').toLowerCase().includes(searchLower) ||
+                (p.brand || '').toLowerCase().includes(searchLower) ||
+                (p.conventionalName || '').toLowerCase().includes(searchLower)
             );
-            document.querySelector('#products-table tbody').innerHTML = renderProductRows(filtered);
-            attachProductCheckboxListeners();
+            
+            console.log('Résultats trouvés:', filtered.length);
+            
+            const tbody = document.querySelector('#products-table tbody');
+            if (tbody) {
+                tbody.innerHTML = renderProductRows(filtered);
+                attachProductCheckboxListeners();
+            }
         }
 
         // ============ PRODUCT MODAL ============
@@ -1047,6 +1065,8 @@
 
         function filterMovementProducts(search) {
             const searchLower = search.toLowerCase().trim();
+            console.log('Recherche mouvements:', searchLower);
+            
             const filtered = products.filter(p => 
                 p.name.toLowerCase().includes(searchLower) ||
                 p.reference.toLowerCase().includes(searchLower) ||
@@ -1054,16 +1074,23 @@
                 (p.barcode || '').toLowerCase().includes(searchLower)
             );
             
-            document.getElementById('movements-table-body').innerHTML = renderMovementRows(filtered);
+            console.log('Résultats trouvés:', filtered.length);
             
-            // Réattacher les event listeners après le filtrage
-            document.querySelectorAll('.product-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const input = document.querySelector(`.quantity-input[data-ref="${this.dataset.ref}"]`);
-                    input.disabled = !this.checked;
-                    if (!this.checked) input.value = '';
+            const tbody = document.getElementById('movements-table-body');
+            if (tbody) {
+                tbody.innerHTML = renderMovementRows(filtered);
+                
+                // Réattacher les event listeners après le filtrage
+                document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        const input = document.querySelector(`.quantity-input[data-ref="${this.dataset.ref}"]`);
+                        if (input) {
+                            input.disabled = !this.checked;
+                            if (!this.checked) input.value = '';
+                        }
+                    });
                 });
-            });
+            }
         }
 
         function toggleAllProducts(checked) {
@@ -1330,13 +1357,21 @@
 
         function filterPDVProducts(search) {
             const searchLower = search.toLowerCase().trim();
+            console.log('Recherche PDV:', searchLower);
+            
             const filtered = products.filter(p => 
                 p.name.toLowerCase().includes(searchLower) ||
                 p.reference.toLowerCase().includes(searchLower) ||
                 (p.conventionalName || '').toLowerCase().includes(searchLower) ||
                 (p.barcode || '').toLowerCase().includes(searchLower)
             );
-            document.getElementById('pdv-overview-body').innerHTML = renderPDVOverview(filtered);
+            
+            console.log('Résultats trouvés:', filtered.length);
+            
+            const tbody = document.getElementById('pdv-overview-body');
+            if (tbody) {
+                tbody.innerHTML = renderPDVOverview(filtered);
+            }
         }
 
         function openAddPDVModal() {
@@ -1459,10 +1494,52 @@
                     <div class="card-header">
                         <h3 class="card-title">📜 Historique des mouvements</h3>
                         <div class="btn-group">
-                            <input type="text" id="history-search" class="search-input" placeholder="🔍 Rechercher un produit ou référence..." onkeyup="filterHistory(this.value)">
                             <button class="btn btn-warning" onclick="exportHistory()">📥 Exporter</button>
                         </div>
                     </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; background: #f9fafb; padding: 1rem; border-radius: 8px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">🔍 Rechercher</label>
+                            <input type="text" id="history-search" class="search-input" placeholder="Produit ou référence..." onkeyup="filterHistory()" style="width: 100%;">
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">📅 Date</label>
+                            <input type="date" id="history-date" onchange="filterHistory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
+                        </div>
+
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">📆 Mois</label>
+                            <input type="month" id="history-month" onchange="filterHistory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
+                        </div>
+
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">📅 Année</label>
+                            <select id="history-year" onchange="filterHistory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
+                                <option value="">Toutes les années</option>
+                                ${getAvailableYears().map(year => `<option value="${year}">${year}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">🏪 Point de vente</label>
+                            <select id="history-pdv" onchange="filterHistory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
+                                <option value="">Tous les PDV</option>
+                                <option value="Stock Central">Stock Central</option>
+                                ${pointsVente.map(pdv => `<option value="${pdv.name}">${pdv.name}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <div style="display: flex; align-items: flex-end;">
+                            <button class="btn btn-secondary" onclick="resetHistoryFilters()" style="width: 100%;">🔄 Réinitialiser</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #eff6ff; border-radius: 8px; border-left: 4px solid #2563eb;">
+                        <strong id="history-count">${sortedMovements.length}</strong> mouvement(s) trouvé(s)
+                    </div>
+
                     <div class="table-container">
                         <table>
                             <thead>
@@ -1487,36 +1564,84 @@
             `;
         }
 
-        function renderHistoryRows(filteredMovements) {
-            if (filteredMovements.length === 0) {
-                return '<tr><td colspan="9" class="text-center">Aucun mouvement enregistré</td></tr>';
-            }
-
-            return filteredMovements.map(m => `
-                <tr>
-                    <td>${new Date(m.date).toLocaleString('fr-FR')}</td>
-                    <td><span style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; background: ${m.type === 'in' ? '#dcfce7' : m.type === 'transfer' ? '#dbeafe' : '#fee2e2'}; color: ${m.type === 'in' ? '#166534' : m.type === 'transfer' ? '#1e40af' : '#991b1b'};">${m.type === 'in' ? 'ENTRÉE' : m.type === 'transfer' ? 'TRANSFERT' : 'SORTIE'}</span></td>
-                    <td>${m.reason}</td>
-                    <td><strong>${m.product}</strong></td>
-                    <td>${m.reference}</td>
-                    <td><strong>${m.quantity}</strong></td>
-                    <td>${m.oldQuantity !== undefined ? m.oldQuantity : '-'}</td>
-                    <td>${m.newQuantity !== undefined ? m.newQuantity : '-'}</td>
-                    <td>${m.note || '-'}</td>
-                </tr>
-            `).join('');
+        function getAvailableYears() {
+            const years = new Set();
+            movements.forEach(m => {
+                const year = new Date(m.date).getFullYear();
+                years.add(year);
+            });
+            return Array.from(years).sort((a, b) => b - a);
         }
 
-        function filterHistory(search) {
-            const searchLower = search.toLowerCase().trim();
+        function resetHistoryFilters() {
+            document.getElementById('history-search').value = '';
+            document.getElementById('history-date').value = '';
+            document.getElementById('history-month').value = '';
+            document.getElementById('history-year').value = '';
+            document.getElementById('history-pdv').value = '';
+            filterHistory();
+        }
+
+        function filterHistory() {
+            const searchLower = document.getElementById('history-search').value.toLowerCase().trim();
+            const selectedDate = document.getElementById('history-date').value;
+            const selectedMonth = document.getElementById('history-month').value;
+            const selectedYear = document.getElementById('history-year').value;
+            const selectedPDV = document.getElementById('history-pdv').value;
+
+            console.log('=== FILTRES HISTORIQUE ===');
+            console.log('Recherche:', searchLower);
+            console.log('Date:', selectedDate);
+            console.log('Mois:', selectedMonth);
+            console.log('Année:', selectedYear);
+            console.log('PDV:', selectedPDV);
+
             const sortedMovements = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const filtered = sortedMovements.filter(m => 
-                m.product.toLowerCase().includes(searchLower) ||
-                m.reference.toLowerCase().includes(searchLower) ||
-                (m.reason || '').toLowerCase().includes(searchLower) ||
-                (m.note || '').toLowerCase().includes(searchLower)
-            );
-            document.getElementById('history-table-body').innerHTML = renderHistoryRows(filtered);
+            
+            const filtered = sortedMovements.filter(m => {
+                const movementDate = new Date(m.date);
+                const movementDateStr = movementDate.toISOString().split('T')[0];
+                const movementMonth = movementDate.toISOString().substring(0, 7);
+                const movementYear = movementDate.getFullYear().toString();
+
+                // Filtre par recherche texte
+                const matchesSearch = !searchLower || 
+                    m.product.toLowerCase().includes(searchLower) ||
+                    m.reference.toLowerCase().includes(searchLower) ||
+                    (m.reason || '').toLowerCase().includes(searchLower) ||
+                    (m.note || '').toLowerCase().includes(searchLower);
+
+                // Filtre par date exacte
+                const matchesDate = !selectedDate || movementDateStr === selectedDate;
+
+                // Filtre par mois
+                const matchesMonth = !selectedMonth || movementMonth === selectedMonth;
+
+                // Filtre par année
+                const matchesYear = !selectedYear || movementYear === selectedYear;
+
+                // Filtre par PDV (dans la raison ou les notes)
+                const matchesPDV = !selectedPDV || 
+                    (m.reason || '').includes(selectedPDV) ||
+                    (m.note || '').includes(selectedPDV) ||
+                    (m.pdvSource === selectedPDV) ||
+                    (m.pdvDest === selectedPDV);
+
+                return matchesSearch && matchesDate && matchesMonth && matchesYear && matchesPDV;
+            });
+
+            console.log('Résultats trouvés:', filtered.length);
+
+            const tbody = document.getElementById('history-table-body');
+            const countElement = document.getElementById('history-count');
+            
+            if (tbody) {
+                tbody.innerHTML = renderHistoryRows(filtered);
+            }
+            
+            if (countElement) {
+                countElement.textContent = filtered.length;
+            }
         }
 
         function exportHistory() {
@@ -1525,28 +1650,77 @@
                 return;
             }
 
-            const exportData = movements.map(m => ({
+            // Récupérer les filtres actifs
+            const searchLower = document.getElementById('history-search')?.value.toLowerCase().trim() || '';
+            const selectedDate = document.getElementById('history-date')?.value || '';
+            const selectedMonth = document.getElementById('history-month')?.value || '';
+            const selectedYear = document.getElementById('history-year')?.value || '';
+            const selectedPDV = document.getElementById('history-pdv')?.value || '';
+
+            const sortedMovements = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            // Appliquer les mêmes filtres que l'affichage
+            const filtered = sortedMovements.filter(m => {
+                const movementDate = new Date(m.date);
+                const movementDateStr = movementDate.toISOString().split('T')[0];
+                const movementMonth = movementDate.toISOString().substring(0, 7);
+                const movementYear = movementDate.getFullYear().toString();
+
+                const matchesSearch = !searchLower || 
+                    m.product.toLowerCase().includes(searchLower) ||
+                    m.reference.toLowerCase().includes(searchLower) ||
+                    (m.reason || '').toLowerCase().includes(searchLower) ||
+                    (m.note || '').toLowerCase().includes(searchLower);
+
+                const matchesDate = !selectedDate || movementDateStr === selectedDate;
+                const matchesMonth = !selectedMonth || movementMonth === selectedMonth;
+                const matchesYear = !selectedYear || movementYear === selectedYear;
+                const matchesPDV = !selectedPDV || 
+                    (m.reason || '').includes(selectedPDV) ||
+                    (m.note || '').includes(selectedPDV) ||
+                    (m.pdvSource === selectedPDV) ||
+                    (m.pdvDest === selectedPDV);
+
+                return matchesSearch && matchesDate && matchesMonth && matchesYear && matchesPDV;
+            });
+
+            if (filtered.length === 0) {
+                showToast('Aucun mouvement à exporter avec ces filtres', 'warning');
+                return;
+            }
+
+            const exportData = filtered.map(m => ({
                 'Date': new Date(m.date).toLocaleString('fr-FR'),
-                'Type': m.type === 'in' ? 'Entrée' : 'Sortie',
+                'Type': m.type === 'in' ? 'Entrée' : m.type === 'transfer' ? 'Transfert' : 'Sortie',
                 'Raison': m.reason,
                 'Produit': m.product,
                 'Référence': m.reference,
                 'Quantité': m.quantity,
-                'Stock Avant': m.oldQuantity,
-                'Stock Après': m.newQuantity,
+                'Stock Avant': m.oldQuantity !== undefined ? m.oldQuantity : '',
+                'Stock Après': m.newQuantity !== undefined ? m.newQuantity : '',
                 'Note': m.note || ''
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Historique');
-            XLSX.writeFile(wb, `historique_${new Date().toISOString().split('T')[0]}.xlsx`);
             
-            showToast('Export réussi', 'success');
+            const fileName = `historique_${selectedDate || selectedMonth || selectedYear || new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            
+            showToast(`${filtered.length} mouvement(s) exporté(s)`, 'success');
         }
 
         // ============ SAVE FUNCTIONS ============
         function saveProducts() {
+            // Avant de sauvegarder, recalculer tous les stocks totaux
+            products.forEach(product => {
+                const totalInAllPDV = pointsVente.reduce((sum, pdv) => {
+                    const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
+                    return sum + (pdvProduct?.quantity || 0);
+                }, 0);
+                product.quantity = totalInAllPDV;
+            });
             localStorage.setItem('products', JSON.stringify(products));
         }
 
@@ -1556,6 +1730,8 @@
 
         function savePDV() {
             localStorage.setItem('pointsVente', JSON.stringify(pointsVente));
+            // Après avoir sauvegardé les PDV, recalculer les stocks totaux
+            saveProducts();
         }
 
         // ============ INIT ============
