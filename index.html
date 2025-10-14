@@ -150,13 +150,22 @@
     <div id="import-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Importer Excel</h2>
+                <h2 class="modal-title">Importer depuis Excel</h2>
                 <button class="close-btn" onclick="closeImportModal()">×</button>
             </div>
             <div style="margin-bottom:1rem;">
-                <p style="color:#666;margin-bottom:1rem;">Format: IMAGE | Real Name | Conventional Name | Référence | Barcode | Repetition | Category | Brand | QTY [PDV]</p>
+                <p style="margin-bottom:0.5rem;"><strong>Format Excel attendu :</strong></p>
+                <p style="color:#666;font-size:0.9rem;line-height:1.6;margin-bottom:1rem;">
+                    IMAGE | Real Name | Conventional Name | Référence | Barcode | Repetition | Category | Brand | QTY [Nom PDV] | QTY [Nom PDV] | ...
+                </p>
+                <p style="color:#666;font-size:0.85rem;line-height:1.6;margin-bottom:1rem;">
+                    Les colonnes <strong>QTY XXX</strong> représentent le stock de chaque point de vente (ex: QTY Al Baraka, QTY Roche Noire, QTY ALGHAFLA)<br>
+                    Le système détectera automatiquement tous les points de vente et distribuera le stock selon chaque colonne QTY.
+                </p>
                 <input type="file" id="excel-file" accept=".xlsx,.xls" onchange="handleImport(event)">
-                <button class="btn btn-primary" onclick="document.getElementById('excel-file').click()">📁 Fichier</button>
+                <button class="btn btn-primary" onclick="document.getElementById('excel-file').click()" style="font-size:1rem;">
+                    📁 Choisir un fichier
+                </button>
             </div>
             <div id="import-progress" class="progress-container hidden">
                 <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
@@ -237,23 +246,47 @@
             document.getElementById('app-container').innerHTML = `
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">📦 Produits</h3>
+                        <h3 class="card-title">📦 Gestion des produits</h3>
                         <div class="btn-group">
-                            <input type="text" id="prod-search" class="search-input" placeholder="🔍">
-                            <button class="btn btn-primary" onclick="openProductModal()">➕</button>
-                            <button class="btn btn-success" onclick="openImportModal()">📤</button>
-                            <button class="btn btn-warning" onclick="exportProducts()">📥</button>
+                            <input type="text" id="prod-search" class="search-input" placeholder="🔍 Rechercher un produit...">
+                            <button class="btn btn-primary" onclick="openProductModal()">➕ Ajouter</button>
+                            <button class="btn btn-success" onclick="openImportModal()">📤 Importer Excel</button>
+                            <button class="btn btn-warning" onclick="exportProducts()">📥 Exporter Excel</button>
                             <button class="btn btn-danger" onclick="deleteSel()" id="del-btn" style="display:none;">🗑️</button>
                         </div>
                     </div>
-                    <div class="table-container"><table><thead><tr><th><input type="checkbox" onclick="toggleAll(this)"></th><th>Nom</th><th>Référence</th><th>Stock</th><th>Prix</th><th>Actions</th></tr></thead>
-                    <tbody id="prod-body">${renderProdRows(products)}</tbody></table></div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:50px;"><input type="checkbox" onclick="toggleAll(this)"></th>
+                                    <th style="width:80px;">Image</th>
+                                    <th>Nom</th>
+                                    <th>Référence</th>
+                                    <th>Code-barres</th>
+                                    <th>Catégorie</th>
+                                    <th>Marque</th>
+                                    <th style="width:100px;">Stock</th>
+                                    <th style="width:120px;">Prix</th>
+                                    <th style="width:150px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prod-body">${renderProdRows(products)}</tbody>
+                        </table>
+                    </div>
+                    ${products.length === 0 ? '<div style="text-align:center;padding:3rem;color:#666;font-size:1.1rem;">Aucun produit trouvé</div>' : ''}
                 </div>
             `;
 
             document.getElementById('prod-search').oninput = function() {
                 const s = this.value.toLowerCase();
-                const f = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s));
+                const f = products.filter(p => 
+                    p.name.toLowerCase().includes(s) || 
+                    p.reference.toLowerCase().includes(s) ||
+                    (p.barcode || '').toLowerCase().includes(s) ||
+                    (p.category || '').toLowerCase().includes(s) ||
+                    (p.brand || '').toLowerCase().includes(s)
+                );
                 document.getElementById('prod-body').innerHTML = renderProdRows(f);
                 attachCB();
             };
@@ -261,20 +294,51 @@
         }
 
         function renderProdRows(list) {
-            if (list.length === 0) return '<tr><td colspan="6" style="text-align:center;">Aucun produit</td></tr>';
-            return list.map(p => `
-                <tr>
-                    <td><input type="checkbox" class="cb" data-ref="${p.reference}"></td>
-                    <td><strong>${p.name}</strong></td>
-                    <td>${p.reference}</td>
-                    <td><strong>${p.quantity || 0}</strong></td>
-                    <td>${p.price} DH</td>
-                    <td>
-                        <button class="btn btn-primary" onclick='editP("${p.reference}")' style="padding:0.4rem 0.8rem;">✏️</button>
-                        <button class="btn btn-danger" onclick='delP("${p.reference}")' style="padding:0.4rem 0.8rem;">🗑️</button>
-                    </td>
-                </tr>
-            `).join('');
+            if (list.length === 0) return '<tr><td colspan="10" style="text-align:center;padding:2rem;color:#666;">Aucun produit trouvé</td></tr>';
+            
+            return list.map(p => {
+                let img = '📦';
+                if (p.image) {
+                    const match = p.image.match(/[?&]id=([^&]+)/);
+                    if (match) {
+                        const id = match[1];
+                        img = `<img src="https://drive.google.com/thumbnail?id=${id}&sz=w200" class="product-img" onclick="openImgModal('${p.image}')" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2224%22%3E📦%3C/text%3E%3C/svg%3E'" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
+                    }
+                }
+                
+                return `
+                    <tr>
+                        <td><input type="checkbox" class="cb" data-ref="${p.reference}"></td>
+                        <td>${img}</td>
+                        <td>
+                            <strong style="display:block;">${p.name}</strong>
+                            ${p.conventionalName ? `<small style="color:#666;">${p.conventionalName}</small>` : ''}
+                        </td>
+                        <td>${p.reference}</td>
+                        <td>${p.barcode || '-'}</td>
+                        <td>${p.category || '-'}</td>
+                        <td>${p.brand || '-'}</td>
+                        <td><strong style="font-size:1.1rem;">${p.quantity || 0}</strong></td>
+                        <td><strong>${p.price.toFixed(2)} DH</strong></td>
+                        <td>
+                            <button class="btn btn-primary" onclick='editP("${p.reference}")' style="padding:0.4rem 0.8rem;margin-right:0.3rem;">✏️ Modifier</button>
+                            <button class="btn btn-danger" onclick='delP("${p.reference}")' style="padding:0.4rem 0.8rem;">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openImgModal(src) {
+            const modal = document.getElementById('image-modal');
+            const img = document.getElementById('modal-image');
+            const match = src.match(/[?&]id=([^&]+)/);
+            if (match) {
+                img.src = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+            } else {
+                img.src = src;
+            }
+            modal.classList.add('active');
         }
 
         function attachCB() {
@@ -400,41 +464,71 @@
                 const wb = XLSX.read(data);
                 const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-                if (rows.length === 0) { showToast('Fichier vide', 'error'); closeImportModal(); return; }
+                if (rows.length === 0) { 
+                    showToast('Fichier vide', 'error'); 
+                    closeImportModal(); 
+                    return; 
+                }
 
-                txt.textContent = `${rows.length} lignes détectées. Traitement...`;
+                txt.textContent = `${rows.length} lignes détectées. Préparation...`;
+                await new Promise(r => setTimeout(r, 100));
 
                 const cols = Object.keys(rows[0]);
                 const pdvCols = cols.filter(c => c.startsWith('QTY '));
 
-                // Créer les PDV manquants
+                // Créer les PDV manquants AVANT le traitement
+                const newPDVs = [];
                 pdvCols.forEach(c => {
                     const n = c.replace('QTY ', '').trim();
-                    if (!pointsVente.find(p => p.name === n)) {
-                        pointsVente.push({ id: Date.now() + '_' + Math.random(), name: n, products: [] });
+                    if (!pointsVente.find(p => p.name === n) && !newPDVs.find(p => p.name === n)) {
+                        newPDVs.push({ 
+                            id: Date.now() + '_' + Math.random(), 
+                            name: n, 
+                            products: [] 
+                        });
                     }
                 });
+                pointsVente.push(...newPDVs);
 
-                // Traitement par lots de 100 pour meilleure performance
-                const batchSize = 100;
-                let imp = 0;
+                // Préparer les données en mémoire SANS toucher au DOM
+                const newProducts = [];
+                const pdvUpdates = {};
+                
+                // Initialiser les updates PDV
+                pdvCols.forEach(c => {
+                    const n = c.replace('QTY ', '').trim();
+                    pdvUpdates[n] = [];
+                });
+
+                txt.textContent = 'Traitement des données...';
+                
+                // TRAITEMENT PAR GROS LOTS (500 lignes)
+                const batchSize = 500;
+                let processed = 0;
                 
                 for (let i = 0; i < rows.length; i += batchSize) {
                     const batch = rows.slice(i, i + batchSize);
                     
-                    batch.forEach((r, idx) => {
-                        // Traiter l'image Google Drive
+                    // Traiter tout le lot d'un coup
+                    batch.forEach(r => {
+                        // Image Google Drive
                         let img = (r['IMAGE'] || '').trim();
                         if (img && img.includes('drive.google.com')) {
-                            const m = img.match(/\/file\/d\/([^/]+)/) || img.match(/[?&]id=([^&]+)/);
+                            const m = img.match(/\/d\/([^/]+)/) || img.match(/[?&]id=([^&]+)/);
                             if (m) img = `https://drive.google.com/uc?export=view&id=${m[1]}`;
                         }
 
-                        const ref = (r['Référence'] || '').trim() || `REF-${Date.now()}-${i + idx}`;
+                        const ref = (r['Référence'] || '').trim() || `REF-${Date.now()}-${processed}`;
                         
                         // Calculer quantité totale
                         let qty = 0;
-                        pdvCols.forEach(c => qty += parseInt(r[c]) || 0);
+                        const pdvQtys = {};
+                        pdvCols.forEach(c => {
+                            const q = parseInt(r[c]) || 0;
+                            qty += q;
+                            const pdvName = c.replace('QTY ', '').trim();
+                            pdvQtys[pdvName] = q;
+                        });
 
                         const prod = {
                             image: img,
@@ -448,51 +542,68 @@
                             quantity: qty
                         };
 
-                        // Ajouter ou mettre à jour le produit
-                        const idx2 = products.findIndex(p => p.reference === ref);
-                        if (idx2 >= 0) {
-                            const oldImg = products[idx2].image;
-                            products[idx2] = { ...products[idx2], ...prod, image: prod.image || oldImg };
-                        } else {
-                            products.push(prod);
-                        }
+                        newProducts.push(prod);
 
-                        // Distribuer dans les PDV
-                        pdvCols.forEach(c => {
-                            const pdvName = c.replace('QTY ', '').trim();
-                            const pdv = pointsVente.find(p => p.name === pdvName);
-                            const q = parseInt(r[c]) || 0;
-                            
-                            if (pdv) {
-                                if (!pdv.products) pdv.products = [];
-                                const pi = pdv.products.findIndex(p => p.reference === ref);
-                                
-                                if (pi >= 0) {
-                                    pdv.products[pi].quantity = q;
-                                } else if (q > 0) {
-                                    pdv.products.push({ reference: ref, quantity: q });
-                                }
+                        // Préparer les updates PDV
+                        Object.keys(pdvQtys).forEach(pdvName => {
+                            if (pdvQtys[pdvName] > 0) {
+                                pdvUpdates[pdvName].push({
+                                    reference: ref,
+                                    quantity: pdvQtys[pdvName]
+                                });
                             }
                         });
 
-                        imp++;
+                        processed++;
                     });
 
-                    // Mise à jour progressive
-                    const percent = Math.round((imp / rows.length) * 100);
+                    // Mise à jour UI uniquement toutes les 500 lignes
+                    const percent = Math.round((processed / rows.length) * 100);
                     fill.style.width = percent + '%';
-                    txt.textContent = `${imp}/${rows.length} (${percent}%)`;
+                    txt.textContent = `${processed}/${rows.length} (${percent}%)`;
                     
-                    // Pause pour ne pas bloquer l'interface
-                    await new Promise(r => setTimeout(r, 1));
+                    // Pause courte pour laisser respirer le navigateur
+                    await new Promise(r => setTimeout(r, 5));
                 }
 
-                // Sauvegarder
+                txt.textContent = 'Finalisation...';
+                await new Promise(r => setTimeout(r, 50));
+
+                // Mise à jour MASSIVE en une seule fois
+                newProducts.forEach(prod => {
+                    const idx = products.findIndex(p => p.reference === prod.reference);
+                    if (idx >= 0) {
+                        const oldImg = products[idx].image;
+                        products[idx] = { ...products[idx], ...prod, image: prod.image || oldImg };
+                    } else {
+                        products.push(prod);
+                    }
+                });
+
+                // Mise à jour des PDV en une seule fois
+                Object.keys(pdvUpdates).forEach(pdvName => {
+                    const pdv = pointsVente.find(p => p.name === pdvName);
+                    if (pdv) {
+                        if (!pdv.products) pdv.products = [];
+                        
+                        pdvUpdates[pdvName].forEach(update => {
+                            const pi = pdv.products.findIndex(p => p.reference === update.reference);
+                            if (pi >= 0) {
+                                pdv.products[pi].quantity = update.quantity;
+                            } else {
+                                pdv.products.push(update);
+                            }
+                        });
+                    }
+                });
+
+                // Sauvegarder UNE SEULE FOIS
                 save();
                 savePDV();
                 
-                txt.textContent = `✓ ${imp} produits importés avec succès !`;
-                showToast(`${imp} produits importés dans ${pdvCols.length} PDV`, 'success');
+                txt.textContent = `✓ ${processed} produits importés !`;
+                fill.style.width = '100%';
+                showToast(`${processed} produits importés dans ${pdvCols.length} PDV`, 'success');
                 
                 setTimeout(() => {
                     closeImportModal();
