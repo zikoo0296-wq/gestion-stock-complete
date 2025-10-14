@@ -345,12 +345,14 @@
                             <button class="btn btn-primary" onclick="openProductModal()">➕ Ajouter</button>
                             <button class="btn btn-success" onclick="openImportModal()">📤 Importer Excel</button>
                             <button class="btn btn-warning" onclick="exportProducts()">📥 Exporter Excel</button>
+                            <button class="btn btn-danger" onclick="deleteSelectedProducts()" id="delete-selected-btn" style="display: none;">🗑️ Supprimer sélection</button>
                         </div>
                     </div>
                     <div class="table-container">
                         <table id="products-table">
                             <thead>
                                 <tr>
+                                    <th><input type="checkbox" id="select-all-products" onchange="toggleAllProductsSelection(this.checked)"></th>
                                     <th>Image</th>
                                     <th>Nom</th>
                                     <th>Référence</th>
@@ -369,15 +371,72 @@
                     </div>
                 </div>
             `;
+
+            // Ajouter les listeners pour les checkboxes
+            attachProductCheckboxListeners();
+        }
+
+        function attachProductCheckboxListeners() {
+            document.querySelectorAll('.product-select-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', updateDeleteButton);
+            });
+        }
+
+        function toggleAllProductsSelection(checked) {
+            document.querySelectorAll('.product-select-checkbox').forEach(checkbox => {
+                checkbox.checked = checked;
+            });
+            updateDeleteButton();
+        }
+
+        function updateDeleteButton() {
+            const checkedCount = document.querySelectorAll('.product-select-checkbox:checked').length;
+            const deleteBtn = document.getElementById('delete-selected-btn');
+            if (checkedCount > 0) {
+                deleteBtn.style.display = 'inline-block';
+                deleteBtn.textContent = `🗑️ Supprimer (${checkedCount})`;
+            } else {
+                deleteBtn.style.display = 'none';
+            }
+        }
+
+        function deleteSelectedProducts() {
+            const checkedBoxes = document.querySelectorAll('.product-select-checkbox:checked');
+            const count = checkedBoxes.length;
+            
+            if (count === 0) {
+                showToast('Aucun produit sélectionné', 'warning');
+                return;
+            }
+
+            if (!confirm(`Voulez-vous vraiment supprimer ${count} produit(s) ?`)) {
+                return;
+            }
+
+            const refsToDelete = Array.from(checkedBoxes).map(cb => cb.dataset.ref);
+            products = products.filter(p => !refsToDelete.includes(p.reference));
+            
+            // Supprimer aussi des PDV
+            pointsVente.forEach(pdv => {
+                if (pdv.products) {
+                    pdv.products = pdv.products.filter(p => !refsToDelete.includes(p.reference));
+                }
+            });
+
+            saveProducts();
+            savePDV();
+            showToast(`${count} produit(s) supprimé(s) avec succès`, 'success');
+            renderProducts();
         }
 
         function renderProductRows(filteredProducts = products) {
             if (filteredProducts.length === 0) {
-                return '<tr><td colspan="9" class="text-center">Aucun produit trouvé</td></tr>';
+                return '<tr><td colspan="10" class="text-center">Aucun produit trouvé</td></tr>';
             }
             
             return filteredProducts.map(p => `
                 <tr>
+                    <td><input type="checkbox" class="product-select-checkbox" data-ref="${p.reference}"></td>
                     <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';" alt="${p.name}">` : '📦'}</td>
                     <td>
                         <strong>${p.name}</strong>
@@ -406,6 +465,7 @@
                 (p.brand || '').toLowerCase().includes(search.toLowerCase())
             );
             document.querySelector('#products-table tbody').innerHTML = renderProductRows(filtered);
+            attachProductCheckboxListeners();
         }
 
         // ============ PRODUCT MODAL ============
