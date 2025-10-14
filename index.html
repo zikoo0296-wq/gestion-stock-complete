@@ -500,10 +500,12 @@
 
                 // FILTRER lignes vides - vérifier plusieurs colonnes
                 const rows = allRows.filter(r => {
-                    const hasData = (r['Real Name'] && r['Real Name'].toString().trim()) || 
-                                   (r['Référence'] && r['Référence'].toString().trim()) ||
-                                   (r['IMAGE'] && r['IMAGE'].toString().trim() && r['IMAGE'].toString().includes('drive.google.com'));
-                    return hasData;
+                    // Une ligne est valide SI elle a une référence ET un nom
+                    const hasRef = r['Référence'] && r['Référence'].toString().trim() && 
+                                  !r['Référence'].toString().includes('drive.google.com');
+                    const hasName = r['Real Name'] && r['Real Name'].toString().trim() && 
+                                   !r['Real Name'].toString().includes('drive.google.com');
+                    return hasRef && hasName;
                 });
 
                 console.log(`Produits filtrés: ${rows.length}`);
@@ -580,14 +582,22 @@
                             name = r['Conventional Name'].toString().trim();
                         }
 
-                        // Référence
+                        // Référence - OBLIGATOIRE, ne jamais générer
                         let ref = '';
                         if (r['Référence'] && !r['Référence'].toString().includes('drive.google.com')) {
                             ref = r['Référence'].toString().trim();
                         }
                         
-                        if (!ref) ref = `REF_${Date.now()}_${i + idx}`;
-                        if (!name) name = ref; // Si pas de nom, utiliser la référence
+                        // Si pas de référence valide, IGNORER ce produit
+                        if (!ref) {
+                            console.warn(`Produit ignoré (pas de référence): ligne ${i + idx + 2}`);
+                            return;
+                        }
+                        
+                        if (!name) {
+                            console.warn(`Produit sans nom, utilise référence: ${ref}`);
+                            name = ref;
+                        }
 
                         // Calculer quantité totale
                         let totalQty = 0;
