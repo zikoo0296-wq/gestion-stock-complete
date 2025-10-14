@@ -460,9 +460,23 @@
             txt.textContent = 'Lecture du fichier...';
 
             try {
+                // Lecture du fichier
                 const data = await file.arrayBuffer();
-                const wb = XLSX.read(data);
-                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                
+                // Parser Excel avec options optimisées
+                const wb = XLSX.read(data, {
+                    cellFormula: false,  // Ignorer les formules
+                    cellHTML: false,
+                    cellNF: false,
+                    cellStyles: false,
+                    sheetStubs: false,
+                    dense: true  // Format dense pour performance
+                });
+                
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {
+                    raw: false,  // Convertir tout en texte
+                    defval: ''   // Valeur par défaut pour cellules vides
+                });
 
                 if (rows.length === 0) { 
                     showToast('Fichier vide', 'error'); 
@@ -470,126 +484,134 @@
                     return; 
                 }
 
-                txt.textContent = `${rows.length} lignes détectées. Préparation...`;
-                await new Promise(r => setTimeout(r, 100));
+                console.log(`Import: ${rows.length} lignes détectées`);
+                txt.textContent = `${rows.length} produits détectés. Traitement...`;
+                await new Promise(r => setTimeout(r, 200));
 
+                // Détecter les colonnes
                 const cols = Object.keys(rows[0]);
-                const pdvCols = cols.filter(c => c.startsWith('QTY '));
+                const pdvCols = cols.filter(c => c.toUpperCase().startsWith('QTY'));
+                console.log('Colonnes PDV:', pdvCols);
 
-                // Créer les PDV manquants AVANT le traitement
+                // Créer les PDV (une seule fois)
                 const newPDVs = [];
                 pdvCols.forEach(c => {
-                    const n = c.replace('QTY ', '').trim();
-                    if (!pointsVente.find(p => p.name === n) && !newPDVs.find(p => p.name === n)) {
+                    const n = c.replace(/^QTY\s*/i, '').trim();
+                    if (n && !pointsVente.find(p => p.name === n) && !newPDVs.find(p => p.name === n)) {
                         newPDVs.push({ 
-                            id: Date.now() + '_' + Math.random(), 
+                            id: `pdv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, 
                             name: n, 
                             products: [] 
                         });
                     }
                 });
                 pointsVente.push(...newPDVs);
+                console.log(`${newPDVs.length} nouveaux PDV créés`);
 
-                // Préparer les données en mémoire SANS toucher au DOM
+                // TRAITEMENT ULTRA-OPTIMISÉ
                 const newProducts = [];
-                const pdvUpdates = {};
+                const pdvMap = {};
                 
-                // Initialiser les updates PDV
+                // Initialiser la map des PDV
                 pdvCols.forEach(c => {
-                    const n = c.replace('QTY ', '').trim();
-                    pdvUpdates[n] = [];
+                    const n = c.replace(/^QTY\s*/i, '').trim();
+                    if (n) pdvMap[n] = [];
                 });
 
-                txt.textContent = 'Traitement des données...';
-                
-                // TRAITEMENT PAR GROS LOTS (500 lignes)
-                const batchSize = 500;
+                // Traiter par MEGA-lots de 1000
+                const batchSize = 1000;
                 let processed = 0;
                 
                 for (let i = 0; i < rows.length; i += batchSize) {
                     const batch = rows.slice(i, i + batchSize);
                     
-                    // Traiter tout le lot d'un coup
-                    batch.forEach(r => {
-                        // Image Google Drive
-                        let img = (r['IMAGE'] || '').trim();
+                    // Traitement synchrone du lot complet
+                    for (let j = 0; j < batch.length; j++) {
+                        const r = batch[j];
+                        
+                        // Nettoyer et traiter l'image
+                        let img = (r['IMAGE'] || '').toString().trim();
                         if (img && img.includes('drive.google.com')) {
                             const m = img.match(/\/d\/([^/]+)/) || img.match(/[?&]id=([^&]+)/);
                             if (m) img = `https://drive.google.com/uc?export=view&id=${m[1]}`;
                         }
 
-                        const ref = (r['Référence'] || '').trim() || `REF-${Date.now()}-${processed}`;
+                        const ref = (r['Référence'] || r['Reference'] || '').toString().trim() || `REF_${Date.now()}_${processed}`;
                         
-                        // Calculer quantité totale
-                        let qty = 0;
+                        // Calculer quantités
+                        let totalQty = 0;
                         const pdvQtys = {};
+                        
                         pdvCols.forEach(c => {
-                            const q = parseInt(r[c]) || 0;
-                            qty += q;
-                            const pdvName = c.replace('QTY ', '').trim();
-                            pdvQtys[pdvName] = q;
+                            const val = r[c];
+                            const q = val ? parseInt(val.toString().replace(/[^\d]/g, '')) || 0 : 0;
+                            totalQty += q;
+                            const n = c.replace(/^QTY\s*/i, '').trim();
+                            if (n) pdvQtys[n] = q;
                         });
 
                         const prod = {
                             image: img,
-                            name: (r['Real Name'] || '').trim(),
-                            conventionalName: (r['Conventional Name'] || '').trim(),
+                            name: (r['Real Name'] || r['Nom'] || '').toString().trim(),
+                            conventionalName: (r['Conventional Name'] || '').toString().trim(),
                             reference: ref,
-                            barcode: (r['Barcode'] || '').trim(),
-                            category: (r['Category'] || '').trim(),
-                            brand: (r['Brand'] || '').trim(),
-                            price: parseFloat(r['Selling Price'] || r['Prix']) || 0,
-                            quantity: qty
+                            barcode: (r['Barcode'] || '').toString().trim(),
+                            category: (r['Category'] || r['Catégorie'] || '').toString().trim(),
+                            brand: (r['Brand'] || r['Marque'] || '').toString().trim(),
+                            price: parseFloat((r['Selling Price'] || r['Prix'] || '0').toString().replace(/[^\d.]/g, '')) || 0,
+                            quantity: totalQty
                         };
 
-                        newProducts.push(prod);
-
-                        // Préparer les updates PDV
-                        Object.keys(pdvQtys).forEach(pdvName => {
-                            if (pdvQtys[pdvName] > 0) {
-                                pdvUpdates[pdvName].push({
-                                    reference: ref,
-                                    quantity: pdvQtys[pdvName]
-                                });
-                            }
-                        });
-
+                        newProducts.push({ ref, prod, pdvQtys });
                         processed++;
-                    });
+                    }
 
-                    // Mise à jour UI uniquement toutes les 500 lignes
+                    // Mise à jour UI toutes les 1000 lignes
                     const percent = Math.round((processed / rows.length) * 100);
                     fill.style.width = percent + '%';
                     txt.textContent = `${processed}/${rows.length} (${percent}%)`;
                     
-                    // Pause courte pour laisser respirer le navigateur
-                    await new Promise(r => setTimeout(r, 5));
+                    // Micro-pause toutes les 1000 lignes
+                    await new Promise(r => setTimeout(r, 10));
                 }
 
-                txt.textContent = 'Finalisation...';
-                await new Promise(r => setTimeout(r, 50));
+                txt.textContent = 'Enregistrement des données...';
+                await new Promise(r => setTimeout(r, 100));
 
-                // Mise à jour MASSIVE en une seule fois
-                newProducts.forEach(prod => {
-                    const idx = products.findIndex(p => p.reference === prod.reference);
-                    if (idx >= 0) {
-                        const oldImg = products[idx].image;
-                        products[idx] = { ...products[idx], ...prod, image: prod.image || oldImg };
+                // Mise à jour MASSIVE unique
+                const existingRefs = new Map(products.map(p => [p.reference, p]));
+                
+                newProducts.forEach(({ ref, prod, pdvQtys }) => {
+                    const existing = existingRefs.get(ref);
+                    if (existing) {
+                        const oldImg = existing.image;
+                        Object.assign(existing, prod);
+                        if (!prod.image && oldImg) existing.image = oldImg;
                     } else {
                         products.push(prod);
                     }
+
+                    // Préparer updates PDV
+                    Object.entries(pdvQtys).forEach(([pdvName, qty]) => {
+                        if (!pdvMap[pdvName]) pdvMap[pdvName] = [];
+                        if (qty > 0) {
+                            pdvMap[pdvName].push({ reference: ref, quantity: qty });
+                        }
+                    });
                 });
 
-                // Mise à jour des PDV en une seule fois
-                Object.keys(pdvUpdates).forEach(pdvName => {
+                // Appliquer les updates PDV en masse
+                Object.entries(pdvMap).forEach(([pdvName, updates]) => {
                     const pdv = pointsVente.find(p => p.name === pdvName);
                     if (pdv) {
                         if (!pdv.products) pdv.products = [];
                         
-                        pdvUpdates[pdvName].forEach(update => {
-                            const pi = pdv.products.findIndex(p => p.reference === update.reference);
-                            if (pi >= 0) {
-                                pdv.products[pi].quantity = update.quantity;
+                        const refMap = new Map(pdv.products.map(p => [p.reference, p]));
+                        
+                        updates.forEach(update => {
+                            const existing = refMap.get(update.reference);
+                            if (existing) {
+                                existing.quantity = update.quantity;
                             } else {
                                 pdv.products.push(update);
                             }
@@ -597,23 +619,26 @@
                     }
                 });
 
-                // Sauvegarder UNE SEULE FOIS
+                // Sauvegarder une seule fois
+                console.log('Sauvegarde...');
                 save();
                 savePDV();
                 
-                txt.textContent = `✓ ${processed} produits importés !`;
                 fill.style.width = '100%';
+                txt.textContent = `✓ ${processed} produits importés avec succès !`;
+                console.log(`Import terminé: ${processed} produits, ${newPDVs.length} PDV`);
                 showToast(`${processed} produits importés dans ${pdvCols.length} PDV`, 'success');
                 
                 setTimeout(() => {
                     closeImportModal();
                     if (currentPage === 'products') renderProducts();
-                }, 1500);
+                }, 2000);
 
             } catch (err) {
-                console.error('Erreur import:', err);
+                console.error('ERREUR IMPORT:', err);
+                txt.textContent = '❌ Erreur: ' + err.message;
                 showToast('Erreur: ' + err.message, 'error');
-                closeImportModal();
+                setTimeout(() => closeImportModal(), 3000);
             }
         }
 
