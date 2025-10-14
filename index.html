@@ -91,9 +91,9 @@
     <div class="container" id="app-container"></div>
     <div class="toast-container" id="toast-container"></div>
 
-    <div class="image-modal" id="image-modal" onclick="this.classList.remove('active')">
-        <div class="image-modal-close">✕</div>
-        <img id="modal-image" src="">
+    <div class="image-modal" id="image-modal" onclick="closeImageModal()">
+        <div class="image-modal-close" onclick="closeImageModal()">✕</div>
+        <img id="modal-image" src="" onclick="event.stopPropagation();">
     </div>
 
     <div id="product-modal" class="modal">
@@ -302,7 +302,7 @@
                     const match = p.image.match(/[?&]id=([^&]+)/);
                     if (match) {
                         const id = match[1];
-                        img = `<img src="https://drive.google.com/thumbnail?id=${id}&sz=w200" class="product-img" onclick="openImgModal('${p.image}')" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2224%22%3E📦%3C/text%3E%3C/svg%3E'" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
+                        img = `<img src="https://drive.google.com/thumbnail?id=${id}&sz=w200" class="product-img" onclick="openImgModal('${p.image}')" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2224%22%3E📦%3C/text%3E%3C/svg%3E';" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
                     }
                 }
                 
@@ -334,11 +334,28 @@
             const img = document.getElementById('modal-image');
             const match = src.match(/[?&]id=([^&]+)/);
             if (match) {
-                img.src = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                const id = match[1];
+                // Essayer d'abord le format uc?export=view
+                img.src = `https://drive.google.com/uc?export=view&id=${id}`;
+                
+                // Si échec, essayer thumbnail
+                img.onerror = function() {
+                    if (this.src.includes('uc?export=view')) {
+                        this.src = `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+                        this.onerror = function() {
+                            this.src = `https://lh3.googleusercontent.com/d/${id}=w1000`;
+                            this.onerror = null;
+                        };
+                    }
+                };
             } else {
                 img.src = src;
             }
             modal.classList.add('active');
+        }
+
+        function closeImageModal() {
+            document.getElementById('image-modal').classList.remove('active');
         }
 
         function attachCB() {
@@ -457,87 +474,78 @@
             
             pg.classList.remove('hidden');
             fill.style.width = '0%';
-            txt.textContent = 'Lecture du fichier...';
+            txt.textContent = 'Lecture...';
 
             try {
                 const data = await file.arrayBuffer();
                 
-                txt.textContent = 'Analyse...';
-                fill.style.width = '10%';
-                await new Promise(r => setTimeout(r, 50));
-                
-                // Parser Excel
+                // Parser Excel RAPIDE
                 const wb = XLSX.read(data, {
                     cellFormula: false,
                     cellHTML: false,
                     cellStyles: false,
-                    sheetStubs: false,  // Ignorer cellules vides
+                    sheetStubs: false,
                     dense: true
                 });
                 
                 const allRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {
                     raw: false,
                     defval: '',
-                    blankrows: false  // Ignorer lignes vides
+                    blankrows: false
                 });
 
-                // FILTRER LES LIGNES VIDES - C'EST LA CLÉ !
-                const rows = allRows.filter(r => {
-                    // Une ligne est valide si elle a au moins un nom ou une référence
-                    return (r['Real Name'] && r['Real Name'].trim()) || 
-                           (r['Référence'] && r['Référence'].trim());
-                });
-
-                console.log(`Lignes Excel: ${allRows.length}, Produits réels: ${rows.length}`);
+                // FILTRER lignes vides (Real Name OU Référence présent)
+                const rows = allRows.filter(r => 
+                    (r['Real Name'] && r['Real Name'].toString().trim()) || 
+                    (r['Référence'] && r['Référence'].toString().trim())
+                );
 
                 if (rows.length === 0) { 
-                    showToast('Aucun produit valide trouvé', 'error'); 
+                    showToast('Aucun produit', 'error'); 
                     closeImportModal(); 
                     return; 
                 }
 
-                txt.textContent = `${rows.length} produits détectés...`;
+                txt.textContent = `${rows.length} produits...`;
                 fill.style.width = '20%';
-                await new Promise(r => setTimeout(r, 50));
 
                 // Détecter colonnes PDV
                 const cols = Object.keys(rows[0]);
-                const pdvCols = cols.filter(c => c.toUpperCase().startsWith('QTY'));
+                const pdvCols = cols.filter(c => c.toUpperCase().includes('QTY'));
                 
                 // Créer PDV
-                const newPDVs = [];
                 pdvCols.forEach(c => {
-                    const n = c.replace(/^QTY\s*/i, '').trim();
+                    const n = c.replace(/QTY/gi, '').trim();
                     if (n && !pointsVente.find(p => p.name === n)) {
-                        newPDVs.push({ 
+                        pointsVente.push({ 
                             id: `pdv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, 
                             name: n, 
                             products: [] 
                         });
                     }
                 });
-                pointsVente.push(...newPDVs);
 
-                txt.textContent = 'Import en cours...';
+                txt.textContent = 'Import...';
                 fill.style.width = '30%';
-                await new Promise(r => setTimeout(r, 50));
 
-                // TRAITEMENT RAPIDE - Lots de 100
-                const batchSize = 100;
+                // TRAITEMENT ULTRA-RAPIDE - Lots de 500
+                const batchSize = 500;
                 const allData = [];
                 
                 for (let i = 0; i < rows.length; i += batchSize) {
                     const batch = rows.slice(i, i + batchSize);
                     
                     batch.forEach(r => {
+                        // Image Google Drive
                         let img = (r['IMAGE'] || '').toString().trim();
                         if (img && img.includes('drive.google.com')) {
-                            const m = img.match(/\/d\/([^/]+)/) || img.match(/[?&]id=([^&]+)/);
+                            const m = img.match(/\/d\/([^/\?]+)/) || img.match(/[?&]id=([^&]+)/);
                             if (m) img = `https://drive.google.com/uc?export=view&id=${m[1]}`;
                         }
 
                         const ref = (r['Référence'] || '').toString().trim() || `REF_${Date.now()}_${i}`;
                         
+                        // Calculer quantité totale
                         let totalQty = 0;
                         const pdvQtys = {};
                         
@@ -545,7 +553,7 @@
                             const val = r[c];
                             const q = val ? parseInt(val.toString().replace(/[^\d]/g, '')) || 0 : 0;
                             totalQty += q;
-                            const n = c.replace(/^QTY\s*/i, '').trim();
+                            const n = c.replace(/QTY/gi, '').trim();
                             if (n) pdvQtys[n] = q;
                         });
 
@@ -566,27 +574,23 @@
                         });
                     });
 
-                    // Progression
+                    // Progression tous les 500
                     const percent = 30 + Math.round(((i + batch.length) / rows.length) * 60);
                     fill.style.width = percent + '%';
-                    txt.textContent = `${i + batch.length}/${rows.length} produits...`;
+                    txt.textContent = `${i + batch.length}/${rows.length}`;
                     
-                    // Pause courte tous les 100 produits
-                    if ((i + batch.length) % 500 === 0) {
-                        await new Promise(r => setTimeout(r, 20));
-                    }
+                    // Micro-pause tous les 500
+                    await new Promise(r => setTimeout(r, 1));
                 }
 
-                txt.textContent = 'Enregistrement...';
+                txt.textContent = 'Sauvegarde...';
                 fill.style.width = '90%';
-                await new Promise(r => setTimeout(r, 50));
 
-                // Mise à jour des produits
+                // Mise à jour RAPIDE
                 allData.forEach(({ prod, ref, pdvQtys }) => {
                     const idx = products.findIndex(p => p.reference === ref);
                     if (idx >= 0) {
-                        const oldImg = products[idx].image;
-                        products[idx] = { ...prod, image: prod.image || oldImg };
+                        products[idx] = { ...prod, image: prod.image || products[idx].image };
                     } else {
                         products.push(prod);
                     }
@@ -597,11 +601,8 @@
                         if (pdv && qty > 0) {
                             if (!pdv.products) pdv.products = [];
                             const pi = pdv.products.findIndex(p => p.reference === ref);
-                            if (pi >= 0) {
-                                pdv.products[pi].quantity = qty;
-                            } else {
-                                pdv.products.push({ reference: ref, quantity: qty });
-                            }
+                            if (pi >= 0) pdv.products[pi].quantity = qty;
+                            else pdv.products.push({ reference: ref, quantity: qty });
                         }
                     });
                 });
@@ -610,13 +611,13 @@
                 savePDV();
                 
                 fill.style.width = '100%';
-                txt.textContent = `✓ ${allData.length} produits importés !`;
+                txt.textContent = `✓ ${allData.length} importés !`;
                 showToast(`${allData.length} produits importés`, 'success');
                 
                 setTimeout(() => {
                     closeImportModal();
                     if (currentPage === 'products') renderProducts();
-                }, 1500);
+                }, 1000);
 
             } catch (err) {
                 console.error('ERREUR:', err);
