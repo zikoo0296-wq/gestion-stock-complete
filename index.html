@@ -463,19 +463,26 @@
                 // Lecture du fichier
                 const data = await file.arrayBuffer();
                 
-                // Parser Excel avec options optimisées
+                txt.textContent = 'Analyse du fichier...';
+                fill.style.width = '10%';
+                
+                // Forcer un render
+                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 100)));
+                
+                // Parser Excel avec délai
                 const wb = XLSX.read(data, {
-                    cellFormula: false,  // Ignorer les formules
+                    cellFormula: false,
                     cellHTML: false,
-                    cellNF: false,
                     cellStyles: false,
-                    sheetStubs: false,
-                    dense: true  // Format dense pour performance
+                    dense: true
                 });
                 
+                fill.style.width = '20%';
+                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 100)));
+                
                 const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {
-                    raw: false,  // Convertir tout en texte
-                    defval: ''   // Valeur par défaut pour cellules vides
+                    raw: false,
+                    defval: ''
                 });
 
                 if (rows.length === 0) { 
@@ -484,20 +491,21 @@
                     return; 
                 }
 
-                console.log(`Import: ${rows.length} lignes détectées`);
-                txt.textContent = `${rows.length} produits détectés. Traitement...`;
-                await new Promise(r => setTimeout(r, 200));
+                console.log(`Import: ${rows.length} lignes`);
+                txt.textContent = `${rows.length} produits détectés...`;
+                fill.style.width = '30%';
+                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
 
-                // Détecter les colonnes
+                // Détecter colonnes
                 const cols = Object.keys(rows[0]);
                 const pdvCols = cols.filter(c => c.toUpperCase().startsWith('QTY'));
                 console.log('Colonnes PDV:', pdvCols);
 
-                // Créer les PDV (une seule fois)
+                // Créer PDV
                 const newPDVs = [];
                 pdvCols.forEach(c => {
                     const n = c.replace(/^QTY\s*/i, '').trim();
-                    if (n && !pointsVente.find(p => p.name === n) && !newPDVs.find(p => p.name === n)) {
+                    if (n && !pointsVente.find(p => p.name === n)) {
                         newPDVs.push({ 
                             id: `pdv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, 
                             name: n, 
@@ -506,39 +514,28 @@
                     }
                 });
                 pointsVente.push(...newPDVs);
-                console.log(`${newPDVs.length} nouveaux PDV créés`);
 
-                // TRAITEMENT ULTRA-OPTIMISÉ
-                const newProducts = [];
-                const pdvMap = {};
-                
-                // Initialiser la map des PDV
-                pdvCols.forEach(c => {
-                    const n = c.replace(/^QTY\s*/i, '').trim();
-                    if (n) pdvMap[n] = [];
-                });
+                fill.style.width = '35%';
+                txt.textContent = 'Traitement des produits...';
+                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 100)));
 
-                // Traiter par MEGA-lots de 1000
-                const batchSize = 1000;
-                let processed = 0;
+                // TRAITEMENT PAR PETITS LOTS AVEC PAUSES LONGUES
+                const batchSize = 50; // Petits lots
+                const allData = [];
                 
                 for (let i = 0; i < rows.length; i += batchSize) {
                     const batch = rows.slice(i, i + batchSize);
                     
-                    // Traitement synchrone du lot complet
-                    for (let j = 0; j < batch.length; j++) {
-                        const r = batch[j];
-                        
-                        // Nettoyer et traiter l'image
+                    // Traiter le lot
+                    batch.forEach(r => {
                         let img = (r['IMAGE'] || '').toString().trim();
                         if (img && img.includes('drive.google.com')) {
                             const m = img.match(/\/d\/([^/]+)/) || img.match(/[?&]id=([^&]+)/);
                             if (m) img = `https://drive.google.com/uc?export=view&id=${m[1]}`;
                         }
 
-                        const ref = (r['Référence'] || r['Reference'] || '').toString().trim() || `REF_${Date.now()}_${processed}`;
+                        const ref = (r['Référence'] || '').toString().trim() || `REF_${Date.now()}_${i}`;
                         
-                        // Calculer quantités
                         let totalQty = 0;
                         const pdvQtys = {};
                         
@@ -550,84 +547,74 @@
                             if (n) pdvQtys[n] = q;
                         });
 
-                        const prod = {
-                            image: img,
-                            name: (r['Real Name'] || r['Nom'] || '').toString().trim(),
-                            conventionalName: (r['Conventional Name'] || '').toString().trim(),
-                            reference: ref,
-                            barcode: (r['Barcode'] || '').toString().trim(),
-                            category: (r['Category'] || r['Catégorie'] || '').toString().trim(),
-                            brand: (r['Brand'] || r['Marque'] || '').toString().trim(),
-                            price: parseFloat((r['Selling Price'] || r['Prix'] || '0').toString().replace(/[^\d.]/g, '')) || 0,
-                            quantity: totalQty
-                        };
+                        allData.push({
+                            prod: {
+                                image: img,
+                                name: (r['Real Name'] || '').toString().trim(),
+                                conventionalName: (r['Conventional Name'] || '').toString().trim(),
+                                reference: ref,
+                                barcode: (r['Barcode'] || '').toString().trim(),
+                                category: (r['Category'] || '').toString().trim(),
+                                brand: (r['Brand'] || '').toString().trim(),
+                                price: parseFloat((r['Selling Price'] || '0').toString().replace(/[^\d.]/g, '')) || 0,
+                                quantity: totalQty
+                            },
+                            ref,
+                            pdvQtys
+                        });
+                    });
 
-                        newProducts.push({ ref, prod, pdvQtys });
-                        processed++;
-                    }
-
-                    // Mise à jour UI toutes les 1000 lignes
-                    const percent = Math.round((processed / rows.length) * 100);
+                    // Mise à jour progressive
+                    const baseProgress = 35;
+                    const progressRange = 55; // de 35% à 90%
+                    const percent = baseProgress + Math.round(((i + batch.length) / rows.length) * progressRange);
                     fill.style.width = percent + '%';
-                    txt.textContent = `${processed}/${rows.length} (${percent}%)`;
+                    txt.textContent = `${i + batch.length}/${rows.length} produits traités...`;
                     
-                    // Micro-pause toutes les 1000 lignes
-                    await new Promise(r => setTimeout(r, 10));
+                    // PAUSE IMPORTANTE pour laisser respirer le navigateur
+                    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 50)));
                 }
 
-                txt.textContent = 'Enregistrement des données...';
-                await new Promise(r => setTimeout(r, 100));
+                fill.style.width = '90%';
+                txt.textContent = 'Enregistrement...';
+                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
 
-                // Mise à jour MASSIVE unique
-                const existingRefs = new Map(products.map(p => [p.reference, p]));
-                
-                newProducts.forEach(({ ref, prod, pdvQtys }) => {
-                    const existing = existingRefs.get(ref);
-                    if (existing) {
-                        const oldImg = existing.image;
-                        Object.assign(existing, prod);
-                        if (!prod.image && oldImg) existing.image = oldImg;
+                // Mise à jour des produits
+                allData.forEach(({ prod, ref, pdvQtys }) => {
+                    const idx = products.findIndex(p => p.reference === ref);
+                    if (idx >= 0) {
+                        const oldImg = products[idx].image;
+                        products[idx] = { ...prod, image: prod.image || oldImg };
                     } else {
                         products.push(prod);
                     }
 
-                    // Préparer updates PDV
+                    // Mise à jour PDV
                     Object.entries(pdvQtys).forEach(([pdvName, qty]) => {
-                        if (!pdvMap[pdvName]) pdvMap[pdvName] = [];
-                        if (qty > 0) {
-                            pdvMap[pdvName].push({ reference: ref, quantity: qty });
+                        const pdv = pointsVente.find(p => p.name === pdvName);
+                        if (pdv && qty > 0) {
+                            if (!pdv.products) pdv.products = [];
+                            const pi = pdv.products.findIndex(p => p.reference === ref);
+                            if (pi >= 0) {
+                                pdv.products[pi].quantity = qty;
+                            } else {
+                                pdv.products.push({ reference: ref, quantity: qty });
+                            }
                         }
                     });
                 });
 
-                // Appliquer les updates PDV en masse
-                Object.entries(pdvMap).forEach(([pdvName, updates]) => {
-                    const pdv = pointsVente.find(p => p.name === pdvName);
-                    if (pdv) {
-                        if (!pdv.products) pdv.products = [];
-                        
-                        const refMap = new Map(pdv.products.map(p => [p.reference, p]));
-                        
-                        updates.forEach(update => {
-                            const existing = refMap.get(update.reference);
-                            if (existing) {
-                                existing.quantity = update.quantity;
-                            } else {
-                                pdv.products.push(update);
-                            }
-                        });
-                    }
-                });
+                fill.style.width = '95%';
+                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 100)));
 
-                // Sauvegarder une seule fois
-                console.log('Sauvegarde...');
+                // Sauvegarder
                 save();
                 savePDV();
                 
                 fill.style.width = '100%';
-                txt.textContent = `✓ ${processed} produits importés avec succès !`;
-                console.log(`Import terminé: ${processed} produits, ${newPDVs.length} PDV`);
-                showToast(`${processed} produits importés dans ${pdvCols.length} PDV`, 'success');
+                txt.textContent = `✓ ${allData.length} produits importés !`;
+                console.log(`Import terminé: ${allData.length} produits`);
+                showToast(`${allData.length} produits importés`, 'success');
                 
                 setTimeout(() => {
                     closeImportModal();
@@ -635,7 +622,7 @@
                 }, 2000);
 
             } catch (err) {
-                console.error('ERREUR IMPORT:', err);
+                console.error('ERREUR:', err);
                 txt.textContent = '❌ Erreur: ' + err.message;
                 showToast('Erreur: ' + err.message, 'error');
                 setTimeout(() => closeImportModal(), 3000);
