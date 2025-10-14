@@ -181,6 +181,16 @@
         let currentPage = 'dashboard';
         let editingProduct = null;
 
+        // Helper function pour trouver une colonne avec plusieurs variantes
+        function getColumnValue(row, possibleNames) {
+            for (let name of possibleNames) {
+                if (row[name] !== undefined && row[name] !== null) {
+                    return row[name].toString().trim();
+                }
+            }
+            return '';
+        }
+
         function showToast(msg, type = 'success') {
             const div = document.createElement('div');
             div.className = `toast ${type}`;
@@ -335,10 +345,8 @@
             const match = src.match(/[?&]id=([^&]+)/);
             if (match) {
                 const id = match[1];
-                // Essayer d'abord le format uc?export=view
                 img.src = `https://drive.google.com/uc?export=view&id=${id}`;
                 
-                // Si échec, essayer thumbnail
                 img.onerror = function() {
                     if (this.src.includes('uc?export=view')) {
                         this.src = `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
@@ -464,7 +472,6 @@
             document.getElementById('import-modal').classList.remove('active');
         }
 
-        // WEB WORKER pour import Excel (code inline)
         let importWorker = null;
 
         function createImportWorker() {
@@ -476,18 +483,15 @@
                     
                     if (action === 'parse') {
                         try {
-                            // Parser Excel
                             const wb = XLSX.read(data, { sheetStubs: false });
                             const allRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
                             
-                            // Filtrer lignes vides
                             const rows = allRows.filter(r => {
-                                const name = (r['Real Name'] || '').toString().trim();
-                                const ref = (r['Référence'] || '').toString().trim();
+                                const name = (r['Real Name'] || r['RealName'] || r['real name'] || '').toString().trim();
+                                const ref = (r['Référence'] || r['Reference'] || r['référence'] || r['reference'] || r['REF'] || r['ref'] || '').toString().trim();
                                 return name || ref;
                             });
                             
-                            // Envoyer résultat
                             self.postMessage({
                                 success: true,
                                 rows: rows,
@@ -519,16 +523,13 @@
             txt.textContent = 'Lecture du fichier...';
 
             try {
-                // Lire fichier
                 const data = await file.arrayBuffer();
                 fill.style.width = '20%';
                 txt.textContent = 'Analyse en cours...';
 
-                // Créer Worker
                 if (importWorker) importWorker.terminate();
                 importWorker = createImportWorker();
 
-                // Parser dans Worker
                 const result = await new Promise((resolve, reject) => {
                     importWorker.onmessage = (e) => resolve(e.data);
                     importWorker.onerror = (err) => reject(err);
@@ -542,6 +543,7 @@
                 const { rows, total, valid, columns } = result;
                 
                 console.log(`Total lignes: ${total} → Valides: ${valid}`);
+                console.log('Colonnes détectées:', columns);
                 
                 fill.style.width = '50%';
                 txt.textContent = `${valid} produits détectés...`;
@@ -552,11 +554,10 @@
                     return;
                 }
 
-                // Détecter colonnes PDV
-                const pdvCols = columns.filter(c => c.includes('QTY'));
+                const pdvCols = columns.filter(c => c.includes('QTY') || c.includes('qty'));
                 
                 pdvCols.forEach(c => {
-                    const n = c.replace(/QTY/gi, '').trim();
+                    const n = c.replace(/QTY|qty/gi, '').trim();
                     if (n && !pointsVente.find(p => p.name === n)) {
                         pointsVente.push({ 
                             id: `pdv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, 
@@ -569,7 +570,6 @@
                 fill.style.width = '60%';
                 txt.textContent = 'Import des produits...';
 
-                // Traiter par lots de 100 (rapide)
                 const batchSize = 100;
                 const newProds = [];
                 
@@ -577,10 +577,10 @@
                     const batch = rows.slice(i, i + batchSize);
                     
                     batch.forEach((r, idx) => {
-                        const name = (r['Real Name'] || '').toString().trim();
-                        const ref = (r['Référence'] || '').toString().trim();
+                        const name = getColumnValue(r, ['Real Name', 'RealName', 'real name', 'Nom', 'nom', 'Name', 'name']);
+                        const ref = getColumnValue(r, ['Référence', 'Reference', 'référence', 'reference', 'REF', 'ref', 'Ref']);
                         
-                        let img = (r['IMAGE'] || '').toString().trim();
+                        let img = getColumnValue(r, ['IMAGE', 'Image', 'image', 'IMG', 'img']);
                         if (img && img.includes('drive.google.com')) {
                             const m = img.match(/[?&]id=([^&]+)/);
                             if (m) img = `https://drive.google.com/uc?export=view&id=${m[1]}`;
@@ -591,7 +591,7 @@
                         pdvCols.forEach(c => {
                             const q = parseInt(r[c]) || 0;
                             qty += q;
-                            const n = c.replace(/QTY/gi, '').trim();
+                            const n = c.replace(/QTY|qty/gi, '').trim();
                             if (n) pdvData[n] = q;
                         });
 
@@ -599,19 +599,18 @@
                             prod: {
                                 image: img,
                                 name: name || ref || `Produit ${i + idx}`,
-                                conventionalName: (r['Conventional Name'] || '').toString().trim(),
+                                conventionalName: getColumnValue(r, ['Conventional Name', 'ConventionalName', 'conventional name', 'Nom commercial', 'nom commercial']),
                                 reference: ref || `REF_${Date.now()}_${i + idx}`,
-                                barcode: (r['Barcode'] || '').toString().trim(),
-                                category: (r['Category'] || '').toString().trim(),
-                                brand: (r['Brand'] || '').toString().trim(),
-                                price: parseFloat(r['Selling Price'] || r['Prix']) || 0,
+                                barcode: getColumnValue(r, ['Barcode', 'barcode', 'Code-barres', 'code-barres', 'Code barre', 'code barre']),
+                                category: getColumnValue(r, ['Category', 'category', 'Catégorie', 'catégorie', 'Cat']),
+                                brand: getColumnValue(r, ['Brand', 'brand', 'Marque', 'marque']),
+                                price: parseFloat(r['Selling Price'] || r['selling price'] || r['Prix'] || r['prix'] || r['Price'] || r['price'] || 0),
                                 quantity: qty
                             },
                             pdvData
                         });
                     });
                     
-                    // Mise à jour progressive
                     const percent = 60 + Math.round(((i + batch.length) / rows.length) * 30);
                     fill.style.width = percent + '%';
                 }
@@ -619,7 +618,6 @@
                 fill.style.width = '90%';
                 txt.textContent = 'Enregistrement...';
 
-                // Enregistrer
                 newProds.forEach(({ prod, pdvData }) => {
                     const idx = products.findIndex(p => p.reference === prod.reference);
                     if (idx >= 0) {
@@ -642,7 +640,6 @@
                 save();
                 savePDV();
                 
-                // Terminer Worker
                 if (importWorker) {
                     importWorker.terminate();
                     importWorker = null;
@@ -680,7 +677,8 @@
                     'Barcode': p.barcode || '',
                     'Repetition': p.quantity || 0,
                     'Category': p.category || '',
-                    'Brand': p.brand || ''
+                    'Brand': p.brand || '',
+                    'Selling Price': p.price || 0
                 };
                 pointsVente.forEach(pdv => {
                     const pp = pdv.products?.find(x => x.reference === p.reference);
