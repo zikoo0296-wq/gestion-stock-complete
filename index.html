@@ -313,7 +313,7 @@
                             <tbody>
                                 ${products.filter(p => (p.quantity || 0) < 10).map(p => `
                                     <tr>
-                                        <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22%3E?%3C/text%3E%3C/svg%3E'">` : '📦'}</td>
+                                        <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';" alt="${p.name}">` : '📦'}</td>
                                         <td><strong>${p.name}</strong><br><small>${p.conventionalName || ''}</small></td>
                                         <td>${p.reference}</td>
                                         <td><span style="color: #ef4444; font-weight: bold;">${p.quantity || 0}</span></td>
@@ -371,7 +371,7 @@
             
             return filteredProducts.map(p => `
                 <tr>
-                    <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22%3E?%3C/text%3E%3C/svg%3E'">` : '📦'}</td>
+                    <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';" alt="${p.name}">` : '📦'}</td>
                     <td>
                         <strong>${p.name}</strong>
                         ${p.conventionalName ? `<br><small style="color: #666;">${p.conventionalName}</small>` : ''}
@@ -504,12 +504,31 @@
                 const rows = XLSX.utils.sheet_to_json(sheet);
 
                 console.log(`Fichier lu: ${rows.length} lignes`);
+                console.log('Première ligne:', rows[0]);
                 
                 if (rows.length === 0) {
                     showToast('Le fichier est vide', 'error');
                     closeImportModal();
                     return;
                 }
+
+                // Détecter les colonnes de quantité PDV (QTY XXX)
+                const columns = Object.keys(rows[0]);
+                const pdvColumns = columns.filter(col => col.startsWith('QTY '));
+                console.log('Colonnes PDV détectées:', pdvColumns);
+
+                // Créer automatiquement les PDV s'ils n'existent pas
+                pdvColumns.forEach(col => {
+                    const pdvName = col.replace('QTY ', '').trim();
+                    if (!pointsVente.find(p => p.name === pdvName)) {
+                        pointsVente.push({
+                            id: Date.now().toString() + Math.random(),
+                            name: pdvName,
+                            products: []
+                        });
+                        console.log('PDV créé:', pdvName);
+                    }
+                });
 
                 progressText.textContent = `Traitement: 0/${rows.length} (0%)`;
                 
@@ -520,26 +539,51 @@
                     const batch = rows.slice(i, i + batchSize);
                     
                     for (const row of batch) {
-                        // Convertir l'URL Google Drive si nécessaire
+                        // Convertir l'URL Google Drive
                         let imageUrl = row['IMAGE'] || '';
-                        if (imageUrl && imageUrl.includes('/file/d/')) {
-                            const match = imageUrl.match(/\/file\/d\/([^/]+)/);
-                            if (match) {
-                                imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                        
+                        if (imageUrl) {
+                            // Supprimer les espaces
+                            imageUrl = imageUrl.trim();
+                            
+                            // Convertir les différents formats Google Drive
+                            if (imageUrl.includes('drive.google.com')) {
+                                // Format: https://drive.google.com/file/d/ID/view
+                                let match = imageUrl.match(/\/file\/d\/([^/]+)/);
+                                if (match) {
+                                    imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                                }
+                                // Format: https://drive.google.com/open?id=ID
+                                else {
+                                    match = imageUrl.match(/[?&]id=([^&]+)/);
+                                    if (match) {
+                                        imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                                    }
+                                }
                             }
                         }
+
+                        const reference = row['Référence'] || row['Reference'] || `REF-${Date.now()}-${i}`;
+
+                        // Calculer le stock total (somme de tous les PDV)
+                        let totalQuantity = 0;
+                        pdvColumns.forEach(col => {
+                            totalQuantity += parseInt(row[col]) || 0;
+                        });
 
                         const product = {
                             image: imageUrl,
                             name: row['Real Name'] || row['Nom'] || '',
                             conventionalName: row['Conventional Name'] || '',
-                            reference: row['Référence'] || row['Reference'] || `REF-${Date.now()}-${i}`,
+                            reference: reference,
                             barcode: row['Barcode'] || '',
                             category: row['Category'] || row['Catégorie'] || '',
                             brand: row['Brand'] || row['Marque'] || '',
                             price: parseFloat(row['Selling Price'] || row['Prix'] || 0),
-                            quantity: parseInt(row['Repetition'] || row['Quantité'] || 0)
+                            quantity: totalQuantity
                         };
+
+                        console.log(`Produit: ${product.name}, Image: ${product.image}`);
 
                         // Vérifier si le produit existe déjà
                         const existingIndex = products.findIndex(p => p.reference === product.reference);
@@ -548,6 +592,26 @@
                         } else {
                             products.push(product);
                         }
+
+                        // Ajouter les quantités dans chaque PDV
+                        pdvColumns.forEach(col => {
+                            const pdvName = col.replace('QTY ', '').trim();
+                            const pdv = pointsVente.find(p => p.name === pdvName);
+                            if (pdv) {
+                                const quantity = parseInt(row[col]) || 0;
+                                if (!pdv.products) pdv.products = [];
+                                
+                                const pdvProductIndex = pdv.products.findIndex(p => p.reference === reference);
+                                if (pdvProductIndex >= 0) {
+                                    pdv.products[pdvProductIndex].quantity = quantity;
+                                } else if (quantity > 0) {
+                                    pdv.products.push({
+                                        reference: reference,
+                                        quantity: quantity
+                                    });
+                                }
+                            }
+                        });
                         
                         imported++;
                     }
@@ -561,11 +625,13 @@
                     await new Promise(resolve => setTimeout(resolve, 10));
                 }
 
-                // Sauvegarder les produits
+                // Sauvegarder les produits ET les PDV
                 saveProducts();
+                savePDV();
                 
                 console.log(`Import terminé: ${imported} produits`);
-                showToast(`${imported} produit(s) importé(s) avec succès`, 'success');
+                console.log(`PDV créés/mis à jour: ${pdvColumns.length}`);
+                showToast(`${imported} produit(s) importé(s) avec succès dans ${pdvColumns.length} point(s) de vente`, 'success');
                 
                 // Fermer le modal après un court délai
                 setTimeout(() => {
@@ -616,32 +682,41 @@
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">🔄 Mouvements de stock</h3>
+                        <input type="text" class="search-input" id="movement-search" placeholder="🔍 Rechercher un produit ou référence..." onkeyup="filterMovementProducts(this.value)">
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-                        <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Type de mouvement</label>
-                            <select id="movement-type" class="form-group input" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px;">
-                                <option value="in">Entrée (+)</option>
-                                <option value="out">Sortie (-)</option>
-                            </select>
+                    <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border: 2px solid #e5e7eb;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Type de mouvement</label>
+                                <select id="movement-type" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                                    <option value="in">Entrée (+)</option>
+                                    <option value="out">Sortie (-)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Raison</label>
+                                <select id="movement-reason" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                                    <option value="Achat">Achat fournisseur</option>
+                                    <option value="Retour">Retour client</option>
+                                    <option value="Vente">Vente</option>
+                                    <option value="Transfert">Transfert</option>
+                                    <option value="Ajustement">Ajustement inventaire</option>
+                                    <option value="Casse">Casse/Perte</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Note (optionnel)</label>
+                                <input type="text" id="movement-note" placeholder="Commentaire..." style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                            </div>
                         </div>
-                        
-                        <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Raison</label>
-                            <select id="movement-reason" class="form-group input" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px;">
-                                <option value="Achat">Achat fournisseur</option>
-                                <option value="Retour">Retour client</option>
-                                <option value="Vente">Vente</option>
-                                <option value="Transfert">Transfert</option>
-                                <option value="Ajustement">Ajustement inventaire</option>
-                                <option value="Casse">Casse/Perte</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Note (optionnel)</label>
-                            <input type="text" id="movement-note" placeholder="Commentaire..." style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px;">
+
+                        <div style="text-align: center; margin-top: 1rem;">
+                            <button class="btn btn-success" onclick="validateMovement()" style="font-size: 1.1rem; padding: 0.9rem 3rem; font-weight: 600;">
+                                ✓ VALIDER LE MOUVEMENT
+                            </button>
                         </div>
                     </div>
 
@@ -657,28 +732,53 @@
                                     <th>Quantité</th>
                                 </tr>
                             </thead>
-                            <tbody id="movements-table">
-                                ${products.map(p => `
-                                    <tr>
-                                        <td><input type="checkbox" class="product-checkbox" data-ref="${p.reference}"></td>
-                                        <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22%3E?%3C/text%3E%3C/svg%3E'">` : '📦'}</td>
-                                        <td><strong>${p.name}</strong></td>
-                                        <td>${p.reference}</td>
-                                        <td><strong>${p.quantity || 0}</strong></td>
-                                        <td><input type="number" class="quantity-input" data-ref="${p.reference}" min="1" style="width: 100px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" disabled></td>
-                                    </tr>
-                                `).join('')}
+                            <tbody id="movements-table-body">
+                                ${renderMovementRows(products)}
                             </tbody>
                         </table>
-                    </div>
-                    
-                    <div style="margin-top: 1.5rem; text-align: right;">
-                        <button class="btn btn-success" onclick="validateMovement()" style="font-size: 1rem; padding: 0.8rem 2rem;">✓ Valider le mouvement</button>
                     </div>
                 </div>
             `;
 
             // Activer/désactiver les champs quantité selon la sélection
+            document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const input = document.querySelector(`.quantity-input[data-ref="${this.dataset.ref}"]`);
+                    input.disabled = !this.checked;
+                    if (!this.checked) input.value = '';
+                });
+            });
+        }
+
+        function renderMovementRows(productList) {
+            if (productList.length === 0) {
+                return '<tr><td colspan="6" class="text-center">Aucun produit trouvé</td></tr>';
+            }
+            
+            return productList.map(p => `
+                <tr>
+                    <td><input type="checkbox" class="product-checkbox" data-ref="${p.reference}"></td>
+                    <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';" alt="${p.name}">` : '📦'}</td>
+                    <td><strong>${p.name}</strong></td>
+                    <td>${p.reference}</td>
+                    <td><strong>${p.quantity || 0}</strong></td>
+                    <td><input type="number" class="quantity-input" data-ref="${p.reference}" min="1" style="width: 100px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" disabled></td>
+                </tr>
+            `).join('');
+        }
+
+        function filterMovementProducts(search) {
+            const searchLower = search.toLowerCase().trim();
+            const filtered = products.filter(p => 
+                p.name.toLowerCase().includes(searchLower) ||
+                p.reference.toLowerCase().includes(searchLower) ||
+                (p.conventionalName || '').toLowerCase().includes(searchLower) ||
+                (p.barcode || '').toLowerCase().includes(searchLower)
+            );
+            
+            document.getElementById('movements-table-body').innerHTML = renderMovementRows(filtered);
+            
+            // Réattacher les event listeners après le filtrage
             document.querySelectorAll('.product-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', function() {
                     const input = document.querySelector(`.quantity-input[data-ref="${this.dataset.ref}"]`);
