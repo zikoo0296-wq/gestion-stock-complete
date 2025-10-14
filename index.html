@@ -464,6 +464,48 @@
             document.getElementById('import-modal').classList.remove('active');
         }
 
+        // WEB WORKER pour import Excel (code inline)
+        let importWorker = null;
+
+        function createImportWorker() {
+            const workerCode = `
+                importScripts('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+                
+                self.onmessage = function(e) {
+                    const { data, action } = e.data;
+                    
+                    if (action === 'parse') {
+                        try {
+                            // Parser Excel
+                            const wb = XLSX.read(data, { sheetStubs: false });
+                            const allRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                            
+                            // Filtrer lignes vides
+                            const rows = allRows.filter(r => {
+                                const name = (r['Real Name'] || '').toString().trim();
+                                const ref = (r['Référence'] || '').toString().trim();
+                                return name || ref;
+                            });
+                            
+                            // Envoyer résultat
+                            self.postMessage({
+                                success: true,
+                                rows: rows,
+                                total: allRows.length,
+                                valid: rows.length,
+                                columns: rows.length > 0 ? Object.keys(rows[0]) : []
+                            });
+                        } catch (err) {
+                            self.postMessage({ success: false, error: err.message });
+                        }
+                    }
+                };
+            `;
+            
+            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            return new Worker(URL.createObjectURL(blob));
+        }
+
         async function handleImport(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -474,59 +516,67 @@
             
             pg.classList.remove('hidden');
             fill.style.width = '0%';
-            txt.textContent = 'Lecture...';
+            txt.textContent = 'Lecture du fichier...';
 
-            setTimeout(async () => {
-                try {
-                    const data = await file.arrayBuffer();
-                    fill.style.width = '10%';
-                    
-                    const wb = XLSX.read(data, { sheetStubs: false });
-                    const allRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+            try {
+                // Lire fichier
+                const data = await file.arrayBuffer();
+                fill.style.width = '20%';
+                txt.textContent = 'Analyse en cours...';
 
-                    fill.style.width = '30%';
-                    txt.textContent = 'Filtrage...';
+                // Créer Worker
+                if (importWorker) importWorker.terminate();
+                importWorker = createImportWorker();
 
-                    // FILTRER LES LIGNES VIDES
-                    const rows = allRows.filter(r => {
-                        const name = (r['Real Name'] || '').toString().trim();
-                        const ref = (r['Référence'] || '').toString().trim();
-                        return name || ref;
-                    });
+                // Parser dans Worker
+                const result = await new Promise((resolve, reject) => {
+                    importWorker.onmessage = (e) => resolve(e.data);
+                    importWorker.onerror = (err) => reject(err);
+                    importWorker.postMessage({ action: 'parse', data });
+                });
 
-                    console.log(`Total: ${allRows.length} → Valides: ${rows.length}`);
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
 
-                    if (rows.length === 0) { 
-                        showToast('Aucun produit', 'error'); 
-                        closeImportModal(); 
-                        return; 
+                const { rows, total, valid, columns } = result;
+                
+                console.log(`Total lignes: ${total} → Valides: ${valid}`);
+                
+                fill.style.width = '50%';
+                txt.textContent = `${valid} produits détectés...`;
+
+                if (valid === 0) {
+                    showToast('Aucun produit valide', 'error');
+                    closeImportModal();
+                    return;
+                }
+
+                // Détecter colonnes PDV
+                const pdvCols = columns.filter(c => c.includes('QTY'));
+                
+                pdvCols.forEach(c => {
+                    const n = c.replace(/QTY/gi, '').trim();
+                    if (n && !pointsVente.find(p => p.name === n)) {
+                        pointsVente.push({ 
+                            id: `pdv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, 
+                            name: n, 
+                            products: [] 
+                        });
                     }
+                });
 
-                    fill.style.width = '40%';
-                    txt.textContent = `${rows.length} produits`;
+                fill.style.width = '60%';
+                txt.textContent = 'Import des produits...';
 
-                    // Colonnes PDV
-                    const cols = Object.keys(rows[0]);
-                    const pdvCols = cols.filter(c => c.includes('QTY'));
+                // Traiter par lots de 100 (rapide)
+                const batchSize = 100;
+                const newProds = [];
+                
+                for (let i = 0; i < rows.length; i += batchSize) {
+                    const batch = rows.slice(i, i + batchSize);
                     
-                    pdvCols.forEach(c => {
-                        const n = c.replace(/QTY/gi, '').trim();
-                        if (n && !pointsVente.find(p => p.name === n)) {
-                            pointsVente.push({ 
-                                id: Date.now() + '_' + Math.random(), 
-                                name: n, 
-                                products: [] 
-                            });
-                        }
-                    });
-
-                    fill.style.width = '50%';
-                    txt.textContent = 'Import...';
-
-                    // IMPORT ULTRA-RAPIDE
-                    const newProds = [];
-                    
-                    rows.forEach((r, i) => {
+                    batch.forEach((r, idx) => {
                         const name = (r['Real Name'] || '').toString().trim();
                         const ref = (r['Référence'] || '').toString().trim();
                         
@@ -548,9 +598,9 @@
                         newProds.push({
                             prod: {
                                 image: img,
-                                name: name || ref || `Produit ${i}`,
+                                name: name || ref || `Produit ${i + idx}`,
                                 conventionalName: (r['Conventional Name'] || '').toString().trim(),
-                                reference: ref || `REF_${Date.now()}_${i}`,
+                                reference: ref || `REF_${Date.now()}_${i + idx}`,
                                 barcode: (r['Barcode'] || '').toString().trim(),
                                 category: (r['Category'] || '').toString().trim(),
                                 brand: (r['Brand'] || '').toString().trim(),
@@ -560,41 +610,62 @@
                             pdvData
                         });
                     });
-
-                    fill.style.width = '80%';
-                    txt.textContent = 'Enregistrement...';
-
-                    // Enregistrer tout
-                    newProds.forEach(({ prod, pdvData }) => {
-                        products.push(prod);
-                        
-                        Object.entries(pdvData).forEach(([pdvName, q]) => {
-                            const pdv = pointsVente.find(p => p.name === pdvName);
-                            if (pdv && q > 0) {
-                                if (!pdv.products) pdv.products = [];
-                                pdv.products.push({ reference: prod.reference, quantity: q });
-                            }
-                        });
-                    });
-
-                    save();
-                    savePDV();
                     
-                    fill.style.width = '100%';
-                    txt.textContent = `✓ ${newProds.length} importés !`;
-                    showToast(`${newProds.length} produits`, 'success');
-                    
-                    setTimeout(() => {
-                        closeImportModal();
-                        renderProducts();
-                    }, 1000);
-
-                } catch (err) {
-                    console.error(err);
-                    txt.textContent = '❌ Erreur';
-                    showToast('Erreur: ' + err.message, 'error');
+                    // Mise à jour progressive
+                    const percent = 60 + Math.round(((i + batch.length) / rows.length) * 30);
+                    fill.style.width = percent + '%';
                 }
-            }, 50);
+
+                fill.style.width = '90%';
+                txt.textContent = 'Enregistrement...';
+
+                // Enregistrer
+                newProds.forEach(({ prod, pdvData }) => {
+                    const idx = products.findIndex(p => p.reference === prod.reference);
+                    if (idx >= 0) {
+                        products[idx] = { ...prod, image: prod.image || products[idx].image };
+                    } else {
+                        products.push(prod);
+                    }
+                    
+                    Object.entries(pdvData).forEach(([pdvName, q]) => {
+                        const pdv = pointsVente.find(p => p.name === pdvName);
+                        if (pdv && q > 0) {
+                            if (!pdv.products) pdv.products = [];
+                            const pi = pdv.products.findIndex(p => p.reference === prod.reference);
+                            if (pi >= 0) pdv.products[pi].quantity = q;
+                            else pdv.products.push({ reference: prod.reference, quantity: q });
+                        }
+                    });
+                });
+
+                save();
+                savePDV();
+                
+                // Terminer Worker
+                if (importWorker) {
+                    importWorker.terminate();
+                    importWorker = null;
+                }
+                
+                fill.style.width = '100%';
+                txt.textContent = `✓ ${newProds.length} produits importés !`;
+                showToast(`${newProds.length} produits importés avec succès`, 'success');
+                
+                setTimeout(() => {
+                    closeImportModal();
+                    renderProducts();
+                }, 1000);
+
+            } catch (err) {
+                console.error('Erreur import:', err);
+                txt.textContent = '❌ Erreur: ' + err.message;
+                showToast('Erreur: ' + err.message, 'error');
+                if (importWorker) {
+                    importWorker.terminate();
+                    importWorker = null;
+                }
+            }
         }
 
         function exportProducts() {
