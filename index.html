@@ -183,11 +183,27 @@
 
         // Helper function pour trouver une colonne avec plusieurs variantes
         function getColumnValue(row, possibleNames) {
+            // D'abord essayer une correspondance exacte
             for (let name of possibleNames) {
                 if (row[name] !== undefined && row[name] !== null) {
-                    return row[name].toString().trim();
+                    const val = row[name].toString().trim();
+                    if (val) return val;
                 }
             }
+            
+            // Si pas trouvé, chercher avec normalisation (ignorer espaces et casse)
+            const keys = Object.keys(row);
+            for (let name of possibleNames) {
+                const normalized = name.toLowerCase().replace(/\s+/g, '');
+                for (let key of keys) {
+                    const keyNormalized = key.toLowerCase().replace(/\s+/g, '');
+                    if (keyNormalized === normalized && row[key] !== undefined && row[key] !== null) {
+                        const val = row[key].toString().trim();
+                        if (val) return val;
+                    }
+                }
+            }
+            
             return '';
         }
 
@@ -545,6 +561,20 @@
                 console.log(`Total lignes: ${total} → Valides: ${valid}`);
                 console.log('Colonnes détectées:', columns);
                 
+                // DIAGNOSTIC: Afficher les colonnes exactes du fichier
+                if (columns.length > 0) {
+                    console.log('📋 COLONNES EXCEL DÉTECTÉES:');
+                    columns.forEach((col, i) => {
+                        console.log(`  [${i}] "${col}" (${col.length} caractères)`);
+                    });
+                    
+                    // Afficher un exemple de ligne
+                    if (rows.length > 0) {
+                        console.log('📄 EXEMPLE DE LIGNE:');
+                        console.log(rows[0]);
+                    }
+                }
+                
                 fill.style.width = '50%';
                 txt.textContent = `${valid} produits détectés...`;
 
@@ -578,7 +608,18 @@
                     
                     batch.forEach((r, idx) => {
                         const name = getColumnValue(r, ['Real Name', 'RealName', 'real name', 'Nom', 'nom', 'Name', 'name']);
-                        const ref = getColumnValue(r, ['Référence', 'Reference', 'référence', 'reference', 'REF', 'ref', 'Ref']);
+                        const ref = getColumnValue(r, ['Référence', 'Reference', 'référence', 'reference', 'REF', 'ref', 'Ref', 'REFERENCE', 'RÉFÉRENCE']);
+                        
+                        // Si pas de référence trouvée, essayer de la chercher directement dans toutes les clés
+                        let finalRef = ref;
+                        if (!finalRef) {
+                            const keys = Object.keys(r);
+                            const refKey = keys.find(k => k.toLowerCase().includes('ref') || k.toLowerCase().includes('réf'));
+                            if (refKey) {
+                                finalRef = (r[refKey] || '').toString().trim();
+                                console.log(`⚠️ Référence trouvée dans colonne: "${refKey}" → valeur: "${finalRef}"`);
+                            }
+                        }
                         
                         let img = getColumnValue(r, ['IMAGE', 'Image', 'image', 'IMG', 'img']);
                         if (img && img.includes('drive.google.com')) {
@@ -598,9 +639,9 @@
                         newProds.push({
                             prod: {
                                 image: img,
-                                name: name || ref || `Produit ${i + idx}`,
+                                name: name || finalRef || `Produit ${i + idx}`,
                                 conventionalName: getColumnValue(r, ['Conventional Name', 'ConventionalName', 'conventional name', 'Nom commercial', 'nom commercial']),
-                                reference: ref || `REF_${Date.now()}_${i + idx}`,
+                                reference: finalRef || `REF_${Date.now()}_${i + idx}`,
                                 barcode: getColumnValue(r, ['Barcode', 'barcode', 'Code-barres', 'code-barres', 'Code barre', 'code barre']),
                                 category: getColumnValue(r, ['Category', 'category', 'Catégorie', 'catégorie', 'Cat']),
                                 brand: getColumnValue(r, ['Brand', 'brand', 'Marque', 'marque']),
