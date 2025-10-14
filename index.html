@@ -393,75 +393,114 @@
             
             pg.classList.remove('hidden');
             fill.style.width = '0%';
+            txt.textContent = 'Lecture du fichier...';
 
             try {
                 const data = await file.arrayBuffer();
                 const wb = XLSX.read(data);
                 const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-                if (rows.length === 0) { showToast('Vide', 'error'); closeImportModal(); return; }
+                if (rows.length === 0) { showToast('Fichier vide', 'error'); closeImportModal(); return; }
+
+                txt.textContent = `${rows.length} lignes détectées. Traitement...`;
 
                 const cols = Object.keys(rows[0]);
                 const pdvCols = cols.filter(c => c.startsWith('QTY '));
 
+                // Créer les PDV manquants
                 pdvCols.forEach(c => {
                     const n = c.replace('QTY ', '').trim();
-                    if (!pointsVente.find(p => p.name === n)) pointsVente.push({ id: Date.now() + Math.random(), name: n, products: [] });
+                    if (!pointsVente.find(p => p.name === n)) {
+                        pointsVente.push({ id: Date.now() + '_' + Math.random(), name: n, products: [] });
+                    }
                 });
 
+                // Traitement par lots de 100 pour meilleure performance
+                const batchSize = 100;
                 let imp = 0;
-                for (let i = 0; i < rows.length; i++) {
-                    const r = rows[i];
-                    let img = r['IMAGE'] || '';
-                    if (img && img.includes('drive.google.com')) {
-                        let m = img.match(/\/file\/d\/([^/]+)/) || img.match(/[?&]id=([^&]+)/);
-                        if (m) img = `https://drive.google.com/uc?export=view&id=${m[1]}`;
-                    }
-
-                    const ref = r['Référence'] || `REF-${Date.now()}-${i}`;
-                    let qty = 0;
-                    pdvCols.forEach(c => qty += parseInt(r[c]) || 0);
-                    if (pdvCols.length === 0) qty = parseInt(r['Repetition']) || 0;
-
-                    const prod = {
-                        image: img,
-                        name: r['Real Name'] || '',
-                        conventionalName: r['Conventional Name'] || '',
-                        reference: ref,
-                        barcode: r['Barcode'] || '',
-                        category: r['Category'] || '',
-                        brand: r['Brand'] || '',
-                        price: parseFloat(r['Selling Price']) || 0,
-                        quantity: qty
-                    };
-
-                    const idx = products.findIndex(p => p.reference === ref);
-                    if (idx >= 0) products[idx] = { ...products[idx], ...prod };
-                    else products.push(prod);
-
-                    pdvCols.forEach(c => {
-                        const n = c.replace('QTY ', '').trim();
-                        const pdv = pointsVente.find(p => p.name === n);
-                        const q = parseInt(r[c]) || 0;
-                        if (pdv) {
-                            if (!pdv.products) pdv.products = [];
-                            const pi = pdv.products.findIndex(p => p.reference === ref);
-                            if (pi >= 0) pdv.products[pi].quantity = q;
-                            else if (q > 0) pdv.products.push({ reference: ref, quantity: q });
+                
+                for (let i = 0; i < rows.length; i += batchSize) {
+                    const batch = rows.slice(i, i + batchSize);
+                    
+                    batch.forEach((r, idx) => {
+                        // Traiter l'image Google Drive
+                        let img = (r['IMAGE'] || '').trim();
+                        if (img && img.includes('drive.google.com')) {
+                            const m = img.match(/\/file\/d\/([^/]+)/) || img.match(/[?&]id=([^&]+)/);
+                            if (m) img = `https://drive.google.com/uc?export=view&id=${m[1]}`;
                         }
+
+                        const ref = (r['Référence'] || '').trim() || `REF-${Date.now()}-${i + idx}`;
+                        
+                        // Calculer quantité totale
+                        let qty = 0;
+                        pdvCols.forEach(c => qty += parseInt(r[c]) || 0);
+
+                        const prod = {
+                            image: img,
+                            name: (r['Real Name'] || '').trim(),
+                            conventionalName: (r['Conventional Name'] || '').trim(),
+                            reference: ref,
+                            barcode: (r['Barcode'] || '').trim(),
+                            category: (r['Category'] || '').trim(),
+                            brand: (r['Brand'] || '').trim(),
+                            price: parseFloat(r['Selling Price'] || r['Prix']) || 0,
+                            quantity: qty
+                        };
+
+                        // Ajouter ou mettre à jour le produit
+                        const idx2 = products.findIndex(p => p.reference === ref);
+                        if (idx2 >= 0) {
+                            const oldImg = products[idx2].image;
+                            products[idx2] = { ...products[idx2], ...prod, image: prod.image || oldImg };
+                        } else {
+                            products.push(prod);
+                        }
+
+                        // Distribuer dans les PDV
+                        pdvCols.forEach(c => {
+                            const pdvName = c.replace('QTY ', '').trim();
+                            const pdv = pointsVente.find(p => p.name === pdvName);
+                            const q = parseInt(r[c]) || 0;
+                            
+                            if (pdv) {
+                                if (!pdv.products) pdv.products = [];
+                                const pi = pdv.products.findIndex(p => p.reference === ref);
+                                
+                                if (pi >= 0) {
+                                    pdv.products[pi].quantity = q;
+                                } else if (q > 0) {
+                                    pdv.products.push({ reference: ref, quantity: q });
+                                }
+                            }
+                        });
+
+                        imp++;
                     });
 
-                    imp++;
-                    fill.style.width = Math.round((imp / rows.length) * 100) + '%';
-                    txt.textContent = `${imp}/${rows.length}`;
-                    if (i % 50 === 0) await new Promise(r => setTimeout(r, 10));
+                    // Mise à jour progressive
+                    const percent = Math.round((imp / rows.length) * 100);
+                    fill.style.width = percent + '%';
+                    txt.textContent = `${imp}/${rows.length} (${percent}%)`;
+                    
+                    // Pause pour ne pas bloquer l'interface
+                    await new Promise(r => setTimeout(r, 1));
                 }
 
+                // Sauvegarder
                 save();
                 savePDV();
-                showToast(`${imp} importés`);
-                setTimeout(() => { closeImportModal(); if (currentPage === 'products') renderProducts(); }, 1000);
+                
+                txt.textContent = `✓ ${imp} produits importés avec succès !`;
+                showToast(`${imp} produits importés dans ${pdvCols.length} PDV`, 'success');
+                
+                setTimeout(() => {
+                    closeImportModal();
+                    if (currentPage === 'products') renderProducts();
+                }, 1500);
+
             } catch (err) {
+                console.error('Erreur import:', err);
                 showToast('Erreur: ' + err.message, 'error');
                 closeImportModal();
             }
