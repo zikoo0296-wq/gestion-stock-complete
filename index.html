@@ -3,25 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion de Stock Professionnel</title>
+    <title>Gestion de Stock</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; color: #333; }
-        
-        /* Navbar */
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; }
         .navbar { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 1rem 2rem; }
-        .navbar-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .navbar-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
         .logo { font-size: 1.5rem; font-weight: bold; color: #2563eb; }
         .nav-buttons { display: flex; gap: 1rem; flex-wrap: wrap; }
-        .nav-btn { padding: 0.5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; background: transparent; color: #666; transition: all 0.3s; }
+        .nav-btn { padding: 0.5rem 1rem; border: none; border-radius: 8px; cursor: pointer; background: transparent; color: #666; transition: 0.3s; }
         .nav-btn:hover { background: #f0f0f0; }
         .nav-btn.active { background: #2563eb; color: white; }
-        
-        /* Container */
         .container { max-width: 1400px; margin: 2rem auto; padding: 0 2rem; }
-        
-        /* Stats */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
         .stat-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid; }
         .stat-card.blue { border-color: #2563eb; }
@@ -29,99 +23,58 @@
         .stat-card.red { border-color: #ef4444; }
         .stat-card.orange { border-color: #f59e0b; }
         .stat-label { color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; }
-        .stat-value { font-size: 2rem; font-weight: bold; color: #333; }
-        
-        /* Cards */
+        .stat-value { font-size: 2rem; font-weight: bold; }
         .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 2rem; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
         .card-title { font-size: 1.3rem; font-weight: bold; }
-        
-        /* Buttons */
         .btn-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-        .btn { padding: 0.7rem 1.2rem; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.3s; }
+        .btn { padding: 0.7rem 1.2rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; transition: 0.3s; }
         .btn-primary { background: #2563eb; color: white; }
         .btn-primary:hover { background: #1d4ed8; }
         .btn-success { background: #10b981; color: white; }
-        .btn-success:hover { background: #059669; }
-        .btn-danger { background: #ef4444; color: white; }
-        .btn-danger:hover { background: #dc2626; }
         .btn-warning { background: #f59e0b; color: white; }
-        .btn-warning:hover { background: #d97706; }
+        .btn-danger { background: #ef4444; color: white; }
         .btn-secondary { background: #6b7280; color: white; }
-        .btn-secondary:hover { background: #4b5563; }
-        
-        /* Search */
-        .search-input { flex: 1; max-width: 400px; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; }
-        
-        /* Table */
+        .search-input { flex: 1; max-width: 400px; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; }
         .table-container { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
-        th { background: #f9fafb; font-weight: 600; color: #374151; }
+        th { background: #f9fafb; font-weight: 600; }
         tr:hover { background: #f9fafb; }
-        .product-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: transform 0.2s; }
-        .product-img:hover { transform: scale(1.1); }
-        
-        /* Modal */
-        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .product-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; cursor: pointer; }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
         .modal-content { background: white; padding: 2rem; border-radius: 12px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .modal-header { display: flex; justify-content: space-between; margin-bottom: 1.5rem; }
         .modal-title { font-size: 1.5rem; font-weight: bold; }
-        .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; }
-        
-        /* Form */
+        .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
         .form-group { margin-bottom: 1.5rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; }
-        .form-group textarea { resize: vertical; min-height: 80px; }
-        
-        /* Progress */
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; }
         .progress-container { margin: 1rem 0; }
         .progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
         .progress-fill { height: 100%; background: #2563eb; transition: width 0.3s; }
-        .progress-text { margin-top: 0.5rem; text-align: center; color: #666; font-size: 0.9rem; }
-        
-        /* Toast */
+        .progress-text { margin-top: 0.5rem; text-align: center; color: #666; }
         .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
-        .toast { background: white; padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 1rem; min-width: 300px; animation: slideIn 0.3s; }
+        .toast { background: white; padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 0.5rem; display: flex; gap: 1rem; animation: slideIn 0.3s; }
         .toast.success { border-left: 4px solid #10b981; }
         .toast.error { border-left: 4px solid #ef4444; }
         .toast.warning { border-left: 4px solid #f59e0b; }
         @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        
-        /* Image Modal */
-        .image-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        .image-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; }
         .image-modal.active { display: flex; }
-        .image-modal img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        .image-modal img { max-width: 90%; max-height: 90%; border-radius: 8px; }
         .image-modal-close { position: absolute; top: 20px; right: 20px; color: white; font-size: 2rem; cursor: pointer; background: rgba(0,0,0,0.5); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
-        
-        /* Utilities */
         .hidden { display: none; }
-        .text-center { text-align: center; }
-        .mb-2 { margin-bottom: 1rem; }
         input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
         input[type="file"] { display: none; }
-        
-        /* Points de Vente */
         .pdv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-        .pdv-card { background: #f9fafb; padding: 1rem; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: all 0.3s; }
-        .pdv-card.active { border-color: #2563eb; background: #eff6ff; }
+        .pdv-card { background: #f9fafb; padding: 1rem; border-radius: 8px; border: 2px solid transparent; }
         .pdv-card:hover { border-color: #93c5fd; }
         .pdv-name { font-weight: 600; margin-bottom: 0.5rem; }
-        .pdv-stock { color: #666; font-size: 0.9rem; }
-        
-        @media (max-width: 768px) {
-            .navbar-content { flex-direction: column; }
-            .card-header { flex-direction: column; align-items: stretch; }
-            .search-input { max-width: 100%; }
-            .btn-group { flex-direction: column; }
-            .stats-grid { grid-template-columns: 1fr; }
-        }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
     <div class="navbar">
         <div class="navbar-content">
             <div class="logo">📦 Stock Pro</div>
@@ -135,19 +88,14 @@
         </div>
     </div>
 
-    <!-- Container -->
     <div class="container" id="app-container"></div>
-
-    <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- Image Modal -->
-    <div class="image-modal" id="image-modal">
-        <div class="image-modal-close" onclick="closeImageModal()">✕</div>
-        <img id="modal-image" src="" alt="">
+    <div class="image-modal" id="image-modal" onclick="this.classList.remove('active')">
+        <div class="image-modal-close">✕</div>
+        <img id="modal-image" src="">
     </div>
 
-    <!-- Product Modal -->
     <div id="product-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -156,11 +104,11 @@
             </div>
             <form id="product-form">
                 <div class="form-group">
-                    <label>Image URL (Google Drive)</label>
-                    <input type="text" id="product-image" placeholder="https://drive.google.com/uc?export=view&id=...">
+                    <label>Image URL</label>
+                    <input type="text" id="product-image">
                 </div>
                 <div class="form-group">
-                    <label>Nom du produit *</label>
+                    <label>Nom *</label>
                     <input type="text" id="product-name" required>
                 </div>
                 <div class="form-group">
@@ -184,11 +132,11 @@
                     <input type="text" id="product-brand">
                 </div>
                 <div class="form-group">
-                    <label>Prix de vente *</label>
+                    <label>Prix *</label>
                     <input type="number" step="0.01" id="product-price" required>
                 </div>
                 <div class="form-group">
-                    <label>Quantité initiale</label>
+                    <label>Quantité</label>
                     <input type="number" id="product-quantity" value="0">
                 </div>
                 <div class="btn-group">
@@ -199,533 +147,204 @@
         </div>
     </div>
 
-    <!-- Import Modal -->
     <div id="import-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Importer depuis Excel</h2>
+                <h2 class="modal-title">Importer Excel</h2>
                 <button class="close-btn" onclick="closeImportModal()">×</button>
             </div>
-            <div class="mb-2">
-                <p style="color: #666; margin-bottom: 1rem;">
-                    <strong>Format Excel attendu :</strong><br>
-                    IMAGE | Real Name | Conventional Name | Référence | Barcode | Repetition | Category | Brand | QTY [Nom PDV] | QTY [Nom PDV] | ...<br>
-                    <small style="color: #999;">
-                        Les colonnes <strong>QTY XXX</strong> représentent le stock de chaque point de vente (ex: QTY Al Baraka, QTY Roche Noire, QTY ALGHAFLA)<br>
-                        Le système détectera automatiquement tous les points de vente et distribuera le stock selon chaque colonne QTY.
-                    </small>
-                    <br><br>
-                    <strong style="color: #ef4444;">⚠️ Important pour les images :</strong><br>
-                    <small style="color: #666;">
-                        • Les images Google Drive doivent être <strong>partagées publiquement</strong><br>
-                        • Format accepté : <code style="background: #f3f4f6; padding: 2px 6px; border-radius: 4px;">https://drive.google.com/uc?export=view&id=XXX</code><br>
-                        • Testez vos images en ouvrant l'URL dans un navigateur incognito<br>
-                        • Si "Accès refusé", partagez le fichier en mode "Tous les utilisateurs disposant du lien"
-                    </small>
-                </p>
+            <div style="margin-bottom:1rem;">
+                <p style="color:#666;margin-bottom:1rem;">Format: IMAGE | Real Name | Conventional Name | Référence | Barcode | Repetition | Category | Brand | QTY [PDV]</p>
                 <input type="file" id="excel-file" accept=".xlsx,.xls" onchange="handleImport(event)">
-                <button class="btn btn-primary" onclick="document.getElementById('excel-file').click()">📁 Choisir un fichier</button>
+                <button class="btn btn-primary" onclick="document.getElementById('excel-file').click()">📁 Fichier</button>
             </div>
             <div id="import-progress" class="progress-container hidden">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill"></div>
-                </div>
-                <div class="progress-text" id="progress-text">Import en cours...</div>
+                <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+                <div class="progress-text" id="progress-text"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // ============ DATA STORAGE ============
         let products = JSON.parse(localStorage.getItem('products')) || [];
         let movements = JSON.parse(localStorage.getItem('movements')) || [];
         let pointsVente = JSON.parse(localStorage.getItem('pointsVente')) || [];
         let currentPage = 'dashboard';
         let editingProduct = null;
 
-        // ============ TOAST NOTIFICATIONS ============
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerHTML = `
-                <div>${type === 'success' ? '✓' : type === 'error' ? '✗' : '⚠'}</div>
-                <div>${message}</div>
-            `;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+        function showToast(msg, type = 'success') {
+            const div = document.createElement('div');
+            div.className = `toast ${type}`;
+            div.innerHTML = `<div>${type === 'success' ? '✓' : '✗'}</div><div>${msg}</div>`;
+            document.getElementById('toast-container').appendChild(div);
+            setTimeout(() => div.remove(), 3000);
         }
 
-        // ============ IMAGE MODAL ============
-        function openImageModal(src) {
-            const modal = document.getElementById('image-modal');
-            const modalImg = document.getElementById('modal-image');
-            
-            // Extraire l'ID du fichier pour essayer plusieurs formats
-            const idMatch = src.match(/[?&]id=([^&]+)/);
-            const fileId = idMatch ? idMatch[1] : null;
-            
-            if (fileId) {
-                // Essayer le format haute résolution
-                modalImg.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
-                modalImg.onerror = function() {
-                    // Si échec, essayer le format thumbnail plus large
-                    if (this.src.includes('uc?export=view')) {
-                        this.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
-                    } else if (this.src.includes('thumbnail')) {
-                        this.src = `https://lh3.googleusercontent.com/d/${fileId}=w800`;
-                    } else {
-                        console.error('Impossible de charger l\'image en haute résolution');
-                        this.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22%3E%3Crect fill=%22%23333%22 width=%22400%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2224%22%3EImage non disponible%3C/text%3E%3C/svg%3E';
-                    }
-                };
-            } else {
-                modalImg.src = src;
-            }
-            
-            modal.classList.add('active');
-        }
-
-        function closeImageModal() {
-            document.getElementById('image-modal').classList.remove('active');
-        }
-
-        // ============ NAVIGATION ============
         function showPage(page) {
-            console.log('=== CHANGEMENT DE PAGE ===');
-            console.log('Ancienne page:', currentPage);
-            console.log('Nouvelle page:', page);
-            
             currentPage = page;
-            
-            // Mettre à jour les boutons de navigation
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            // Trouver et activer le bon bouton
-            const buttons = document.querySelectorAll('.nav-btn');
-            buttons.forEach(btn => {
-                const btnText = btn.textContent.toLowerCase();
-                if ((page === 'dashboard' && btnText.includes('dashboard')) ||
-                    (page === 'products' && btnText.includes('produits')) ||
-                    (page === 'movements' && btnText.includes('mouvements')) ||
-                    (page === 'pointsVente' && btnText.includes('points')) ||
-                    (page === 'history' && btnText.includes('historique'))) {
-                    btn.classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                if ((page === 'dashboard' && b.textContent.includes('Dashboard')) ||
+                    (page === 'products' && b.textContent.includes('Produits')) ||
+                    (page === 'movements' && b.textContent.includes('Mouvements')) ||
+                    (page === 'pointsVente' && b.textContent.includes('Points')) ||
+                    (page === 'history' && b.textContent.includes('Historique'))) {
+                    b.classList.add('active');
                 }
             });
             
-            // Appeler la fonction de rendu appropriée
-            try {
-                const pages = {
-                    'dashboard': renderDashboard,
-                    'products': renderProducts,
-                    'movements': renderMovements,
-                    'pointsVente': renderPointsVente,
-                    'history': renderHistory
-                };
-                
-                if (pages[page]) {
-                    console.log('Rendu de la page:', page);
-                    pages[page]();
-                } else {
-                    console.error('Page inconnue:', page);
-                }
-            } catch (error) {
-                console.error('Erreur lors du rendu de la page:', error);
-                showToast('Erreur lors du chargement de la page', 'error');
-            }
+            if (page === 'dashboard') renderDashboard();
+            else if (page === 'products') renderProducts();
+            else if (page === 'movements') renderMovements();
+            else if (page === 'pointsVente') renderPointsVente();
+            else if (page === 'history') renderHistory();
         }
 
-        // ============ DASHBOARD ============
         function renderDashboard() {
-            console.log('=== RENDU DASHBOARD ===');
-            
-            const totalProducts = products.length;
-            const totalStock = products.reduce((sum, p) => sum + (p.quantity || 0), 0);
-            const lowStock = products.filter(p => (p.quantity || 0) < 10).length;
-            const totalValue = products.reduce((sum, p) => sum + ((p.quantity || 0) * (p.price || 0)), 0);
+            const total = products.length;
+            const stock = products.reduce((s, p) => s + (p.quantity || 0), 0);
+            const low = products.filter(p => (p.quantity || 0) < 10).length;
+            const value = products.reduce((s, p) => s + ((p.quantity || 0) * (p.price || 0)), 0);
 
-            const container = document.getElementById('app-container');
-            if (!container) {
-                console.error('Container app-container introuvable');
-                return;
-            }
-
-            container.innerHTML = `
-                <div class="card" style="margin-bottom: 1.5rem;">
-                    <input type="text" id="dashboard-search" class="search-input" placeholder="🔍 Rechercher un produit ou référence..." style="width: 100%;">
-                </div>
-
+            document.getElementById('app-container').innerHTML = `
+                <div class="card"><input type="text" id="dash-search" class="search-input" placeholder="🔍 Rechercher..." style="width:100%;"></div>
                 <div class="stats-grid">
-                    <div class="stat-card blue">
-                        <div class="stat-label">Total Produits</div>
-                        <div class="stat-value">${totalProducts}</div>
-                    </div>
-                    <div class="stat-card green">
-                        <div class="stat-label">Stock Total</div>
-                        <div class="stat-value">${totalStock}</div>
-                    </div>
-                    <div class="stat-card red">
-                        <div class="stat-label">Alertes Stock Faible</div>
-                        <div class="stat-value">${lowStock}</div>
-                    </div>
-                    <div class="stat-card orange">
-                        <div class="stat-label">Valeur Totale</div>
-                        <div class="stat-value">${totalValue.toFixed(2)} DH</div>
-                    </div>
+                    <div class="stat-card blue"><div class="stat-label">Produits</div><div class="stat-value">${total}</div></div>
+                    <div class="stat-card green"><div class="stat-label">Stock Total</div><div class="stat-value">${stock}</div></div>
+                    <div class="stat-card red"><div class="stat-label">Alertes</div><div class="stat-value">${low}</div></div>
+                    <div class="stat-card orange"><div class="stat-label">Valeur</div><div class="stat-value">${value.toFixed(2)} DH</div></div>
                 </div>
-
                 <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">🚨 Produits en alerte</h3>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Image</th>
-                                    <th>Produit</th>
-                                    <th>Référence</th>
-                                    <th>Stock</th>
-                                    <th>Prix</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dashboard-alerts-body">
-                                ${renderDashboardAlerts(products.filter(p => (p.quantity || 0) < 10))}
-                            </tbody>
-                        </table>
-                    </div>
+                    <div class="card-header"><h3 class="card-title">🚨 Alertes (stock < 10)</h3></div>
+                    <div class="table-container"><table><thead><tr><th>Produit</th><th>Référence</th><th>Stock</th></tr></thead>
+                    <tbody id="dash-body">${renderAlerts(products.filter(p => (p.quantity || 0) < 10))}</tbody></table></div>
                 </div>
             `;
 
-            // Attacher l'événement de recherche
-            const searchInput = document.getElementById('dashboard-search');
-            if (searchInput) {
-                searchInput.addEventListener('keyup', function() {
-                    filterDashboardProducts(this.value);
-                });
-                console.log('✓ Événement de recherche attaché au dashboard');
-            }
+            document.getElementById('dash-search').oninput = function() {
+                const s = this.value.toLowerCase();
+                const f = products.filter(p => (p.quantity || 0) < 10 && (p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s)));
+                document.getElementById('dash-body').innerHTML = renderAlerts(f);
+            };
         }
 
-        function renderDashboardAlerts(filteredProducts) {
-            if (filteredProducts.length === 0) {
-                return '<tr><td colspan="5" class="text-center">Aucun produit en alerte</td></tr>';
-            }
-
-            return filteredProducts.map(p => {
-                const imageSrc = p.image || '';
-                const idMatch = imageSrc.match(/[?&]id=([^&]+)/);
-                const fileId = idMatch ? idMatch[1] : null;
-                let imageHtml = '📦';
-                
-                if (fileId) {
-                    imageHtml = `<img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w200" class="product-img" onclick="openImageModal('https://drive.google.com/uc?export=view&id=${fileId}')" onerror="if (this.src.includes('thumbnail')) { this.src='https://drive.google.com/uc?export=view&id=${fileId}'; } else { this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E'; }" alt="${p.name}">`;
-                }
-                
-                return `
-                    <tr>
-                        <td>${imageHtml}</td>
-                        <td><strong>${p.name}</strong><br><small>${p.conventionalName || ''}</small></td>
-                        <td>${p.reference}</td>
-                        <td><span style="color: #ef4444; font-weight: bold;">${p.quantity || 0}</span></td>
-                        <td>${p.price} DH</td>
-                    </tr>
-                `;
-            }).join('');
+        function renderAlerts(list) {
+            if (list.length === 0) return '<tr><td colspan="3" style="text-align:center;">Aucune alerte</td></tr>';
+            return list.map(p => `<tr><td><strong>${p.name}</strong></td><td>${p.reference}</td><td style="color:#ef4444;"><strong>${p.quantity || 0}</strong></td></tr>`).join('');
         }
 
-        function filterDashboardProducts(search) {
-            const searchLower = search.toLowerCase().trim();
-            console.log('Recherche dashboard:', searchLower);
-            
-            const filtered = products.filter(p => 
-                (p.quantity || 0) < 10 && (
-                    p.name.toLowerCase().includes(searchLower) ||
-                    p.reference.toLowerCase().includes(searchLower) ||
-                    (p.conventionalName || '').toLowerCase().includes(searchLower) ||
-                    (p.barcode || '').toLowerCase().includes(searchLower)
-                )
-            );
-            
-            console.log('Résultats trouvés:', filtered.length);
-            
-            const tbody = document.getElementById('dashboard-alerts-body');
-            if (tbody) {
-                tbody.innerHTML = renderDashboardAlerts(filtered);
-            }
-        }
-
-        // ============ PRODUCTS PAGE ============
         function renderProducts() {
-            console.log('=== RENDU PRODUITS ===');
-            
-            const container = document.getElementById('app-container');
-            if (!container) {
-                console.error('Container app-container introuvable');
-                return;
-            }
-
-            container.innerHTML = `
+            document.getElementById('app-container').innerHTML = `
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">📦 Gestion des produits</h3>
+                        <h3 class="card-title">📦 Produits</h3>
                         <div class="btn-group">
-                            <input type="text" id="products-search" class="search-input" placeholder="🔍 Rechercher un produit...">
-                            <button class="btn btn-primary" onclick="openProductModal()">➕ Ajouter</button>
-                            <button class="btn btn-success" onclick="openImportModal()">📤 Importer Excel</button>
-                            <button class="btn btn-warning" onclick="exportProducts()">📥 Exporter Excel</button>
-                            <button class="btn btn-danger" onclick="deleteSelectedProducts()" id="delete-selected-btn" style="display: none;">🗑️ Supprimer sélection</button>
+                            <input type="text" id="prod-search" class="search-input" placeholder="🔍">
+                            <button class="btn btn-primary" onclick="openProductModal()">➕</button>
+                            <button class="btn btn-success" onclick="openImportModal()">📤</button>
+                            <button class="btn btn-warning" onclick="exportProducts()">📥</button>
+                            <button class="btn btn-danger" onclick="deleteSel()" id="del-btn" style="display:none;">🗑️</button>
                         </div>
                     </div>
-                    <div class="table-container">
-                        <table id="products-table">
-                            <thead>
-                                <tr>
-                                    <th><input type="checkbox" id="select-all-products" onchange="toggleAllProductsSelection(this.checked)"></th>
-                                    <th>Image</th>
-                                    <th>Nom</th>
-                                    <th>Référence</th>
-                                    <th>Code-barres</th>
-                                    <th>Catégorie</th>
-                                    <th>Marque</th>
-                                    <th>Stock</th>
-                                    <th>Prix</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${renderProductRows()}
-                            </tbody>
-                        </table>
-                    </div>
+                    <div class="table-container"><table><thead><tr><th><input type="checkbox" onclick="toggleAll(this)"></th><th>Nom</th><th>Référence</th><th>Stock</th><th>Prix</th><th>Actions</th></tr></thead>
+                    <tbody id="prod-body">${renderProdRows(products)}</tbody></table></div>
                 </div>
             `;
 
-            // Attacher les listeners
-            attachProductCheckboxListeners();
-            
-            const searchInput = document.getElementById('products-search');
-            if (searchInput) {
-                searchInput.addEventListener('keyup', function() {
-                    filterProducts(this.value);
-                });
-                console.log('✓ Événement de recherche attaché aux produits');
-            }
+            document.getElementById('prod-search').oninput = function() {
+                const s = this.value.toLowerCase();
+                const f = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s));
+                document.getElementById('prod-body').innerHTML = renderProdRows(f);
+                attachCB();
+            };
+            attachCB();
         }
 
-        function attachProductCheckboxListeners() {
-            document.querySelectorAll('.product-select-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', updateDeleteButton);
+        function renderProdRows(list) {
+            if (list.length === 0) return '<tr><td colspan="6" style="text-align:center;">Aucun produit</td></tr>';
+            return list.map(p => `
+                <tr>
+                    <td><input type="checkbox" class="cb" data-ref="${p.reference}"></td>
+                    <td><strong>${p.name}</strong></td>
+                    <td>${p.reference}</td>
+                    <td><strong>${p.quantity || 0}</strong></td>
+                    <td>${p.price} DH</td>
+                    <td>
+                        <button class="btn btn-primary" onclick='editP("${p.reference}")' style="padding:0.4rem 0.8rem;">✏️</button>
+                        <button class="btn btn-danger" onclick='delP("${p.reference}")' style="padding:0.4rem 0.8rem;">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function attachCB() {
+            document.querySelectorAll('.cb').forEach(c => {
+                c.onchange = function() {
+                    const n = document.querySelectorAll('.cb:checked').length;
+                    const b = document.getElementById('del-btn');
+                    b.style.display = n > 0 ? 'inline-block' : 'none';
+                    b.textContent = `🗑️ (${n})`;
+                };
             });
         }
 
-        function toggleAllProductsSelection(checked) {
-            document.querySelectorAll('.product-select-checkbox').forEach(checkbox => {
-                checkbox.checked = checked;
-            });
-            updateDeleteButton();
+        function toggleAll(c) {
+            document.querySelectorAll('.cb').forEach(x => x.checked = c.checked);
+            document.querySelectorAll('.cb')[0]?.dispatchEvent(new Event('change'));
         }
 
-        function updateDeleteButton() {
-            const checkedCount = document.querySelectorAll('.product-select-checkbox:checked').length;
-            const deleteBtn = document.getElementById('delete-selected-btn');
-            if (checkedCount > 0) {
-                deleteBtn.style.display = 'inline-block';
-                deleteBtn.textContent = `🗑️ Supprimer (${checkedCount})`;
-            } else {
-                deleteBtn.style.display = 'none';
-            }
-        }
-
-        function deleteSelectedProducts() {
-            const checkedBoxes = document.querySelectorAll('.product-select-checkbox:checked');
-            const count = checkedBoxes.length;
-            
-            console.log('Suppression de produits sélectionnés:', count);
-            
-            if (count === 0) {
-                showToast('Aucun produit sélectionné', 'warning');
-                return;
-            }
-
-            if (!confirm(`Voulez-vous vraiment supprimer ${count} produit(s) ?`)) {
-                return;
-            }
-
-            const refsToDelete = Array.from(checkedBoxes).map(cb => cb.dataset.ref);
-            console.log('Références à supprimer:', refsToDelete);
-            
-            const initialLength = products.length;
-            products = products.filter(p => !refsToDelete.includes(p.reference));
-            console.log(`Produits avant: ${initialLength}, après: ${products.length}`);
-            
-            // Supprimer aussi des PDV
-            pointsVente.forEach(pdv => {
-                if (pdv.products) {
-                    pdv.products = pdv.products.filter(p => !refsToDelete.includes(p.reference));
-                }
-            });
-
-            saveProducts();
+        function deleteSel() {
+            const refs = Array.from(document.querySelectorAll('.cb:checked')).map(c => c.dataset.ref);
+            if (!confirm(`Supprimer ${refs.length} produit(s) ?`)) return;
+            products = products.filter(p => !refs.includes(p.reference));
+            pointsVente.forEach(pdv => { if (pdv.products) pdv.products = pdv.products.filter(p => !refs.includes(p.reference)); });
+            save();
             savePDV();
-            showToast(`${count} produit(s) supprimé(s) avec succès`, 'success');
+            showToast(`${refs.length} supprimé(s)`);
             renderProducts();
         }
 
-        function renderProductRows(filteredProducts = products) {
-            if (filteredProducts.length === 0) {
-                return '<tr><td colspan="10" class="text-center">Aucun produit trouvé</td></tr>';
-            }
-            
-            return filteredProducts.map(p => {
-                const imageSrc = p.image || '';
-                
-                // Créer plusieurs formats d'URL Google Drive en fallback
-                let imageHtml = '📦';
-                if (imageSrc) {
-                    // Extraire l'ID du fichier
-                    const idMatch = imageSrc.match(/[?&]id=([^&]+)/);
-                    const fileId = idMatch ? idMatch[1] : null;
-                    
-                    if (fileId) {
-                        // Essayer plusieurs formats d'URL
-                        imageHtml = `
-                            <img 
-                                src="https://drive.google.com/thumbnail?id=${fileId}&sz=w200" 
-                                class="product-img" 
-                                onclick="openImageModal('https://drive.google.com/uc?export=view&id=${fileId}')"
-                                onerror="
-                                    if (this.src.includes('thumbnail')) {
-                                        this.src='https://drive.google.com/uc?export=view&id=${fileId}';
-                                    } else if (this.src.includes('uc?export=view')) {
-                                        this.src='https://lh3.googleusercontent.com/d/${fileId}';
-                                    } else {
-                                        console.error('Image non chargée:', '${fileId}'); 
-                                        this.onerror=null; 
-                                        this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';
-                                    }
-                                " 
-                                alt="${p.name}"
-                                title="ID: ${fileId}"
-                            >`;
-                    } else {
-                        imageHtml = `<img src="${imageSrc}" class="product-img" onclick="openImageModal('${imageSrc}')" onerror="console.error('URL invalide:', '${imageSrc}'); this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';" alt="${p.name}">`;
-                    }
-                }
-                
-                return `
-                <tr>
-                    <td><input type="checkbox" class="product-select-checkbox" data-ref="${p.reference}"></td>
-                    <td>${imageHtml}</td>
-                    <td>
-                        <strong>${p.name}</strong>
-                        ${p.conventionalName ? `<br><small style="color: #666;">${p.conventionalName}</small>` : ''}
-                    </td>
-                    <td>${p.reference}</td>
-                    <td>${p.barcode || '-'}</td>
-                    <td>${p.category || '-'}</td>
-                    <td>${p.brand || '-'}</td>
-                    <td><strong>${p.quantity || 0}</strong></td>
-                    <td>${p.price || 0} DH</td>
-                    <td>
-                        <button class="btn btn-primary" onclick='editProductByRef("${p.reference}")' style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">✏️</button>
-                        <button class="btn btn-danger" onclick="deleteProduct('${p.reference}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">🗑️</button>
-                    </td>
-                </tr>
-            `;
-            }).join('');
+        function editP(ref) {
+            const p = products.find(x => x.reference === ref);
+            if (!p) return;
+            editingProduct = p;
+            document.getElementById('modal-title').textContent = 'Modifier';
+            document.getElementById('product-image').value = p.image || '';
+            document.getElementById('product-name').value = p.name;
+            document.getElementById('product-conventional').value = p.conventionalName || '';
+            document.getElementById('product-ref').value = p.reference;
+            document.getElementById('product-barcode').value = p.barcode || '';
+            document.getElementById('product-category').value = p.category || '';
+            document.getElementById('product-brand').value = p.brand || '';
+            document.getElementById('product-price').value = p.price;
+            document.getElementById('product-quantity').value = p.quantity || 0;
+            document.getElementById('product-modal').classList.add('active');
         }
 
-        function editProductByRef(reference) {
-            const product = products.find(p => p.reference === reference);
-            if (product) {
-                editProduct(product);
-            }
+        function delP(ref) {
+            if (!confirm('Supprimer ?')) return;
+            products = products.filter(p => p.reference !== ref);
+            pointsVente.forEach(pdv => { if (pdv.products) pdv.products = pdv.products.filter(p => p.reference !== ref); });
+            save();
+            savePDV();
+            showToast('Supprimé');
+            renderProducts();
         }
 
-        function filterProducts(search) {
-            const searchLower = search.toLowerCase().trim();
-            console.log('Recherche produits:', searchLower);
-            
-            const filtered = products.filter(p => 
-                p.name.toLowerCase().includes(searchLower) ||
-                p.reference.toLowerCase().includes(searchLower) ||
-                (p.barcode || '').toLowerCase().includes(searchLower) ||
-                (p.category || '').toLowerCase().includes(searchLower) ||
-                (p.brand || '').toLowerCase().includes(searchLower) ||
-                (p.conventionalName || '').toLowerCase().includes(searchLower)
-            );
-            
-            console.log('Résultats trouvés:', filtered.length);
-            
-            const tbody = document.querySelector('#products-table tbody');
-            if (tbody) {
-                tbody.innerHTML = renderProductRows(filtered);
-                attachProductCheckboxListeners();
-            }
-        }
-
-        // ============ PRODUCT MODAL ============
         function openProductModal() {
             editingProduct = null;
-            document.getElementById('modal-title').textContent = 'Ajouter un produit';
+            document.getElementById('modal-title').textContent = 'Ajouter';
             document.getElementById('product-form').reset();
             document.getElementById('product-modal').classList.add('active');
         }
 
         function closeProductModal() {
             document.getElementById('product-modal').classList.remove('active');
-            editingProduct = null;
         }
 
-        function editProduct(product) {
-            editingProduct = product;
-            document.getElementById('modal-title').textContent = 'Modifier le produit';
-            document.getElementById('product-image').value = product.image || '';
-            document.getElementById('product-name').value = product.name;
-            document.getElementById('product-conventional').value = product.conventionalName || '';
-            document.getElementById('product-ref').value = product.reference;
-            document.getElementById('product-barcode').value = product.barcode || '';
-            document.getElementById('product-category').value = product.category || '';
-            document.getElementById('product-brand').value = product.brand || '';
-            document.getElementById('product-price').value = product.price;
-            document.getElementById('product-quantity').value = product.quantity || 0;
-            document.getElementById('product-modal').classList.add('active');
-        }
-
-        function deleteProduct(reference) {
-            console.log('Suppression du produit:', reference);
-            if (confirm('Voulez-vous vraiment supprimer ce produit ?')) {
-                const initialLength = products.length;
-                products = products.filter(p => p.reference !== reference);
-                
-                // Supprimer aussi des PDV
-                pointsVente.forEach(pdv => {
-                    if (pdv.products) {
-                        pdv.products = pdv.products.filter(p => p.reference !== reference);
-                    }
-                });
-                
-                console.log(`Produits avant: ${initialLength}, après: ${products.length}`);
-                saveProducts();
-                savePDV();
-                showToast('Produit supprimé avec succès', 'success');
-                
-                // Recharger la page produits
-                if (currentPage === 'products') {
-                    renderProducts();
-                }
-            }
-        }
-
-        // ============ PRODUCT FORM SUBMIT ============
-        document.getElementById('product-form').addEventListener('submit', function(e) {
+        document.getElementById('product-form').onsubmit = function(e) {
             e.preventDefault();
-            
-            const productData = {
+            const data = {
                 image: document.getElementById('product-image').value,
                 name: document.getElementById('product-name').value,
                 conventionalName: document.getElementById('product-conventional').value,
@@ -738,24 +357,23 @@
             };
 
             if (editingProduct) {
-                const index = products.findIndex(p => p.reference === editingProduct.reference);
-                products[index] = { ...products[index], ...productData };
-                showToast('Produit modifié avec succès', 'success');
+                const i = products.findIndex(p => p.reference === editingProduct.reference);
+                products[i] = { ...products[i], ...data };
+                showToast('Modifié');
             } else {
-                if (products.some(p => p.reference === productData.reference)) {
-                    showToast('Cette référence existe déjà', 'error');
+                if (products.some(p => p.reference === data.reference)) {
+                    showToast('Référence existe', 'error');
                     return;
                 }
-                products.push(productData);
-                showToast('Produit ajouté avec succès', 'success');
+                products.push(data);
+                showToast('Ajouté');
             }
 
-            saveProducts();
+            save();
             closeProductModal();
             renderProducts();
-        });
+        };
 
-        // ============ IMPORT EXCEL ============
         function openImportModal() {
             document.getElementById('import-modal').classList.add('active');
             document.getElementById('import-progress').classList.add('hidden');
@@ -763,208 +381,97 @@
 
         function closeImportModal() {
             document.getElementById('import-modal').classList.remove('active');
-            document.getElementById('excel-file').value = '';
         }
 
-        async function handleImport(event) {
-            const file = event.target.files[0];
+        async function handleImport(e) {
+            const file = e.target.files[0];
             if (!file) return;
 
-            console.log('=== DÉBUT IMPORT EXCEL ===');
+            const pg = document.getElementById('import-progress');
+            const fill = document.getElementById('progress-fill');
+            const txt = document.getElementById('progress-text');
             
-            const progressContainer = document.getElementById('import-progress');
-            const progressFill = document.getElementById('progress-fill');
-            const progressText = document.getElementById('progress-text');
-            
-            progressContainer.classList.remove('hidden');
-            progressFill.style.width = '0%';
-            progressText.textContent = 'Lecture du fichier...';
+            pg.classList.remove('hidden');
+            fill.style.width = '0%';
 
             try {
                 const data = await file.arrayBuffer();
-                const workbook = XLSX.read(data);
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const rows = XLSX.utils.sheet_to_json(sheet);
+                const wb = XLSX.read(data);
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-                console.log(`Fichier lu: ${rows.length} lignes`);
-                console.log('Première ligne:', rows[0]);
-                
-                if (rows.length === 0) {
-                    showToast('Le fichier est vide', 'error');
-                    closeImportModal();
-                    return;
-                }
+                if (rows.length === 0) { showToast('Vide', 'error'); closeImportModal(); return; }
 
-                // Détecter les colonnes de quantité PDV (QTY XXX)
-                const columns = Object.keys(rows[0]);
-                const pdvColumns = columns.filter(col => col.startsWith('QTY '));
-                console.log('Colonnes PDV détectées:', pdvColumns);
+                const cols = Object.keys(rows[0]);
+                const pdvCols = cols.filter(c => c.startsWith('QTY '));
 
-                // Créer automatiquement les PDV s'ils n'existent pas
-                pdvColumns.forEach(col => {
-                    const pdvName = col.replace('QTY ', '').trim();
-                    if (!pointsVente.find(p => p.name === pdvName)) {
-                        pointsVente.push({
-                            id: Date.now().toString() + Math.random(),
-                            name: pdvName,
-                            products: []
-                        });
-                        console.log('PDV créé:', pdvName);
-                    }
+                pdvCols.forEach(c => {
+                    const n = c.replace('QTY ', '').trim();
+                    if (!pointsVente.find(p => p.name === n)) pointsVente.push({ id: Date.now() + Math.random(), name: n, products: [] });
                 });
 
-                progressText.textContent = `Traitement: 0/${rows.length} (0%)`;
-                
-                let imported = 0;
-                const batchSize = 50;
-                
-                for (let i = 0; i < rows.length; i += batchSize) {
-                    const batch = rows.slice(i, i + batchSize);
-                    
-                    for (const row of batch) {
-                        // Convertir l'URL Google Drive
-                        let imageUrl = row['IMAGE'] || '';
-                        
-                        if (imageUrl) {
-                            // Supprimer les espaces
-                            imageUrl = imageUrl.trim();
-                            
-                            // Convertir les différents formats Google Drive
-                            if (imageUrl.includes('drive.google.com')) {
-                                // Format: https://drive.google.com/file/d/ID/view
-                                let match = imageUrl.match(/\/file\/d\/([^/]+)/);
-                                if (match) {
-                                    imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
-                                }
-                                // Format: https://drive.google.com/open?id=ID
-                                else {
-                                    match = imageUrl.match(/[?&]id=([^&]+)/);
-                                    if (match) {
-                                        imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
-                                    }
-                                }
-                            }
-                        }
-
-                        const reference = row['Référence'] || row['Reference'] || `REF-${Date.now()}-${i}`;
-
-                        // Calculer le stock total (somme de tous les PDV)
-                        let totalQuantity = 0;
-                        pdvColumns.forEach(col => {
-                            totalQuantity += parseInt(row[col]) || 0;
-                        });
-                        
-                        // Si aucune colonne QTY, utiliser Repetition
-                        if (pdvColumns.length === 0 && row['Repetition']) {
-                            totalQuantity = parseInt(row['Repetition']) || 0;
-                        }
-
-                        const product = {
-                            image: imageUrl,
-                            name: row['Real Name'] || row['Nom'] || '',
-                            conventionalName: row['Conventional Name'] || '',
-                            reference: reference,
-                            barcode: row['Barcode'] || '',
-                            category: row['Category'] || row['Catégorie'] || '',
-                            brand: row['Brand'] || row['Marque'] || '',
-                            price: parseFloat(row['Selling Price'] || row['Prix'] || 0),
-                            quantity: totalQuantity
-                        };
-
-                        console.log(`Produit: ${product.name}, Image URL: ${product.image}`);
-
-                        // Vérifier si le produit existe déjà
-                        const existingIndex = products.findIndex(p => p.reference === product.reference);
-                        if (existingIndex >= 0) {
-                            // Mise à jour: garder l'ancienne image si la nouvelle est vide
-                            const oldImage = products[existingIndex].image;
-                            products[existingIndex] = { 
-                                ...products[existingIndex], 
-                                ...product,
-                                image: product.image || oldImage
-                            };
-                        } else {
-                            products.push(product);
-                        }
-
-                        // Ajouter les quantités dans chaque PDV
-                        pdvColumns.forEach(col => {
-                            const pdvName = col.replace('QTY ', '').trim();
-                            const pdv = pointsVente.find(p => p.name === pdvName);
-                            if (pdv) {
-                                const quantity = parseInt(row[col]) || 0;
-                                if (!pdv.products) pdv.products = [];
-                                
-                                const pdvProductIndex = pdv.products.findIndex(p => p.reference === reference);
-                                if (pdvProductIndex >= 0) {
-                                    pdv.products[pdvProductIndex].quantity = quantity;
-                                } else if (quantity > 0) {
-                                    pdv.products.push({
-                                        reference: reference,
-                                        quantity: quantity
-                                    });
-                                }
-                            }
-                        });
-                        
-                        imported++;
+                let imp = 0;
+                for (let i = 0; i < rows.length; i++) {
+                    const r = rows[i];
+                    let img = r['IMAGE'] || '';
+                    if (img && img.includes('drive.google.com')) {
+                        let m = img.match(/\/file\/d\/([^/]+)/) || img.match(/[?&]id=([^&]+)/);
+                        if (m) img = `https://drive.google.com/uc?export=view&id=${m[1]}`;
                     }
 
-                    // Mise à jour de la progression
-                    const progress = Math.round((imported / rows.length) * 100);
-                    progressFill.style.width = progress + '%';
-                    progressText.textContent = `Traité: ${imported}/${rows.length} (${progress}%)`;
-                    
-                    // Pause pour ne pas bloquer l'interface
-                    await new Promise(resolve => setTimeout(resolve, 10));
+                    const ref = r['Référence'] || `REF-${Date.now()}-${i}`;
+                    let qty = 0;
+                    pdvCols.forEach(c => qty += parseInt(r[c]) || 0);
+                    if (pdvCols.length === 0) qty = parseInt(r['Repetition']) || 0;
+
+                    const prod = {
+                        image: img,
+                        name: r['Real Name'] || '',
+                        conventionalName: r['Conventional Name'] || '',
+                        reference: ref,
+                        barcode: r['Barcode'] || '',
+                        category: r['Category'] || '',
+                        brand: r['Brand'] || '',
+                        price: parseFloat(r['Selling Price']) || 0,
+                        quantity: qty
+                    };
+
+                    const idx = products.findIndex(p => p.reference === ref);
+                    if (idx >= 0) products[idx] = { ...products[idx], ...prod };
+                    else products.push(prod);
+
+                    pdvCols.forEach(c => {
+                        const n = c.replace('QTY ', '').trim();
+                        const pdv = pointsVente.find(p => p.name === n);
+                        const q = parseInt(r[c]) || 0;
+                        if (pdv) {
+                            if (!pdv.products) pdv.products = [];
+                            const pi = pdv.products.findIndex(p => p.reference === ref);
+                            if (pi >= 0) pdv.products[pi].quantity = q;
+                            else if (q > 0) pdv.products.push({ reference: ref, quantity: q });
+                        }
+                    });
+
+                    imp++;
+                    fill.style.width = Math.round((imp / rows.length) * 100) + '%';
+                    txt.textContent = `${imp}/${rows.length}`;
+                    if (i % 50 === 0) await new Promise(r => setTimeout(r, 10));
                 }
 
-                // Sauvegarder les produits ET les PDV
-                saveProducts();
+                save();
                 savePDV();
-                
-                console.log(`Import terminé: ${imported} produits`);
-                console.log(`PDV créés/mis à jour: ${pdvColumns.length}`);
-                
-                // Recalculer tous les stocks totaux après import
-                products.forEach(product => {
-                    const totalInAllPDV = pointsVente.reduce((sum, pdv) => {
-                        const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
-                        return sum + (pdvProduct?.quantity || 0);
-                    }, 0);
-                    product.quantity = totalInAllPDV;
-                });
-                saveProducts();
-                
-                showToast(`${imported} produit(s) importé(s) avec succès dans ${pdvColumns.length} point(s) de vente`, 'success');
-                
-                // Fermer le modal après un court délai
-                setTimeout(() => {
-                    closeImportModal();
-                    if (currentPage === 'products') {
-                        renderProducts();
-                    }
-                }, 1000);
-
-            } catch (error) {
-                console.error('Erreur import:', error);
-                showToast('Erreur lors de l\'importation: ' + error.message, 'error');
+                showToast(`${imp} importés`);
+                setTimeout(() => { closeImportModal(); if (currentPage === 'products') renderProducts(); }, 1000);
+            } catch (err) {
+                showToast('Erreur: ' + err.message, 'error');
                 closeImportModal();
             }
         }
 
-        // ============ EXPORT EXCEL ============
         function exportProducts() {
-            if (products.length === 0) {
-                showToast('Aucun produit à exporter', 'warning');
-                return;
-            }
+            if (products.length === 0) { showToast('Aucun produit', 'warning'); return; }
 
-            // Récupérer tous les noms de PDV
-            const pdvNames = pointsVente.map(pdv => pdv.name);
-
-            const exportData = products.map(p => {
-                const row = {
+            const data = products.map(p => {
+                const r = {
                     'IMAGE': p.image || '',
                     'Real Name': p.name,
                     'Conventional Name': p.conventionalName || '',
@@ -974,487 +481,260 @@
                     'Category': p.category || '',
                     'Brand': p.brand || ''
                 };
-
-                // Ajouter les colonnes QTY pour chaque PDV
-                pdvNames.forEach(pdvName => {
-                    const pdv = pointsVente.find(pv => pv.name === pdvName);
-                    const pdvProduct = pdv?.products?.find(pp => pp.reference === p.reference);
-                    row[`QTY ${pdvName}`] = pdvProduct?.quantity || 0;
+                pointsVente.forEach(pdv => {
+                    const pp = pdv.products?.find(x => x.reference === p.reference);
+                    r[`QTY ${pdv.name}`] = pp?.quantity || 0;
                 });
-
-                return row;
+                return r;
             });
 
-            const ws = XLSX.utils.json_to_sheet(exportData);
+            const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Produits');
             XLSX.writeFile(wb, `produits_${new Date().toISOString().split('T')[0]}.xlsx`);
-            
-            showToast('Export réussi', 'success');
+            showToast('Exporté');
         }
 
-        // ============ MOVEMENTS PAGE ============
         function renderMovements() {
             document.getElementById('app-container').innerHTML = `
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">🔄 Mouvements de stock</h3>
-                        <input type="text" class="search-input" id="movement-search" placeholder="🔍 Rechercher un produit ou référence..." onkeyup="filterMovementProducts(this.value)">
+                        <h3 class="card-title">🔄 Mouvements</h3>
+                        <input type="text" id="mov-search" class="search-input" placeholder="🔍">
                     </div>
-                    
-                    <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border: 2px solid #e5e7eb;">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Type de mouvement</label>
-                                <select id="movement-type" onchange="updateMovementForm()" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
-                                    <option value="in">Entrée (+)</option>
-                                    <option value="out">Sortie (-)</option>
-                                    <option value="transfer">Transfert entre PDV</option>
+                    <div style="background:#f9fafb;padding:1.5rem;border-radius:8px;margin-bottom:1.5rem;">
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1rem;">
+                            <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;">Type</label>
+                                <select id="mov-type" onchange="updMov()" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:8px;">
+                                    <option value="in">Entrée (+)</option><option value="out">Sortie (-)</option><option value="transfer">Transfert</option>
                                 </select>
                             </div>
-                            
-                            <div id="reason-container">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Raison</label>
-                                <select id="movement-reason" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
-                                    <option value="Achat">Achat fournisseur</option>
-                                    <option value="Retour">Retour client</option>
-                                    <option value="Vente">Vente</option>
-                                    <option value="Ajustement">Ajustement inventaire</option>
-                                    <option value="Casse">Casse/Perte</option>
+                            <div id="reas"><label style="display:block;margin-bottom:0.5rem;font-weight:600;">Raison</label>
+                                <select id="mov-reas" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:8px;">
+                                    <option value="Achat">Achat</option><option value="Vente">Vente</option><option value="Retour">Retour</option>
                                 </select>
                             </div>
-
-                            <div id="pdv-source-container" style="display: none;">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Point de vente SOURCE</label>
-                                <select id="pdv-source" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
-                                    <option value="">-- Stock Central --</option>
-                                    ${pointsVente.map(pdv => `<option value="${pdv.id}">${pdv.name}</option>`).join('')}
+                            <div id="src" style="display:none;"><label style="display:block;margin-bottom:0.5rem;font-weight:600;">Source</label>
+                                <select id="pdv-src" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:8px;">
+                                    <option value="">Central</option>${pointsVente.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
                                 </select>
                             </div>
-
-                            <div id="pdv-dest-container" style="display: none;">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Point de vente DESTINATION</label>
-                                <select id="pdv-dest" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
-                                    <option value="">-- Stock Central --</option>
-                                    ${pointsVente.map(pdv => `<option value="${pdv.id}">${pdv.name}</option>`).join('')}
+                            <div id="dst" style="display:none;"><label style="display:block;margin-bottom:0.5rem;font-weight:600;">Destination</label>
+                                <select id="pdv-dst" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:8px;">
+                                    <option value="">Central</option>${pointsVente.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
                                 </select>
                             </div>
-                            
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Note (optionnel)</label>
-                                <input type="text" id="movement-note" placeholder="Commentaire..." style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                            <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;">Note</label>
+                                <input type="text" id="mov-note" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:8px;">
                             </div>
                         </div>
-
-                        <div style="text-align: center; margin-top: 1rem;">
-                            <button class="btn btn-success" onclick="validateMovement()" style="font-size: 1.1rem; padding: 0.9rem 3rem; font-weight: 600;">
-                                ✓ VALIDER LE MOUVEMENT
-                            </button>
-                        </div>
+                        <div style="text-align:center;"><button class="btn btn-success" onclick="valMov()" style="padding:0.9rem 3rem;">✓ VALIDER</button></div>
                     </div>
-
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th><input type="checkbox" onchange="toggleAllProducts(this.checked)"></th>
-                                    <th>Image</th>
-                                    <th>Produit</th>
-                                    <th>Référence</th>
-                                    <th>Stock actuel</th>
-                                    <th>Quantité</th>
-                                </tr>
-                            </thead>
-                            <tbody id="movements-table-body">
-                                ${renderMovementRows(products)}
-                            </tbody>
-                        </table>
-                    </div>
+                    <div class="table-container"><table><thead><tr><th><input type="checkbox" onclick="togMov(this)"></th><th>Produit</th><th>Stock</th><th>Quantité</th></tr></thead>
+                    <tbody id="mov-body">${renderMovRows(products)}</tbody></table></div>
                 </div>
             `;
 
-            // Activer/désactiver les champs quantité selon la sélection
-            document.querySelectorAll('.product-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const input = document.querySelector(`.quantity-input[data-ref="${this.dataset.ref}"]`);
-                    input.disabled = !this.checked;
-                    if (!this.checked) input.value = '';
-                });
+            document.querySelectorAll('.mck').forEach(c => {
+                c.onchange = function() {
+                    const inp = document.querySelector(`.mqt[data-ref="${this.dataset.ref}"]`);
+                    if (inp) { inp.disabled = !this.checked; if (!this.checked) inp.value = ''; }
+                };
             });
+
+            document.getElementById('mov-search').oninput = function() {
+                const s = this.value.toLowerCase();
+                const f = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s));
+                document.getElementById('mov-body').innerHTML = renderMovRows(f);
+                document.querySelectorAll('.mck').forEach(c => {
+                    c.onchange = function() {
+                        const inp = document.querySelector(`.mqt[data-ref="${this.dataset.ref}"]`);
+                        if (inp) { inp.disabled = !this.checked; if (!this.checked) inp.value = ''; }
+                    };
+                });
+            };
         }
 
-        function updateMovementForm() {
-            const type = document.getElementById('movement-type').value;
-            const reasonContainer = document.getElementById('reason-container');
-            const pdvSourceContainer = document.getElementById('pdv-source-container');
-            const pdvDestContainer = document.getElementById('pdv-dest-container');
-
-            if (type === 'transfer') {
-                reasonContainer.style.display = 'none';
-                pdvSourceContainer.style.display = 'block';
-                pdvDestContainer.style.display = 'block';
-            } else {
-                reasonContainer.style.display = 'block';
-                pdvSourceContainer.style.display = 'none';
-                pdvDestContainer.style.display = 'none';
-            }
-        }
-
-        function renderMovementRows(productList) {
-            if (productList.length === 0) {
-                return '<tr><td colspan="6" class="text-center">Aucun produit trouvé</td></tr>';
-            }
-            
-            return productList.map(p => {
-                const imageSrc = p.image || '';
-                const idMatch = imageSrc.match(/[?&]id=([^&]+)/);
-                const fileId = idMatch ? idMatch[1] : null;
-                let imageHtml = '📦';
-                
-                if (fileId) {
-                    imageHtml = `<img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w200" class="product-img" onclick="openImageModal('https://drive.google.com/uc?export=view&id=${fileId}')" onerror="if (this.src.includes('thumbnail')) { this.src='https://drive.google.com/uc?export=view&id=${fileId}'; } else { this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E'; }" alt="${p.name}">`;
-                }
-                
-                return `
+        function renderMovRows(list) {
+            if (list.length === 0) return '<tr><td colspan="4" style="text-align:center;">Aucun produit</td></tr>';
+            return list.map(p => `
                 <tr>
-                    <td><input type="checkbox" class="product-checkbox" data-ref="${p.reference}"></td>
-                    <td>${imageHtml}</td>
+                    <td><input type="checkbox" class="mck" data-ref="${p.reference}"></td>
                     <td><strong>${p.name}</strong></td>
-                    <td>${p.reference}</td>
                     <td><strong>${p.quantity || 0}</strong></td>
-                    <td><input type="number" class="quantity-input" data-ref="${p.reference}" min="1" style="width: 100px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" disabled></td>
+                    <td><input type="number" class="mqt" data-ref="${p.reference}" min="1" style="width:100px;padding:0.5rem;" disabled></td>
                 </tr>
-            `}).join('');
+            `).join('');
         }
 
-        function filterMovementProducts(search) {
-            const searchLower = search.toLowerCase().trim();
-            console.log('Recherche mouvements:', searchLower);
-            
-            const filtered = products.filter(p => 
-                p.name.toLowerCase().includes(searchLower) ||
-                p.reference.toLowerCase().includes(searchLower) ||
-                (p.conventionalName || '').toLowerCase().includes(searchLower) ||
-                (p.barcode || '').toLowerCase().includes(searchLower)
-            );
-            
-            console.log('Résultats trouvés:', filtered.length);
-            
-            const tbody = document.getElementById('movements-table-body');
-            if (tbody) {
-                tbody.innerHTML = renderMovementRows(filtered);
-                
-                // Réattacher les event listeners après le filtrage
-                document.querySelectorAll('.product-checkbox').forEach(checkbox => {
-                    checkbox.addEventListener('change', function() {
-                        const input = document.querySelector(`.quantity-input[data-ref="${this.dataset.ref}"]`);
-                        if (input) {
-                            input.disabled = !this.checked;
-                            if (!this.checked) input.value = '';
-                        }
-                    });
-                });
-            }
+        function updMov() {
+            const t = document.getElementById('mov-type').value;
+            document.getElementById('reas').style.display = t === 'transfer' ? 'none' : 'block';
+            document.getElementById('src').style.display = t === 'transfer' ? 'block' : 'none';
+            document.getElementById('dst').style.display = t === 'transfer' ? 'block' : 'none';
         }
 
-        function toggleAllProducts(checked) {
-            document.querySelectorAll('.product-checkbox').forEach(checkbox => {
-                checkbox.checked = checked;
-                checkbox.dispatchEvent(new Event('change'));
-            });
+        function togMov(c) {
+            document.querySelectorAll('.mck').forEach(x => { x.checked = c.checked; x.dispatchEvent(new Event('change')); });
         }
 
-        function validateMovement() {
-            const type = document.getElementById('movement-type').value;
-            const reason = document.getElementById('movement-reason')?.value;
-            const note = document.getElementById('movement-note').value;
+        function valMov() {
+            const type = document.getElementById('mov-type').value;
+            const reas = document.getElementById('mov-reas')?.value;
+            const note = document.getElementById('mov-note').value;
             
-            const checkedProducts = [];
-            document.querySelectorAll('.product-checkbox:checked').forEach(checkbox => {
-                const ref = checkbox.dataset.ref;
-                const quantityInput = document.querySelector(`.quantity-input[data-ref="${ref}"]`);
-                const quantity = parseInt(quantityInput.value) || 0;
-                
-                if (quantity > 0) {
-                    checkedProducts.push({ reference: ref, quantity });
-                }
+            const items = [];
+            document.querySelectorAll('.mck:checked').forEach(c => {
+                const q = parseInt(document.querySelector(`.mqt[data-ref="${c.dataset.ref}"]`).value) || 0;
+                if (q > 0) items.push({ reference: c.dataset.ref, quantity: q });
             });
 
-            if (checkedProducts.length === 0) {
-                showToast('Veuillez sélectionner au moins un produit avec une quantité', 'warning');
-                return;
-            }
+            if (items.length === 0) { showToast('Sélectionnez des produits', 'warning'); return; }
 
-            // Transfert entre PDV
             if (type === 'transfer') {
-                const pdvSourceId = document.getElementById('pdv-source').value;
-                const pdvDestId = document.getElementById('pdv-dest').value;
+                const src = document.getElementById('pdv-src').value;
+                const dst = document.getElementById('pdv-dst').value;
+                if (src === dst) { showToast('Source ≠ Destination', 'error'); return; }
 
-                if (pdvSourceId === pdvDestId) {
-                    showToast('Le point de vente source et destination doivent être différents', 'error');
-                    return;
-                }
+                let cnt = 0;
+                items.forEach(it => {
+                    const p = products.find(x => x.reference === it.reference);
+                    if (!p) return;
 
-                console.log('=== TRANSFERT ENTRE PDV ===');
-                console.log('Source:', pdvSourceId || 'Stock Central', 'Destination:', pdvDestId || 'Stock Central');
-                console.log('Produits:', checkedProducts);
-
-                let processedCount = 0;
-
-                checkedProducts.forEach(item => {
-                    const product = products.find(p => p.reference === item.reference);
-                    if (!product) return;
-
-                    // SOURCE: Retirer du stock
-                    if (pdvSourceId === '') {
-                        // Retirer du stock central
-                        if ((product.quantity || 0) < item.quantity) {
-                            showToast(`Stock central insuffisant pour ${product.name}`, 'error');
-                            return;
-                        }
-                        product.quantity = (product.quantity || 0) - item.quantity;
+                    if (src === '') {
+                        if ((p.quantity || 0) < it.quantity) { showToast(`Stock insuffisant: ${p.name}`, 'error'); return; }
+                        p.quantity -= it.quantity;
                     } else {
-                        // Retirer du PDV source
-                        const pdvSource = pointsVente.find(p => p.id === pdvSourceId);
-                        if (!pdvSource.products) pdvSource.products = [];
-                        const pdvProduct = pdvSource.products.find(p => p.reference === item.reference);
-                        
-                        if (!pdvProduct || (pdvProduct.quantity || 0) < item.quantity) {
-                            showToast(`Stock insuffisant dans le PDV source pour ${product.name}`, 'error');
-                            return;
-                        }
-                        
-                        pdvProduct.quantity -= item.quantity;
-                        // Ne pas toucher au stock total du produit lors d'un transfert PDV vers PDV
+                        const ps = pointsVente.find(x => x.id === src);
+                        const pp = ps.products?.find(x => x.reference === it.reference);
+                        if (!pp || pp.quantity < it.quantity) { showToast(`PDV insuffisant: ${p.name}`, 'error'); return; }
+                        pp.quantity -= it.quantity;
                     }
 
-                    // DESTINATION: Ajouter au stock
-                    if (pdvDestId === '') {
-                        // Ajouter au stock central
-                        product.quantity = (product.quantity || 0) + item.quantity;
+                    if (dst === '') {
+                        p.quantity += it.quantity;
                     } else {
-                        // Ajouter au PDV destination
-                        const pdvDest = pointsVente.find(p => p.id === pdvDestId);
-                        if (!pdvDest.products) pdvDest.products = [];
-                        const pdvProductDest = pdvDest.products.find(p => p.reference === item.reference);
-                        
-                        if (pdvProductDest) {
-                            pdvProductDest.quantity = (pdvProductDest.quantity || 0) + item.quantity;
-                        } else {
-                            pdvDest.products.push({
-                                reference: item.reference,
-                                quantity: item.quantity
-                            });
-                        }
-                        // Ne pas toucher au stock total du produit lors d'un transfert PDV vers PDV
+                        const pd = pointsVente.find(x => x.id === dst);
+                        if (!pd.products) pd.products = [];
+                        const pp = pd.products.find(x => x.reference === it.reference);
+                        if (pp) pp.quantity += it.quantity;
+                        else pd.products.push({ reference: it.reference, quantity: it.quantity });
                     }
 
-                    // Recalculer le stock total = somme de tous les PDV
-                    const totalInAllPDV = pointsVente.reduce((sum, pdv) => {
-                        const pdvProd = pdv.products?.find(p => p.reference === item.reference);
-                        return sum + (pdvProd?.quantity || 0);
+                    const tot = pointsVente.reduce((s, pdv) => {
+                        const pp = pdv.products?.find(x => x.reference === it.reference);
+                        return s + (pp?.quantity || 0);
                     }, 0);
-                    product.quantity = totalInAllPDV;
+                    p.quantity = tot;
 
-                    // Enregistrer le mouvement
-                    const pdvSourceName = pdvSourceId ? pointsVente.find(p => p.id === pdvSourceId)?.name : 'Stock Central';
-                    const pdvDestName = pdvDestId ? pointsVente.find(p => p.id === pdvDestId)?.name : 'Stock Central';
+                    const sn = src ? pointsVente.find(x => x.id === src)?.name : 'Central';
+                    const dn = dst ? pointsVente.find(x => x.id === dst)?.name : 'Central';
 
                     movements.push({
                         id: Date.now() + Math.random(),
                         date: new Date().toISOString(),
                         type: 'transfer',
-                        reason: `Transfert: ${pdvSourceName} → ${pdvDestName}`,
+                        reason: `${sn} → ${dn}`,
                         note,
-                        product: product.name,
-                        reference: product.reference,
-                        quantity: item.quantity,
-                        pdvSource: pdvSourceName,
-                        pdvDest: pdvDestName
+                        product: p.name,
+                        reference: it.reference,
+                        quantity: it.quantity
                     });
-                    
-                    processedCount++;
+                    cnt++;
                 });
 
-                if (processedCount > 0) {
-                    saveProducts();
-                    savePDV();
-                    saveMovements();
-                    showToast(`${processedCount} transfert(s) effectué(s) avec succès`, 'success');
-                    renderMovements();
-                }
+                if (cnt > 0) { save(); savePDV(); saveMov(); showToast(`${cnt} transfert(s)`); renderMovements(); }
                 return;
             }
 
-            // Mouvements normaux (Entrée/Sortie)
-            console.log('=== VALIDATION MOUVEMENT ===');
-            console.log('Type:', type, 'Raison:', reason);
-            console.log('Produits:', checkedProducts);
+            let cnt = 0;
+            items.forEach(it => {
+                const p = products.find(x => x.reference === it.reference);
+                if (!p) return;
 
-            let processedCount = 0;
-
-            checkedProducts.forEach(item => {
-                const product = products.find(p => p.reference === item.reference);
-                if (!product) return;
-
-                const oldQuantity = product.quantity || 0;
-                let newQuantity;
+                const old = p.quantity || 0;
+                let newQ;
 
                 if (type === 'in') {
-                    newQuantity = oldQuantity + item.quantity;
+                    newQ = old + it.quantity;
                 } else {
-                    if (oldQuantity < item.quantity) {
-                        showToast(`Stock insuffisant pour ${product.name} (disponible: ${oldQuantity})`, 'error');
-                        return;
-                    }
-                    newQuantity = oldQuantity - item.quantity;
+                    if (old < it.quantity) { showToast(`Stock insuffisant: ${p.name}`, 'error'); return; }
+                    newQ = old - it.quantity;
                 }
 
-                // Mettre à jour le stock
-                product.quantity = newQuantity;
+                p.quantity = newQ;
 
-                // Enregistrer le mouvement
-                const movement = {
+                movements.push({
                     id: Date.now() + Math.random(),
                     date: new Date().toISOString(),
                     type,
-                    reason,
+                    reason: reas,
                     note,
-                    product: product.name,
-                    reference: product.reference,
-                    quantity: item.quantity,
-                    oldQuantity,
-                    newQuantity
-                };
-                
-                movements.push(movement);
-                processedCount++;
+                    product: p.name,
+                    reference: it.reference,
+                    quantity: it.quantity,
+                    oldQuantity: old,
+                    newQuantity: newQ
+                });
+                cnt++;
             });
 
-            if (processedCount > 0) {
-                saveProducts();
-                saveMovements();
-                showToast(`${processedCount} mouvement(s) enregistré(s) avec succès`, 'success');
-                renderMovements();
-            }
+            if (cnt > 0) { save(); saveMov(); showToast(`${cnt} mouvement(s)`); renderMovements(); }
         }
 
-        // ============ POINTS DE VENTE ============
         function renderPointsVente() {
             document.getElementById('app-container').innerHTML = `
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">🏪 Points de Vente</h3>
                         <div class="btn-group">
-                            <input type="text" id="pdv-search" class="search-input" placeholder="🔍 Rechercher un produit ou référence..." onkeyup="filterPDVProducts(this.value)">
-                            <button class="btn btn-primary" onclick="openAddPDVModal()">➕ Ajouter un point de vente</button>
+                            <input type="text" id="pdv-search" class="search-input" placeholder="🔍">
+                            <button class="btn btn-primary" onclick="addPDV()">➕ PDV</button>
                         </div>
                     </div>
-
                     <div class="pdv-grid">
-                        ${pointsVente.map(pdv => `
-                            <div class="pdv-card">
-                                <div class="pdv-name">${pdv.name}</div>
-                                <div class="pdv-stock">${pdv.products?.length || 0} produits</div>
-                                <div style="margin-top: 0.5rem;">
-                                    <button class="btn btn-primary" onclick="viewPDV('${pdv.id}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; width: 100%;">Voir détails</button>
-                                </div>
-                            </div>
-                        `).join('') || '<p style="grid-column: 1/-1; text-align: center; color: #666;">Aucun point de vente configuré</p>'}
+                        ${pointsVente.map(p => `<div class="pdv-card"><div class="pdv-name">${p.name}</div><button class="btn btn-primary" onclick="viewPDV('${p.id}')" style="margin-top:0.5rem;width:100%;padding:0.4rem;">Voir</button></div>`).join('') || '<p style="text-align:center;color:#666;">Aucun PDV</p>'}
                     </div>
-
-                    <div style="margin-top: 2rem;">
-                        <h4 style="margin-bottom: 1rem;">📊 Vue d'ensemble du stock par point de vente</h4>
-                        <p style="color: #666; margin-bottom: 1rem; font-size: 0.9rem;">
-                            <strong>Légende :</strong> Le stock total d'un produit = somme de tous les points de vente
-                        </p>
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Produit</th>
-                                        <th>Référence</th>
-                                        <th>Stock Total</th>
-                                        ${pointsVente.map(pdv => `<th>${pdv.name}</th>`).join('')}
-                                    </tr>
-                                </thead>
-                                <tbody id="pdv-overview-body">
-                                    ${renderPDVOverview(products)}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div style="margin-top:2rem;">
+                        <h4 style="margin-bottom:1rem;">📊 Vue d'ensemble</h4>
+                        <div class="table-container"><table><thead><tr><th>Produit</th><th>Total</th>${pointsVente.map(p => `<th>${p.name}</th>`).join('')}</tr></thead>
+                        <tbody id="pdv-ov">${renderPDVOv(products)}</tbody></table></div>
                     </div>
                 </div>
             `;
+
+            document.getElementById('pdv-search').oninput = function() {
+                const s = this.value.toLowerCase();
+                const f = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s));
+                document.getElementById('pdv-ov').innerHTML = renderPDVOv(f);
+            };
         }
 
-        function renderPDVOverview(filteredProducts) {
-            if (filteredProducts.length === 0) {
-                return '<tr><td colspan="100" class="text-center">Aucun produit disponible</td></tr>';
-            }
-
-            return filteredProducts.map(product => {
-                // Calculer le stock total = somme de tous les PDV
-                const totalInAllPDV = pointsVente.reduce((sum, pdv) => {
-                    const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
-                    return sum + (pdvProduct?.quantity || 0);
+        function renderPDVOv(list) {
+            if (list.length === 0) return '<tr><td colspan="100" style="text-align:center;">Aucun produit</td></tr>';
+            return list.map(p => {
+                const tot = pointsVente.reduce((s, pdv) => {
+                    const pp = pdv.products?.find(x => x.reference === p.reference);
+                    return s + (pp?.quantity || 0);
                 }, 0);
-                
-                // Mettre à jour le stock total du produit si nécessaire
-                if (product.quantity !== totalInAllPDV) {
-                    product.quantity = totalInAllPDV;
-                }
-                
-                return `
-                <tr>
-                    <td><strong>${product.name}</strong></td>
-                    <td>${product.reference}</td>
-                    <td><strong style="color: #2563eb;">${totalInAllPDV}</strong></td>
-                    ${pointsVente.map(pdv => {
-                        const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
-                        const qty = pdvProduct?.quantity || 0;
-                        return `<td>${qty}</td>`;
-                    }).join('')}
-                </tr>
-            `}).join('');
+                return `<tr><td><strong>${p.name}</strong></td><td><strong style="color:#2563eb;">${tot}</strong></td>${pointsVente.map(pdv => {
+                    const pp = pdv.products?.find(x => x.reference === p.reference);
+                    return `<td>${pp?.quantity || 0}</td>`;
+                }).join('')}</tr>`;
+            }).join('');
         }
 
-        function filterPDVProducts(search) {
-            const searchLower = search.toLowerCase().trim();
-            console.log('Recherche PDV:', searchLower);
-            
-            const filtered = products.filter(p => 
-                p.name.toLowerCase().includes(searchLower) ||
-                p.reference.toLowerCase().includes(searchLower) ||
-                (p.conventionalName || '').toLowerCase().includes(searchLower) ||
-                (p.barcode || '').toLowerCase().includes(searchLower)
-            );
-            
-            console.log('Résultats trouvés:', filtered.length);
-            
-            const tbody = document.getElementById('pdv-overview-body');
-            if (tbody) {
-                tbody.innerHTML = renderPDVOverview(filtered);
-            }
+        function addPDV() {
+            const n = prompt('Nom du PDV:');
+            if (!n || !n.trim()) return;
+            pointsVente.push({ id: Date.now().toString(), name: n.trim(), products: [] });
+            savePDV();
+            showToast('PDV ajouté');
+            renderPointsVente();
         }
 
-        function openAddPDVModal() {
-            const name = prompt('Nom du point de vente:');
-            if (name && name.trim()) {
-                const pdv = {
-                    id: Date.now().toString(),
-                    name: name.trim(),
-                    products: []
-                };
-                pointsVente.push(pdv);
-                savePDV();
-                showToast('Point de vente ajouté', 'success');
-                renderPointsVente();
-            }
-        }
-
-        function viewPDV(pdvId) {
-            const pdv = pointsVente.find(p => p.id === pdvId);
+        function viewPDV(id) {
+            const pdv = pointsVente.find(p => p.id === id);
             if (!pdv) return;
 
             document.getElementById('app-container').innerHTML = `
@@ -1463,342 +743,184 @@
                         <h3 class="card-title">🏪 ${pdv.name}</h3>
                         <button class="btn btn-secondary" onclick="renderPointsVente()">← Retour</button>
                     </div>
-
-                    <h4 style="margin-bottom: 1rem;">Transférer du stock vers ce point de vente</h4>
-                    
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Produit</th>
-                                    <th>Stock Central</th>
-                                    <th>Stock PDV</th>
-                                    <th>Quantité à transférer</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${products.map(product => {
-                                    const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
-                                    return `
-                                        <tr>
-                                            <td><strong>${product.name}</strong></td>
-                                            <td>${product.quantity || 0}</td>
-                                            <td>${pdvProduct?.quantity || 0}</td>
-                                            <td><input type="number" id="transfer-${product.reference}" min="1" max="${product.quantity || 0}" style="width: 100px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"></td>
-                                            <td><button class="btn btn-primary" onclick="transferToPDV('${pdvId}', '${product.reference}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">➡️ Transférer</button></td>
-                                        </tr>
-                                    `;
-                                }).join('')}
-                            </tbody>
-                        </table>
-                    </div>
+                    <div class="table-container"><table><thead><tr><th>Produit</th><th>Central</th><th>PDV</th><th>Transférer</th><th>Action</th></tr></thead>
+                    <tbody>
+                        ${products.map(p => {
+                            const pp = pdv.products?.find(x => x.reference === p.reference);
+                            return `<tr><td><strong>${p.name}</strong></td><td>${p.quantity || 0}</td><td>${pp?.quantity || 0}</td>
+                                <td><input type="number" id="t-${p.reference}" min="1" max="${p.quantity || 0}" style="width:100px;padding:0.5rem;"></td>
+                                <td><button class="btn btn-primary" onclick="transTo('${id}','${p.reference}')" style="padding:0.4rem 0.8rem;">➡️</button></td></tr>`;
+                        }).join('')}
+                    </tbody></table></div>
                 </div>
             `;
         }
 
-        function transferToPDV(pdvId, productRef) {
+        function transTo(pdvId, ref) {
             const pdv = pointsVente.find(p => p.id === pdvId);
-            const product = products.find(p => p.reference === productRef);
-            const input = document.getElementById(`transfer-${productRef}`);
-            const quantity = parseInt(input.value) || 0;
+            const prod = products.find(p => p.reference === ref);
+            const q = parseInt(document.getElementById(`t-${ref}`).value) || 0;
 
-            if (quantity <= 0) {
-                showToast('Quantité invalide', 'error');
-                return;
-            }
+            if (q <= 0) { showToast('Quantité invalide', 'error'); return; }
+            if ((prod.quantity || 0) < q) { showToast('Stock insuffisant', 'error'); return; }
 
-            if ((product.quantity || 0) < quantity) {
-                showToast('Stock insuffisant', 'error');
-                return;
-            }
-
-            // Retirer du stock central
-            product.quantity = (product.quantity || 0) - quantity;
-
-            // Ajouter au PDV
+            prod.quantity -= q;
             if (!pdv.products) pdv.products = [];
-            const pdvProduct = pdv.products.find(p => p.reference === productRef);
-            if (pdvProduct) {
-                pdvProduct.quantity = (pdvProduct.quantity || 0) + quantity;
-            } else {
-                pdv.products.push({
-                    reference: productRef,
-                    quantity: quantity
-                });
-            }
+            const pp = pdv.products.find(p => p.reference === ref);
+            if (pp) pp.quantity += q;
+            else pdv.products.push({ reference: ref, quantity: q });
 
-            // Enregistrer le mouvement
             movements.push({
                 id: Date.now(),
                 date: new Date().toISOString(),
                 type: 'transfer',
-                reason: 'Transfert vers PDV',
-                note: `Transfert vers ${pdv.name}`,
-                product: product.name,
-                reference: productRef,
-                quantity: quantity,
-                oldQuantity: (product.quantity || 0) + quantity,
-                newQuantity: product.quantity
+                reason: `Vers ${pdv.name}`,
+                product: prod.name,
+                reference: ref,
+                quantity: q
             });
 
-            saveProducts();
+            save();
             savePDV();
-            saveMovements();
-            showToast(`${quantity} unités transférées vers ${pdv.name}`, 'success');
+            saveMov();
+            showToast(`${q} transférés`);
             viewPDV(pdvId);
         }
 
-        // ============ HISTORY PAGE ============
         function renderHistory() {
-            const sortedMovements = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const sorted = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
 
             document.getElementById('app-container').innerHTML = `
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">📜 Historique des mouvements</h3>
-                        <div class="btn-group">
-                            <button class="btn btn-warning" onclick="exportHistory()">📥 Exporter</button>
-                        </div>
+                        <h3 class="card-title">📜 Historique</h3>
+                        <button class="btn btn-warning" onclick="expHist()">📥</button>
                     </div>
-
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; background: #f9fafb; padding: 1rem; border-radius: 8px;">
-                        <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">🔍 Rechercher</label>
-                            <input type="text" id="history-search" class="search-input" placeholder="Produit ou référence..." onkeyup="filterHistory()" style="width: 100%;">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;background:#f9fafb;padding:1rem;border-radius:8px;">
+                        <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;">🔍</label>
+                            <input type="text" id="hs" placeholder="Rechercher..." style="width:100%;padding:0.5rem;border:1px solid #ddd;border-radius:8px;">
                         </div>
-                        
-                        <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">📅 Date</label>
-                            <input type="date" id="history-date" onchange="filterHistory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
+                        <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;">📅 Date</label>
+                            <input type="date" id="hd" style="width:100%;padding:0.5rem;border:1px solid #ddd;border-radius:8px;">
                         </div>
-
-                        <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">📆 Mois</label>
-                            <input type="month" id="history-month" onchange="filterHistory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
+                        <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;">📆 Mois</label>
+                            <input type="month" id="hm" style="width:100%;padding:0.5rem;border:1px solid #ddd;border-radius:8px;">
                         </div>
-
-                        <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">📅 Année</label>
-                            <select id="history-year" onchange="filterHistory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
-                                <option value="">Toutes les années</option>
-                                ${getAvailableYears().map(year => `<option value="${year}">${year}</option>`).join('')}
+                        <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;">📅 Année</label>
+                            <select id="hy" style="width:100%;padding:0.5rem;border:1px solid #ddd;border-radius:8px;">
+                                <option value="">Toutes</option>${getYrs().map(y => `<option value="${y}">${y}</option>`).join('')}
                             </select>
                         </div>
-
-                        <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">🏪 Point de vente</label>
-                            <select id="history-pdv" onchange="filterHistory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
-                                <option value="">Tous les PDV</option>
-                                <option value="Stock Central">Stock Central</option>
-                                ${pointsVente.map(pdv => `<option value="${pdv.name}">${pdv.name}</option>`).join('')}
-                            </select>
-                        </div>
-
-                        <div style="display: flex; align-items: flex-end;">
-                            <button class="btn btn-secondary" onclick="resetHistoryFilters()" style="width: 100%;">🔄 Réinitialiser</button>
+                        <div style="display:flex;align-items:flex-end;">
+                            <button class="btn btn-secondary" onclick="rstHist()" style="width:100%;">🔄</button>
                         </div>
                     </div>
-
-                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #eff6ff; border-radius: 8px; border-left: 4px solid #2563eb;">
-                        <strong id="history-count">${sortedMovements.length}</strong> mouvement(s) trouvé(s)
+                    <div style="margin-bottom:1rem;padding:0.75rem;background:#eff6ff;border-radius:8px;">
+                        <strong id="hc">${sorted.length}</strong> mouvement(s)
                     </div>
-
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Type</th>
-                                    <th>Raison</th>
-                                    <th>Produit</th>
-                                    <th>Référence</th>
-                                    <th>Quantité</th>
-                                    <th>Stock avant</th>
-                                    <th>Stock après</th>
-                                    <th>Note</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history-table-body">
-                                ${renderHistoryRows(sortedMovements)}
-                            </tbody>
-                        </table>
-                    </div>
+                    <div class="table-container"><table><thead><tr><th>Date</th><th>Type</th><th>Raison</th><th>Produit</th><th>Quantité</th><th>Note</th></tr></thead>
+                    <tbody id="hb">${renderHist(sorted)}</tbody></table></div>
                 </div>
             `;
-        }
 
-        function getAvailableYears() {
-            const years = new Set();
-            movements.forEach(m => {
-                const year = new Date(m.date).getFullYear();
-                years.add(year);
+            ['hs', 'hd', 'hm', 'hy'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener(id === 'hs' ? 'input' : 'change', filtHist);
             });
-            return Array.from(years).sort((a, b) => b - a);
         }
 
-        function resetHistoryFilters() {
-            document.getElementById('history-search').value = '';
-            document.getElementById('history-date').value = '';
-            document.getElementById('history-month').value = '';
-            document.getElementById('history-year').value = '';
-            document.getElementById('history-pdv').value = '';
-            filterHistory();
+        function renderHist(list) {
+            if (!list || list.length === 0) return '<tr><td colspan="6" style="text-align:center;">Aucun mouvement</td></tr>';
+            return list.map(m => {
+                const ic = m.type === 'in' ? '➕' : m.type === 'transfer' ? '🔄' : '➖';
+                const cl = m.type === 'in' ? '#10b981' : m.type === 'transfer' ? '#f59e0b' : '#ef4444';
+                const tp = m.type === 'in' ? 'Entrée' : m.type === 'transfer' ? 'Transfert' : 'Sortie';
+                return `<tr><td>${new Date(m.date).toLocaleString('fr-FR')}</td>
+                    <td><span style="color:${cl};font-weight:bold;">${ic} ${tp}</span></td>
+                    <td>${m.reason || '-'}</td><td><strong>${m.product}</strong></td>
+                    <td><strong style="color:${cl};">${m.quantity}</strong></td><td>${m.note || '-'}</td></tr>`;
+            }).join('');
         }
 
-        function filterHistory() {
-            const searchLower = document.getElementById('history-search').value.toLowerCase().trim();
-            const selectedDate = document.getElementById('history-date').value;
-            const selectedMonth = document.getElementById('history-month').value;
-            const selectedYear = document.getElementById('history-year').value;
-            const selectedPDV = document.getElementById('history-pdv').value;
+        function getYrs() {
+            const y = new Set();
+            movements.forEach(m => y.add(new Date(m.date).getFullYear()));
+            return Array.from(y).sort((a, b) => b - a);
+        }
 
-            console.log('=== FILTRES HISTORIQUE ===');
-            console.log('Recherche:', searchLower);
-            console.log('Date:', selectedDate);
-            console.log('Mois:', selectedMonth);
-            console.log('Année:', selectedYear);
-            console.log('PDV:', selectedPDV);
+        function rstHist() {
+            document.getElementById('hs').value = '';
+            document.getElementById('hd').value = '';
+            document.getElementById('hm').value = '';
+            document.getElementById('hy').value = '';
+            filtHist();
+        }
 
-            const sortedMovements = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
-            
-            const filtered = sortedMovements.filter(m => {
-                const movementDate = new Date(m.date);
-                const movementDateStr = movementDate.toISOString().split('T')[0];
-                const movementMonth = movementDate.toISOString().substring(0, 7);
-                const movementYear = movementDate.getFullYear().toString();
+        function filtHist() {
+            const s = document.getElementById('hs').value.toLowerCase();
+            const d = document.getElementById('hd').value;
+            const m = document.getElementById('hm').value;
+            const y = document.getElementById('hy').value;
 
-                // Filtre par recherche texte
-                const matchesSearch = !searchLower || 
-                    m.product.toLowerCase().includes(searchLower) ||
-                    m.reference.toLowerCase().includes(searchLower) ||
-                    (m.reason || '').toLowerCase().includes(searchLower) ||
-                    (m.note || '').toLowerCase().includes(searchLower);
+            const sorted = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const filt = sorted.filter(mv => {
+                const dt = new Date(mv.date);
+                const ds = dt.toISOString().split('T')[0];
+                const ms = dt.toISOString().substring(0, 7);
+                const ys = dt.getFullYear().toString();
 
-                // Filtre par date exacte
-                const matchesDate = !selectedDate || movementDateStr === selectedDate;
+                const ms1 = !s || mv.product.toLowerCase().includes(s) || mv.reference.toLowerCase().includes(s);
+                const md = !d || ds === d;
+                const mm = !m || ms === m;
+                const my = !y || ys === y;
 
-                // Filtre par mois
-                const matchesMonth = !selectedMonth || movementMonth === selectedMonth;
-
-                // Filtre par année
-                const matchesYear = !selectedYear || movementYear === selectedYear;
-
-                // Filtre par PDV (dans la raison ou les notes)
-                const matchesPDV = !selectedPDV || 
-                    (m.reason || '').includes(selectedPDV) ||
-                    (m.note || '').includes(selectedPDV) ||
-                    (m.pdvSource === selectedPDV) ||
-                    (m.pdvDest === selectedPDV);
-
-                return matchesSearch && matchesDate && matchesMonth && matchesYear && matchesPDV;
+                return ms1 && md && mm && my;
             });
 
-            console.log('Résultats trouvés:', filtered.length);
-
-            const tbody = document.getElementById('history-table-body');
-            const countElement = document.getElementById('history-count');
-            
-            if (tbody) {
-                tbody.innerHTML = renderHistoryRows(filtered);
-            }
-            
-            if (countElement) {
-                countElement.textContent = filtered.length;
-            }
+            document.getElementById('hb').innerHTML = renderHist(filt);
+            document.getElementById('hc').textContent = filt.length;
         }
 
-        function exportHistory() {
-            if (movements.length === 0) {
-                showToast('Aucun historique à exporter', 'warning');
-                return;
-            }
+        function expHist() {
+            if (movements.length === 0) { showToast('Aucun historique', 'warning'); return; }
 
-            // Récupérer les filtres actifs
-            const searchLower = document.getElementById('history-search')?.value.toLowerCase().trim() || '';
-            const selectedDate = document.getElementById('history-date')?.value || '';
-            const selectedMonth = document.getElementById('history-month')?.value || '';
-            const selectedYear = document.getElementById('history-year')?.value || '';
-            const selectedPDV = document.getElementById('history-pdv')?.value || '';
-
-            const sortedMovements = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
-            
-            // Appliquer les mêmes filtres que l'affichage
-            const filtered = sortedMovements.filter(m => {
-                const movementDate = new Date(m.date);
-                const movementDateStr = movementDate.toISOString().split('T')[0];
-                const movementMonth = movementDate.toISOString().substring(0, 7);
-                const movementYear = movementDate.getFullYear().toString();
-
-                const matchesSearch = !searchLower || 
-                    m.product.toLowerCase().includes(searchLower) ||
-                    m.reference.toLowerCase().includes(searchLower) ||
-                    (m.reason || '').toLowerCase().includes(searchLower) ||
-                    (m.note || '').toLowerCase().includes(searchLower);
-
-                const matchesDate = !selectedDate || movementDateStr === selectedDate;
-                const matchesMonth = !selectedMonth || movementMonth === selectedMonth;
-                const matchesYear = !selectedYear || movementYear === selectedYear;
-                const matchesPDV = !selectedPDV || 
-                    (m.reason || '').includes(selectedPDV) ||
-                    (m.note || '').includes(selectedPDV) ||
-                    (m.pdvSource === selectedPDV) ||
-                    (m.pdvDest === selectedPDV);
-
-                return matchesSearch && matchesDate && matchesMonth && matchesYear && matchesPDV;
-            });
-
-            if (filtered.length === 0) {
-                showToast('Aucun mouvement à exporter avec ces filtres', 'warning');
-                return;
-            }
-
-            const exportData = filtered.map(m => ({
+            const data = movements.map(m => ({
                 'Date': new Date(m.date).toLocaleString('fr-FR'),
                 'Type': m.type === 'in' ? 'Entrée' : m.type === 'transfer' ? 'Transfert' : 'Sortie',
                 'Raison': m.reason,
                 'Produit': m.product,
                 'Référence': m.reference,
                 'Quantité': m.quantity,
-                'Stock Avant': m.oldQuantity !== undefined ? m.oldQuantity : '',
-                'Stock Après': m.newQuantity !== undefined ? m.newQuantity : '',
                 'Note': m.note || ''
             }));
 
-            const ws = XLSX.utils.json_to_sheet(exportData);
+            const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Historique');
-            
-            const fileName = `historique_${selectedDate || selectedMonth || selectedYear || new Date().toISOString().split('T')[0]}.xlsx`;
-            XLSX.writeFile(wb, fileName);
-            
-            showToast(`${filtered.length} mouvement(s) exporté(s)`, 'success');
+            XLSX.writeFile(wb, `historique_${new Date().toISOString().split('T')[0]}.xlsx`);
+            showToast('Exporté');
         }
 
-        // ============ SAVE FUNCTIONS ============
-        function saveProducts() {
-            // Avant de sauvegarder, recalculer tous les stocks totaux
-            products.forEach(product => {
-                const totalInAllPDV = pointsVente.reduce((sum, pdv) => {
-                    const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
-                    return sum + (pdvProduct?.quantity || 0);
+        function save() {
+            products.forEach(p => {
+                const t = pointsVente.reduce((s, pdv) => {
+                    const pp = pdv.products?.find(x => x.reference === p.reference);
+                    return s + (pp?.quantity || 0);
                 }, 0);
-                product.quantity = totalInAllPDV;
+                p.quantity = t;
             });
             localStorage.setItem('products', JSON.stringify(products));
         }
 
-        function saveMovements() {
+        function saveMov() {
             localStorage.setItem('movements', JSON.stringify(movements));
         }
 
         function savePDV() {
             localStorage.setItem('pointsVente', JSON.stringify(pointsVente));
-            // Après avoir sauvegardé les PDV, recalculer les stocks totaux
-            saveProducts();
+            save();
         }
 
-        // ============ INIT ============
         renderDashboard();
     </script>
 </body>
