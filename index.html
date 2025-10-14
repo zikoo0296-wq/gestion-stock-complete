@@ -214,6 +214,14 @@
                         Les colonnes <strong>QTY XXX</strong> représentent le stock de chaque point de vente (ex: QTY Al Baraka, QTY Roche Noire, QTY ALGHAFLA)<br>
                         Le système détectera automatiquement tous les points de vente et distribuera le stock selon chaque colonne QTY.
                     </small>
+                    <br><br>
+                    <strong style="color: #ef4444;">⚠️ Important pour les images :</strong><br>
+                    <small style="color: #666;">
+                        • Les images Google Drive doivent être <strong>partagées publiquement</strong><br>
+                        • Format accepté : <code style="background: #f3f4f6; padding: 2px 6px; border-radius: 4px;">https://drive.google.com/uc?export=view&id=XXX</code><br>
+                        • Testez vos images en ouvrant l'URL dans un navigateur incognito<br>
+                        • Si "Accès refusé", partagez le fichier en mode "Tous les utilisateurs disposant du lien"
+                    </small>
                 </p>
                 <input type="file" id="excel-file" accept=".xlsx,.xls" onchange="handleImport(event)">
                 <button class="btn btn-primary" onclick="document.getElementById('excel-file').click()">📁 Choisir un fichier</button>
@@ -318,15 +326,25 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                ${products.filter(p => (p.quantity || 0) < 10).map(p => `
+                                ${products.filter(p => (p.quantity || 0) < 10).map(p => {
+                                    const imageSrc = p.image || '';
+                                    const idMatch = imageSrc.match(/[?&]id=([^&]+)/);
+                                    const fileId = idMatch ? idMatch[1] : null;
+                                    let imageHtml = '📦';
+                                    
+                                    if (fileId) {
+                                        imageHtml = `<img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w200" class="product-img" onclick="openImageModal('https://drive.google.com/uc?export=view&id=${fileId}')" onerror="if (this.src.includes('thumbnail')) { this.src='https://drive.google.com/uc?export=view&id=${fileId}'; } else { this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E'; }" alt="${p.name}">`;
+                                    }
+                                    
+                                    return `
                                     <tr>
-                                        <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';" alt="${p.name}">` : '📦'}</td>
+                                        <td>${imageHtml}</td>
                                         <td><strong>${p.name}</strong><br><small>${p.conventionalName || ''}</small></td>
                                         <td>${p.reference}</td>
                                         <td><span style="color: #ef4444; font-weight: bold;">${p.quantity || 0}</span></td>
                                         <td>${p.price} DH</td>
                                     </tr>
-                                `).join('') || '<tr><td colspan="5" class="text-center">Aucun produit en alerte</td></tr>'}
+                                `}).join('') || '<tr><td colspan="5" class="text-center">Aucun produit en alerte</td></tr>'}
                             </tbody>
                         </table>
                     </div>
@@ -404,6 +422,8 @@
             const checkedBoxes = document.querySelectorAll('.product-select-checkbox:checked');
             const count = checkedBoxes.length;
             
+            console.log('Suppression de produits sélectionnés:', count);
+            
             if (count === 0) {
                 showToast('Aucun produit sélectionné', 'warning');
                 return;
@@ -414,7 +434,11 @@
             }
 
             const refsToDelete = Array.from(checkedBoxes).map(cb => cb.dataset.ref);
+            console.log('Références à supprimer:', refsToDelete);
+            
+            const initialLength = products.length;
             products = products.filter(p => !refsToDelete.includes(p.reference));
+            console.log(`Produits avant: ${initialLength}, après: ${products.length}`);
             
             // Supprimer aussi des PDV
             pointsVente.forEach(pdv => {
@@ -435,14 +459,45 @@
             }
             
             return filteredProducts.map(p => {
-                // Échapper les guillemets dans les données JSON pour éviter les erreurs
-                const productJson = JSON.stringify(p).replace(/"/g, '&quot;');
                 const imageSrc = p.image || '';
+                
+                // Créer plusieurs formats d'URL Google Drive en fallback
+                let imageHtml = '📦';
+                if (imageSrc) {
+                    // Extraire l'ID du fichier
+                    const idMatch = imageSrc.match(/[?&]id=([^&]+)/);
+                    const fileId = idMatch ? idMatch[1] : null;
+                    
+                    if (fileId) {
+                        // Essayer plusieurs formats d'URL
+                        imageHtml = `
+                            <img 
+                                src="https://drive.google.com/thumbnail?id=${fileId}&sz=w200" 
+                                class="product-img" 
+                                onclick="openImageModal('https://drive.google.com/uc?export=view&id=${fileId}')"
+                                onerror="
+                                    if (this.src.includes('thumbnail')) {
+                                        this.src='https://drive.google.com/uc?export=view&id=${fileId}';
+                                    } else if (this.src.includes('uc?export=view')) {
+                                        this.src='https://lh3.googleusercontent.com/d/${fileId}';
+                                    } else {
+                                        console.error('Image non chargée:', '${fileId}'); 
+                                        this.onerror=null; 
+                                        this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';
+                                    }
+                                " 
+                                alt="${p.name}"
+                                title="ID: ${fileId}"
+                            >`;
+                    } else {
+                        imageHtml = `<img src="${imageSrc}" class="product-img" onclick="openImageModal('${imageSrc}')" onerror="console.error('URL invalide:', '${imageSrc}'); this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';" alt="${p.name}">`;
+                    }
+                }
                 
                 return `
                 <tr>
                     <td><input type="checkbox" class="product-select-checkbox" data-ref="${p.reference}"></td>
-                    <td>${imageSrc ? `<img src="${imageSrc}" class="product-img" onclick="openImageModal('${imageSrc}')" onerror="console.error('Erreur chargement image:', '${imageSrc}'); this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';" alt="${p.name}">` : '📦'}</td>
+                    <td>${imageHtml}</td>
                     <td>
                         <strong>${p.name}</strong>
                         ${p.conventionalName ? `<br><small style="color: #666;">${p.conventionalName}</small>` : ''}
@@ -762,18 +817,30 @@
                 return;
             }
 
-            const exportData = products.map(p => ({
-                'IMAGE': p.image || '',
-                'Real Name': p.name,
-                'Conventional Name': p.conventionalName || '',
-                'Selling Price': p.price,
-                'Barcode': p.barcode || '',
-                'Repetition': p.quantity || 0,
-                'Barcode Category': '',
-                'Category': p.category || '',
-                'Brand': p.brand || '',
-                'Référence': p.reference
-            }));
+            // Récupérer tous les noms de PDV
+            const pdvNames = pointsVente.map(pdv => pdv.name);
+
+            const exportData = products.map(p => {
+                const row = {
+                    'IMAGE': p.image || '',
+                    'Real Name': p.name,
+                    'Conventional Name': p.conventionalName || '',
+                    'Référence': p.reference,
+                    'Barcode': p.barcode || '',
+                    'Repetition': p.quantity || 0,
+                    'Category': p.category || '',
+                    'Brand': p.brand || ''
+                };
+
+                // Ajouter les colonnes QTY pour chaque PDV
+                pdvNames.forEach(pdvName => {
+                    const pdv = pointsVente.find(pv => pv.name === pdvName);
+                    const pdvProduct = pdv?.products?.find(pp => pp.reference === p.reference);
+                    row[`QTY ${pdvName}`] = pdvProduct?.quantity || 0;
+                });
+
+                return row;
+            });
 
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
@@ -862,16 +929,26 @@
                 return '<tr><td colspan="6" class="text-center">Aucun produit trouvé</td></tr>';
             }
             
-            return productList.map(p => `
+            return productList.map(p => {
+                const imageSrc = p.image || '';
+                const idMatch = imageSrc.match(/[?&]id=([^&]+)/);
+                const fileId = idMatch ? idMatch[1] : null;
+                let imageHtml = '📦';
+                
+                if (fileId) {
+                    imageHtml = `<img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w200" class="product-img" onclick="openImageModal('https://drive.google.com/uc?export=view&id=${fileId}')" onerror="if (this.src.includes('thumbnail')) { this.src='https://drive.google.com/uc?export=view&id=${fileId}'; } else { this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E'; }" alt="${p.name}">`;
+                }
+                
+                return `
                 <tr>
                     <td><input type="checkbox" class="product-checkbox" data-ref="${p.reference}"></td>
-                    <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';" alt="${p.name}">` : '📦'}</td>
+                    <td>${imageHtml}</td>
                     <td><strong>${p.name}</strong></td>
                     <td>${p.reference}</td>
                     <td><strong>${p.quantity || 0}</strong></td>
                     <td><input type="number" class="quantity-input" data-ref="${p.reference}" min="1" style="width: 100px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" disabled></td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         function filterMovementProducts(search) {
@@ -1000,26 +1077,38 @@
 
                     <div style="margin-top: 2rem;">
                         <h4 style="margin-bottom: 1rem;">📊 Vue d'ensemble du stock par point de vente</h4>
+                        <p style="color: #666; margin-bottom: 1rem; font-size: 0.9rem;">
+                            <strong>Légende :</strong> Le stock total d'un produit = Stock Central (si géré) + somme de tous les points de vente
+                        </p>
                         <div class="table-container">
                             <table>
                                 <thead>
                                     <tr>
                                         <th>Produit</th>
+                                        <th>Référence</th>
                                         <th>Stock Total</th>
                                         ${pointsVente.map(pdv => `<th>${pdv.name}</th>`).join('')}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${products.map(product => `
+                                    ${products.length > 0 ? products.map(product => {
+                                        const totalInPDV = pointsVente.reduce((sum, pdv) => {
+                                            const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
+                                            return sum + (pdvProduct?.quantity || 0);
+                                        }, 0);
+                                        
+                                        return `
                                         <tr>
                                             <td><strong>${product.name}</strong></td>
-                                            <td><strong>${product.quantity || 0}</strong></td>
+                                            <td>${product.reference}</td>
+                                            <td><strong style="color: #2563eb;">${product.quantity || 0}</strong></td>
                                             ${pointsVente.map(pdv => {
                                                 const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
-                                                return `<td>${pdvProduct?.quantity || 0}</td>`;
+                                                const qty = pdvProduct?.quantity || 0;
+                                                return `<td>${qty}</td>`;
                                             }).join('')}
                                         </tr>
-                                    `).join('')}
+                                    `}).join('') : '<tr><td colspan="100" class="text-center">Aucun produit disponible</td></tr>'}
                                 </tbody>
                             </table>
                         </div>
