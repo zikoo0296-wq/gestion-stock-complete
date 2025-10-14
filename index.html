@@ -494,57 +494,101 @@
                     blankrows: false
                 });
 
-                // FILTRER lignes vides (Real Name OU Référence présent)
-                const rows = allRows.filter(r => 
-                    (r['Real Name'] && r['Real Name'].toString().trim()) || 
-                    (r['Référence'] && r['Référence'].toString().trim())
-                );
+                console.log('Total lignes Excel:', allRows.length);
+                console.log('Colonnes détectées:', Object.keys(allRows[0]));
+                console.log('Première ligne exemple:', allRows[0]);
+
+                // FILTRER lignes vides - vérifier plusieurs colonnes
+                const rows = allRows.filter(r => {
+                    const hasData = (r['Real Name'] && r['Real Name'].toString().trim()) || 
+                                   (r['Référence'] && r['Référence'].toString().trim()) ||
+                                   (r['IMAGE'] && r['IMAGE'].toString().trim() && r['IMAGE'].toString().includes('drive.google.com'));
+                    return hasData;
+                });
+
+                console.log(`Produits filtrés: ${rows.length}`);
 
                 if (rows.length === 0) { 
-                    showToast('Aucun produit', 'error'); 
+                    showToast('Aucun produit trouvé', 'error'); 
                     closeImportModal(); 
                     return; 
                 }
 
-                txt.textContent = `${rows.length} produits...`;
+                txt.textContent = `${rows.length} produits détectés`;
                 fill.style.width = '20%';
 
-                // Détecter colonnes PDV
+                // Détecter colonnes PDV (QTY suivi d'un nom)
                 const cols = Object.keys(rows[0]);
-                const pdvCols = cols.filter(c => c.toUpperCase().includes('QTY'));
+                const pdvCols = cols.filter(c => {
+                    const upper = c.toUpperCase();
+                    return upper.includes('QTY') || upper.startsWith('QTÉ');
+                });
+                
+                console.log('Colonnes PDV trouvées:', pdvCols);
                 
                 // Créer PDV
                 pdvCols.forEach(c => {
-                    const n = c.replace(/QTY/gi, '').trim();
+                    let n = c.replace(/QTY/gi, '').replace(/QTÉ/gi, '').trim();
                     if (n && !pointsVente.find(p => p.name === n)) {
                         pointsVente.push({ 
                             id: `pdv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, 
                             name: n, 
                             products: [] 
                         });
+                        console.log('PDV créé:', n);
                     }
                 });
 
-                txt.textContent = 'Import...';
+                txt.textContent = 'Traitement...';
                 fill.style.width = '30%';
 
-                // TRAITEMENT ULTRA-RAPIDE - Lots de 500
+                // TRAITEMENT ULTRA-RAPIDE
                 const batchSize = 500;
                 const allData = [];
                 
                 for (let i = 0; i < rows.length; i += batchSize) {
                     const batch = rows.slice(i, i + batchSize);
                     
-                    batch.forEach(r => {
-                        // Image Google Drive
-                        let img = (r['IMAGE'] || '').toString().trim();
+                    batch.forEach((r, idx) => {
+                        // IMAGE - chercher dans toutes les colonnes
+                        let img = '';
+                        
+                        // Vérifier colonne IMAGE
+                        if (r['IMAGE'] && r['IMAGE'].toString().trim()) {
+                            img = r['IMAGE'].toString().trim();
+                        }
+                        // Si pas dans IMAGE, chercher dans Real Name si c'est une URL
+                        else if (r['Real Name'] && r['Real Name'].toString().includes('drive.google.com')) {
+                            img = r['Real Name'].toString().trim();
+                        }
+                        // Chercher dans Référence
+                        else if (r['Référence'] && r['Référence'].toString().includes('drive.google.com')) {
+                            img = r['Référence'].toString().trim();
+                        }
+                        
+                        // Convertir URL Google Drive
                         if (img && img.includes('drive.google.com')) {
                             const m = img.match(/\/d\/([^/\?]+)/) || img.match(/[?&]id=([^&]+)/);
                             if (m) img = `https://drive.google.com/uc?export=view&id=${m[1]}`;
                         }
 
-                        const ref = (r['Référence'] || '').toString().trim() || `REF_${Date.now()}_${i}`;
+                        // Real Name - chercher dans les colonnes
+                        let name = '';
+                        if (r['Real Name'] && !r['Real Name'].toString().includes('drive.google.com')) {
+                            name = r['Real Name'].toString().trim();
+                        } else if (r['Conventional Name'] && !r['Conventional Name'].toString().includes('drive.google.com')) {
+                            name = r['Conventional Name'].toString().trim();
+                        }
+
+                        // Référence
+                        let ref = '';
+                        if (r['Référence'] && !r['Référence'].toString().includes('drive.google.com')) {
+                            ref = r['Référence'].toString().trim();
+                        }
                         
+                        if (!ref) ref = `REF_${Date.now()}_${i + idx}`;
+                        if (!name) name = ref; // Si pas de nom, utiliser la référence
+
                         // Calculer quantité totale
                         let totalQty = 0;
                         const pdvQtys = {};
@@ -553,20 +597,20 @@
                             const val = r[c];
                             const q = val ? parseInt(val.toString().replace(/[^\d]/g, '')) || 0 : 0;
                             totalQty += q;
-                            const n = c.replace(/QTY/gi, '').trim();
+                            const n = c.replace(/QTY/gi, '').replace(/QTÉ/gi, '').trim();
                             if (n) pdvQtys[n] = q;
                         });
 
                         allData.push({
                             prod: {
                                 image: img,
-                                name: (r['Real Name'] || '').toString().trim(),
+                                name: name,
                                 conventionalName: (r['Conventional Name'] || '').toString().trim(),
                                 reference: ref,
-                                barcode: (r['Barcode'] || '').toString().trim(),
-                                category: (r['Category'] || '').toString().trim(),
-                                brand: (r['Brand'] || '').toString().trim(),
-                                price: parseFloat((r['Selling Price'] || '0').toString().replace(/[^\d.]/g, '')) || 0,
+                                barcode: (r['Barcode'] || r['Code-barres'] || '').toString().trim(),
+                                category: (r['Category'] || r['Catégorie'] || '').toString().trim(),
+                                brand: (r['Brand'] || r['Marque'] || '').toString().trim(),
+                                price: parseFloat((r['Selling Price'] || r['Prix'] || '0').toString().replace(/[^\d.]/g, '')) || 0,
                                 quantity: totalQty
                             },
                             ref,
@@ -574,15 +618,15 @@
                         });
                     });
 
-                    // Progression tous les 500
                     const percent = 30 + Math.round(((i + batch.length) / rows.length) * 60);
                     fill.style.width = percent + '%';
                     txt.textContent = `${i + batch.length}/${rows.length}`;
                     
-                    // Micro-pause tous les 500
                     await new Promise(r => setTimeout(r, 1));
                 }
 
+                console.log('Produits traités:', allData.length);
+                
                 txt.textContent = 'Sauvegarde...';
                 fill.style.width = '90%';
 
@@ -612,6 +656,7 @@
                 
                 fill.style.width = '100%';
                 txt.textContent = `✓ ${allData.length} importés !`;
+                console.log('Import terminé:', allData.length, 'produits');
                 showToast(`${allData.length} produits importés`, 'success');
                 
                 setTimeout(() => {
