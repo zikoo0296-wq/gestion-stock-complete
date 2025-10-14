@@ -258,8 +258,32 @@
 
         // ============ IMAGE MODAL ============
         function openImageModal(src) {
-            document.getElementById('modal-image').src = src;
-            document.getElementById('image-modal').classList.add('active');
+            const modal = document.getElementById('image-modal');
+            const modalImg = document.getElementById('modal-image');
+            
+            // Extraire l'ID du fichier pour essayer plusieurs formats
+            const idMatch = src.match(/[?&]id=([^&]+)/);
+            const fileId = idMatch ? idMatch[1] : null;
+            
+            if (fileId) {
+                // Essayer le format haute résolution
+                modalImg.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                modalImg.onerror = function() {
+                    // Si échec, essayer le format thumbnail plus large
+                    if (this.src.includes('uc?export=view')) {
+                        this.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+                    } else if (this.src.includes('thumbnail')) {
+                        this.src = `https://lh3.googleusercontent.com/d/${fileId}=w800`;
+                    } else {
+                        console.error('Impossible de charger l\'image en haute résolution');
+                        this.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22%3E%3Crect fill=%22%23333%22 width=%22400%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2224%22%3EImage non disponible%3C/text%3E%3C/svg%3E';
+                    }
+                };
+            } else {
+                modalImg.src = src;
+            }
+            
+            modal.classList.add('active');
         }
 
         function closeImageModal() {
