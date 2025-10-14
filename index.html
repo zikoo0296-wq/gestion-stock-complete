@@ -8,6 +8,8 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; color: #333; }
+        
+        /* Navbar */
         .navbar { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 1rem 2rem; }
         .navbar-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
         .logo { font-size: 1.5rem; font-weight: bold; color: #2563eb; }
@@ -15,1146 +17,1006 @@
         .nav-btn { padding: 0.5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; background: transparent; color: #666; transition: all 0.3s; }
         .nav-btn:hover { background: #f0f0f0; }
         .nav-btn.active { background: #2563eb; color: white; }
+        
+        /* Container */
         .container { max-width: 1400px; margin: 2rem auto; padding: 0 2rem; }
+        
+        /* Stats */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
         .stat-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid; }
         .stat-card.blue { border-color: #2563eb; }
         .stat-card.green { border-color: #10b981; }
         .stat-card.red { border-color: #ef4444; }
+        .stat-card.orange { border-color: #f59e0b; }
         .stat-label { color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; }
         .stat-value { font-size: 2rem; font-weight: bold; color: #333; }
+        
+        /* Cards */
         .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 2rem; }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
         .card-title { font-size: 1.3rem; font-weight: bold; }
-        .search-input { flex: 1; max-width: 400px; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; }
+        
+        /* Buttons */
         .btn-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-        .btn { padding: 0.7rem 1.2rem; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn { padding: 0.7rem 1.2rem; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.3s; }
         .btn-primary { background: #2563eb; color: white; }
         .btn-primary:hover { background: #1d4ed8; }
         .btn-success { background: #10b981; color: white; }
         .btn-success:hover { background: #059669; }
-        .btn-purple { background: #8b5cf6; color: white; }
-        .btn-purple:hover { background: #7c3aed; }
         .btn-danger { background: #ef4444; color: white; }
         .btn-danger:hover { background: #dc2626; }
-        .btn-orange { background: #f97316; color: white; }
-        .btn-orange:hover { background: #ea580c; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-warning:hover { background: #d97706; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+        
+        /* Search */
+        .search-input { flex: 1; max-width: 400px; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; }
+        
+        /* Table */
+        .table-container { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
-        thead { background: #f9fafb; }
         th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
-        th { font-weight: 600; font-size: 0.9rem; color: #374151; }
-        td { font-size: 0.9rem; }
-        tbody tr:hover { background: #f9fafb; }
-        .badge { padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
-        .badge-success { background: #d1fae5; color: #065f46; }
-        .badge-danger { background: #fee2e2; color: #991b1b; }
-        .badge-in { background: #d1fae5; color: #065f46; }
-        .badge-out { background: #fee2e2; color: #991b1b; }
-        .product-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; background: #f3f4f6; border: 1px solid #e5e7eb; cursor: pointer; transition: transform 0.2s; }
-        .product-img:hover { transform: scale(1.05); }
-        .product-img-error { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 8px; border: 1px solid #e5e7eb; color: #9ca3af; font-size: 1.5rem; }
-        .action-btn { padding: 0.5rem; border: none; background: transparent; cursor: pointer; color: #666; transition: color 0.3s; font-size: 1.2rem; }
-        .action-btn:hover { color: #2563eb; }
-        .action-btn.delete:hover { color: #ef4444; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        th { background: #f9fafb; font-weight: 600; color: #374151; }
+        tr:hover { background: #f9fafb; }
+        .product-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: transform 0.2s; }
+        .product-img:hover { transform: scale(1.1); }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
         .modal.active { display: flex; }
-        .modal-content { background: white; border-radius: 12px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
-        .modal-header { padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { padding: 1.5rem; }
-        .form-group { margin-bottom: 1rem; }
-        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; }
-        .form-input, .form-select { width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-        .progress-bar { margin-bottom: 1rem; padding: 1rem; background: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; }
-        .progress-info { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: #1e40af; }
-        .progress { height: 8px; background: #93c5fd; border-radius: 4px; overflow: hidden; }
+        .modal-content { background: white; padding: 2rem; border-radius: 12px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .modal-title { font-size: 1.5rem; font-weight: bold; }
+        .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; }
+        
+        /* Form */
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        
+        /* Progress */
+        .progress-container { margin: 1rem 0; }
+        .progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
         .progress-fill { height: 100%; background: #2563eb; transition: width 0.3s; }
+        .progress-text { margin-top: 0.5rem; text-align: center; color: #666; font-size: 0.9rem; }
+        
+        /* Toast */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
+        .toast { background: white; padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 1rem; min-width: 300px; animation: slideIn 0.3s; }
+        .toast.success { border-left: 4px solid #10b981; }
+        .toast.error { border-left: 4px solid #ef4444; }
+        .toast.warning { border-left: 4px solid #f59e0b; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        /* Image Modal */
+        .image-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        .image-modal.active { display: flex; }
+        .image-modal img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        .image-modal-close { position: absolute; top: 20px; right: 20px; color: white; font-size: 2rem; cursor: pointer; background: rgba(0,0,0,0.5); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        
+        /* Utilities */
         .hidden { display: none; }
+        .text-center { text-align: center; }
+        .mb-2 { margin-bottom: 1rem; }
         input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
         input[type="file"] { display: none; }
         
-        /* Toast Notifications */
-        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 400px; }
-        .toast { background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 12px; animation: slideIn 0.3s ease; border-left: 4px solid; min-width: 300px; }
-        .toast.success { border-color: #10b981; }
-        .toast.error { border-color: #ef4444; }
-        .toast.warning { border-color: #f59e0b; }
-        .toast.info { border-color: #3b82f6; }
-        .toast-icon { font-size: 24px; }
-        .toast-content { flex: 1; }
-        .toast-title { font-weight: 600; margin-bottom: 2px; }
-        .toast-message { font-size: 0.9rem; color: #666; }
-        .toast-close { cursor: pointer; font-size: 20px; color: #999; }
-        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        
-        /* Image Viewer */
-        .image-viewer { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
-        .image-viewer.active { display: flex; }
-        .image-viewer-content { position: relative; max-width: 90%; max-height: 90%; }
-        .image-viewer-img { max-width: 100%; max-height: 90vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-        .image-viewer-close { position: absolute; top: -40px; right: 0; background: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; color: #333; }
-        
-        /* Custom Confirm Dialog */
-        .confirm-dialog { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9998; align-items: center; justify-content: center; }
-        .confirm-dialog.active { display: flex; }
-        .confirm-content { background: white; border-radius: 16px; padding: 2rem; max-width: 400px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-        .confirm-icon { font-size: 48px; margin-bottom: 1rem; }
-        .confirm-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 0.5rem; }
-        .confirm-message { color: #666; margin-bottom: 2rem; }
-        .confirm-buttons { display: flex; gap: 1rem; justify-content: center; }
+        /* Points de Vente */
+        .pdv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .pdv-card { background: #f9fafb; padding: 1rem; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: all 0.3s; }
+        .pdv-card.active { border-color: #2563eb; background: #eff6ff; }
+        .pdv-card:hover { border-color: #93c5fd; }
+        .pdv-name { font-weight: 600; margin-bottom: 0.5rem; }
+        .pdv-stock { color: #666; font-size: 0.9rem; }
         
         @media (max-width: 768px) {
             .navbar-content { flex-direction: column; }
-            .stats-grid { grid-template-columns: 1fr; }
             .card-header { flex-direction: column; align-items: stretch; }
             .search-input { max-width: 100%; }
-            .toast-container { left: 10px; right: 10px; max-width: none; }
+            .btn-group { flex-direction: column; }
+            .stats-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <nav class="navbar">
+    <!-- Navbar -->
+    <div class="navbar">
         <div class="navbar-content">
-            <div class="logo">📦 Gestion de Stock Pro</div>
-            <div class="nav-buttons" id="nav-container"></div>
+            <div class="logo">📦 Stock Pro</div>
+            <div class="nav-buttons">
+                <button class="nav-btn active" onclick="showPage('dashboard')">📊 Dashboard</button>
+                <button class="nav-btn" onclick="showPage('products')">📦 Produits</button>
+                <button class="nav-btn" onclick="showPage('movements')">🔄 Mouvements</button>
+                <button class="nav-btn" onclick="showPage('pointsVente')">🏪 Points de Vente</button>
+                <button class="nav-btn" onclick="showPage('history')">📜 Historique</button>
+            </div>
         </div>
-    </nav>
+    </div>
 
+    <!-- Container -->
     <div class="container" id="app-container"></div>
 
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- Image Viewer -->
-    <div class="image-viewer" id="image-viewer">
-        <div class="image-viewer-content">
-            <button class="image-viewer-close" id="close-image-viewer">✖</button>
-            <img class="image-viewer-img" id="viewer-img" src="" alt="">
-        </div>
+    <!-- Image Modal -->
+    <div class="image-modal" id="image-modal">
+        <div class="image-modal-close" onclick="closeImageModal()">✕</div>
+        <img id="modal-image" src="" alt="">
     </div>
 
-    <!-- Confirm Dialog -->
-    <div class="confirm-dialog" id="confirm-dialog">
-        <div class="confirm-content">
-            <div class="confirm-icon" id="confirm-icon">⚠️</div>
-            <div class="confirm-title" id="confirm-title">Confirmation</div>
-            <div class="confirm-message" id="confirm-message">Êtes-vous sûr ?</div>
-            <div class="confirm-buttons">
-                <button class="btn btn-danger" id="confirm-yes">Oui</button>
-                <button class="btn" id="confirm-no" style="background:#e5e7eb;">Annuler</button>
-            </div>
-        </div>
-    </div>
-
+    <!-- Product Modal -->
     <div id="product-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modal-title">Ajouter un Produit</h2>
-                <button class="action-btn" id="close-modal-btn">✖</button>
+                <h2 class="modal-title" id="modal-title">Ajouter un produit</h2>
+                <button class="close-btn" onclick="closeProductModal()">×</button>
             </div>
-            <div class="modal-body">
-                <form id="product-form">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">URL Image</label>
-                            <input type="text" id="form-image" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Nom Réel *</label>
-                            <input type="text" id="form-realName" class="form-input" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Nom Conventionnel</label>
-                            <input type="text" id="form-conventionalName" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Code-barres</label>
-                            <input type="text" id="form-barcode" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Répétition</label>
-                            <input type="text" id="form-repetitionBarcode" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Catégorie</label>
-                            <input type="text" id="form-category" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Marque</label>
-                            <input type="text" id="form-brand" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Référence</label>
-                            <input type="text" id="form-reference" class="form-input">
-                        </div>
-                    </div>
-                    <div class="btn-group" style="margin-top: 1.5rem;">
-                        <button type="submit" class="btn btn-primary">✅ Enregistrer</button>
-                        <button type="button" class="btn" id="cancel-modal-btn" style="background: #e5e7eb;">Annuler</button>
-                    </div>
-                </form>
+            <form id="product-form">
+                <div class="form-group">
+                    <label>Image URL (Google Drive)</label>
+                    <input type="text" id="product-image" placeholder="https://drive.google.com/uc?export=view&id=...">
+                </div>
+                <div class="form-group">
+                    <label>Nom du produit *</label>
+                    <input type="text" id="product-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Nom commercial</label>
+                    <input type="text" id="product-conventional">
+                </div>
+                <div class="form-group">
+                    <label>Référence *</label>
+                    <input type="text" id="product-ref" required>
+                </div>
+                <div class="form-group">
+                    <label>Code-barres</label>
+                    <input type="text" id="product-barcode">
+                </div>
+                <div class="form-group">
+                    <label>Catégorie</label>
+                    <input type="text" id="product-category">
+                </div>
+                <div class="form-group">
+                    <label>Marque</label>
+                    <input type="text" id="product-brand">
+                </div>
+                <div class="form-group">
+                    <label>Prix de vente *</label>
+                    <input type="number" step="0.01" id="product-price" required>
+                </div>
+                <div class="form-group">
+                    <label>Quantité initiale</label>
+                    <input type="number" id="product-quantity" value="0">
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeProductModal()">Annuler</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Importer depuis Excel</h2>
+                <button class="close-btn" onclick="closeImportModal()">×</button>
+            </div>
+            <div class="mb-2">
+                <p style="color: #666; margin-bottom: 1rem;">Format attendu : IMAGE | Real Name | Conventional Name | Selling Price | Barcode | Repetition | Barcode Category | Category | Brand | Référence</p>
+                <input type="file" id="excel-file" accept=".xlsx,.xls" onchange="handleImport(event)">
+                <button class="btn btn-primary" onclick="document.getElementById('excel-file').click()">📁 Choisir un fichier</button>
+            </div>
+            <div id="import-progress" class="progress-container hidden">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-text" id="progress-text">Import en cours...</div>
             </div>
         </div>
     </div>
 
     <script>
-        // === DONNÉES ===
-        let APP = {
-            products: JSON.parse(localStorage.getItem('products')) || [],
-            stores: JSON.parse(localStorage.getItem('stores')) || [],
-            movements: JSON.parse(localStorage.getItem('movements')) || [],
-            returns: JSON.parse(localStorage.getItem('returns')) || [],
-            currentPage: 'dashboard',
-            editingProduct: null
-        };
+        // ============ DATA STORAGE ============
+        let products = JSON.parse(localStorage.getItem('products')) || [];
+        let movements = JSON.parse(localStorage.getItem('movements')) || [];
+        let pointsVente = JSON.parse(localStorage.getItem('pointsVente')) || [];
+        let currentPage = 'dashboard';
+        let editingProduct = null;
 
-        const PAGES = [
-            { id: 'dashboard', label: '🏠 Dashboard' },
-            { id: 'products', label: '📦 Produits' },
-            { id: 'stores', label: '🏪 Points de Vente' },
-            { id: 'movements', label: '📊 Mouvements' },
-            { id: 'returns', label: '🔄 Retours' }
-        ];
-
-        // === FONCTIONS UTILITAIRES ===
-        function save() {
-            localStorage.setItem('products', JSON.stringify(APP.products));
-            localStorage.setItem('stores', JSON.stringify(APP.stores));
-            localStorage.setItem('movements', JSON.stringify(APP.movements));
-            localStorage.setItem('returns', JSON.stringify(APP.returns));
-            console.log('✓ Données sauvegardées');
-        }
-
-        function formatImageUrl(url) {
-            if (!url) return '';
-            url = String(url).trim();
-            if (url.includes('drive.google.com')) {
-                const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-                const match2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-                const fileId = match1 ? match1[1] : (match2 ? match2[1] : '');
-                if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
-            }
-            return url;
-        }
-
-        // === TOAST NOTIFICATIONS ===
-        function showToast(title, message, type = 'success') {
+        // ============ TOAST NOTIFICATIONS ============
+        function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div>${type === 'success' ? '✓' : type === 'error' ? '✗' : '⚠'}</div>
+                <div>${message}</div>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ============ IMAGE MODAL ============
+        function openImageModal(src) {
+            document.getElementById('modal-image').src = src;
+            document.getElementById('image-modal').classList.add('active');
+        }
+
+        function closeImageModal() {
+            document.getElementById('image-modal').classList.remove('active');
+        }
+
+        // ============ NAVIGATION ============
+        function showPage(page) {
+            currentPage = page;
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
             
-            const icons = {
-                success: '✅',
-                error: '❌',
-                warning: '⚠️',
-                info: 'ℹ️'
+            const pages = {
+                'dashboard': renderDashboard,
+                'products': renderProducts,
+                'movements': renderMovements,
+                'pointsVente': renderPointsVente,
+                'history': renderHistory
             };
             
-            toast.innerHTML = `
-                <div class="toast-icon">${icons[type]}</div>
-                <div class="toast-content">
-                    <div class="toast-title">${title}</div>
-                    <div class="toast-message">${message}</div>
-                </div>
-                <div class="toast-close">×</div>
-            `;
-            
-            container.appendChild(toast);
-            
-            toast.querySelector('.toast-close').onclick = () => toast.remove();
-            
-            setTimeout(() => {
-                toast.style.animation = 'slideIn 0.3s ease reverse';
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
+            pages[page]();
         }
 
-        // === IMAGE VIEWER ===
-        function openImageViewer(src) {
-            document.getElementById('viewer-img').src = src;
-            document.getElementById('image-viewer').classList.add('active');
-        }
-
-        function closeImageViewer() {
-            document.getElementById('image-viewer').classList.remove('active');
-        }
-
-        document.getElementById('close-image-viewer').onclick = closeImageViewer;
-        document.getElementById('image-viewer').onclick = (e) => {
-            if (e.target.id === 'image-viewer') closeImageViewer();
-        };
-
-        // === CUSTOM CONFIRM ===
-        let confirmCallback = null;
-
-        function showConfirm(title, message, onConfirm, icon = '⚠️') {
-            document.getElementById('confirm-icon').textContent = icon;
-            document.getElementById('confirm-title').textContent = title;
-            document.getElementById('confirm-message').textContent = message;
-            document.getElementById('confirm-dialog').classList.add('active');
-            confirmCallback = onConfirm;
-        }
-
-        document.getElementById('confirm-yes').onclick = () => {
-            document.getElementById('confirm-dialog').classList.remove('active');
-            if (confirmCallback) confirmCallback();
-            confirmCallback = null;
-        };
-
-        document.getElementById('confirm-no').onclick = () => {
-            document.getElementById('confirm-dialog').classList.remove('active');
-            confirmCallback = null;
-        };
-
-        // === NAVIGATION ===
-        function renderNav() {
-            const nav = document.getElementById('nav-container');
-            nav.innerHTML = PAGES.map(p => 
-                `<button class="nav-btn ${p.id === APP.currentPage ? 'active' : ''}" data-page="${p.id}">${p.label}</button>`
-            ).join('');
-            
-            nav.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.onclick = () => navigateTo(btn.dataset.page);
-            });
-        }
-
-        function navigateTo(page) {
-            APP.currentPage = page;
-            renderNav();
-            render();
-        }
-
-        // === RENDU PRINCIPAL ===
-        function render() {
-            const container = document.getElementById('app-container');
-            
-            switch(APP.currentPage) {
-                case 'dashboard':
-                    container.innerHTML = renderDashboard();
-                    break;
-                case 'products':
-                    container.innerHTML = renderProductsPage();
-                    attachProductsEvents();
-                    break;
-                case 'stores':
-                    container.innerHTML = renderStoresPage();
-                    attachStoresEvents();
-                    break;
-                case 'movements':
-                    container.innerHTML = renderMovementsPage();
-                    attachMovementsEvents();
-                    break;
-                case 'returns':
-                    container.innerHTML = renderReturnsPage();
-                    attachReturnsEvents();
-                    break;
-            }
-        }
-
-        // === DASHBOARD ===
+        // ============ DASHBOARD ============
         function renderDashboard() {
-            const totalProducts = APP.products.length;
-            const totalStores = APP.stores.length;
-            const lowStock = APP.products.filter(p => {
-                const totalQty = APP.stores.reduce((sum, s) => sum + (s.stocks[p.id] || 0), 0);
-                return totalQty < 10;
-            }).length;
-            
-            return `
+            const totalProducts = products.length;
+            const totalStock = products.reduce((sum, p) => sum + (p.quantity || 0), 0);
+            const lowStock = products.filter(p => (p.quantity || 0) < 10).length;
+            const totalValue = products.reduce((sum, p) => sum + ((p.quantity || 0) * (p.price || 0)), 0);
+
+            document.getElementById('app-container').innerHTML = `
                 <div class="stats-grid">
                     <div class="stat-card blue">
                         <div class="stat-label">Total Produits</div>
                         <div class="stat-value">${totalProducts}</div>
                     </div>
                     <div class="stat-card green">
-                        <div class="stat-label">Points de Vente</div>
-                        <div class="stat-value">${totalStores}</div>
+                        <div class="stat-label">Stock Total</div>
+                        <div class="stat-value">${totalStock}</div>
                     </div>
                     <div class="stat-card red">
                         <div class="stat-label">Alertes Stock Faible</div>
                         <div class="stat-value">${lowStock}</div>
                     </div>
+                    <div class="stat-card orange">
+                        <div class="stat-label">Valeur Totale</div>
+                        <div class="stat-value">${totalValue.toFixed(2)} DH</div>
+                    </div>
                 </div>
-                <div class="card">
-                    <div class="card-title">📋 Mouvements Récents</div>
-                    <table style="margin-top: 1rem;">
-                        <thead>
-                            <tr><th>Date</th><th>Produit</th><th>Type</th><th>Raison</th><th>Quantité</th></tr>
-                        </thead>
-                        <tbody>
-                            ${APP.movements.slice(-10).reverse().map(m => `
-                                <tr>
-                                    <td>${new Date(m.date).toLocaleDateString()}</td>
-                                    <td>${m.productName}</td>
-                                    <td><span class="badge badge-${m.type}">${m.type === 'in' ? 'Entrée' : 'Sortie'}</span></td>
-                                    <td>${m.reason}</td>
-                                    <td><strong>${m.quantity}</strong></td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
 
-        // === PRODUITS ===
-        function renderProductsPage() {
-            const storesHeaders = APP.stores.map(s => `<th>QTY ${s.name}</th>`).join('');
-            
-            return `
                 <div class="card">
                     <div class="card-header">
-                        <input type="text" class="search-input" id="search-products" placeholder="🔍 Rechercher...">
-                        <div class="btn-group">
-                            <button class="btn btn-primary" id="btn-add-product">➕ Ajouter</button>
-                            <label class="btn btn-success">
-                                📤 Importer
-                                <input type="file" id="import-products" accept=".xlsx,.xls">
-                            </label>
-                            <button class="btn btn-purple" id="btn-export-products">📥 Exporter</button>
-                            <button class="btn btn-danger" id="btn-delete-selected">🗑️ Supprimer Sélection</button>
-                        </div>
+                        <h3 class="card-title">🚨 Produits en alerte</h3>
                     </div>
-                    <div id="import-progress" class="progress-bar hidden">
-                        <div class="progress-info">
-                            <span>Import en cours...</span>
-                            <span id="progress-text">0 / 0</span>
-                        </div>
-                        <div class="progress">
-                            <div class="progress-fill" id="progress-fill"></div>
-                        </div>
-                    </div>
-                    <div style="overflow-x: auto;">
+                    <div class="table-container">
                         <table>
                             <thead>
                                 <tr>
-                                    <th><input type="checkbox" id="select-all"></th>
-                                    <th>Image</th><th>Nom Réel</th><th>Référence</th><th>Marque</th>
-                                    ${storesHeaders}
-                                    <th>Actions</th>
+                                    <th>Image</th>
+                                    <th>Produit</th>
+                                    <th>Référence</th>
+                                    <th>Stock</th>
+                                    <th>Prix</th>
                                 </tr>
                             </thead>
-                            <tbody id="products-tbody"></tbody>
+                            <tbody>
+                                ${products.filter(p => (p.quantity || 0) < 10).map(p => `
+                                    <tr>
+                                        <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22%3E?%3C/text%3E%3C/svg%3E'">` : '📦'}</td>
+                                        <td><strong>${p.name}</strong><br><small>${p.conventionalName || ''}</small></td>
+                                        <td>${p.reference}</td>
+                                        <td><span style="color: #ef4444; font-weight: bold;">${p.quantity || 0}</span></td>
+                                        <td>${p.price} DH</td>
+                                    </tr>
+                                `).join('') || '<tr><td colspan="5" class="text-center">Aucun produit en alerte</td></tr>'}
+                            </tbody>
                         </table>
                     </div>
                 </div>
             `;
         }
 
-        function renderProductsTable(searchTerm = '') {
-            const filtered = APP.products.filter(p => {
-                const search = searchTerm.toLowerCase();
-                return String(p.realName || '').toLowerCase().includes(search) ||
-                       String(p.reference || '').toLowerCase().includes(search);
-            });
-            
-            const tbody = document.getElementById('products-tbody');
-            if (!tbody) return;
-            
-            tbody.innerHTML = filtered.map(p => {
-                let imgHtml = '<div class="product-img-error">📷</div>';
-                if (p.image) {
-                    imgHtml = `<img src="${p.image}" class="product-img" data-src="${p.image}" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
-                        <div class="product-img-error" style="display:none;">📷</div>`;
-                }
-                
-                const storesQty = APP.stores.map(s => {
-                    const qty = s.stocks[p.id] || 0;
-                    return `<td><span class="badge ${qty < 10 ? 'badge-danger' : 'badge-success'}">${qty}</span></td>`;
-                }).join('');
-                
-                return `
-                    <tr data-product-id="${p.id}">
-                        <td><input type="checkbox" class="product-check" data-id="${p.id}"></td>
-                        <td>${imgHtml}</td>
-                        <td>${p.realName || '—'}</td>
-                        <td>${p.reference || '—'}</td>
-                        <td>${p.brand || '—'}</td>
-                        ${storesQty}
-                        <td>
-                            <button class="action-btn btn-edit-product" data-id="${p.id}">✏️</button>
-                            <button class="action-btn delete btn-delete-product" data-id="${p.id}">🗑️</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-            
-            // Attacher événements images
-            setTimeout(() => {
-                document.querySelectorAll('.product-img[data-src]').forEach(img => {
-                    img.onclick = () => openImageViewer(img.dataset.src);
-                });
-            }, 100);
-        }}
-                
-                const storesQty = APP.stores.map(s => {
-                    const qty = s.stocks[p.id] || 0;
-                    return `<td><span class="badge ${qty < 10 ? 'badge-danger' : 'badge-success'}">${qty}</span></td>`;
-                }).join('');
-                
-                return `
-                    <tr>
-                        <td><input type="checkbox" class="product-check" data-id="${p.id}"></td>
-                        <td>${imgHtml}</td>
-                        <td>${p.realName || '—'}</td>
-                        <td>${p.reference || '—'}</td>
-                        <td>${p.brand || '—'}</td>
-                        ${storesQty}
-                        <td>
-                            <button class="action-btn btn-edit-product" data-id="${p.id}">✏️</button>
-                            <button class="action-btn delete btn-delete-product" data-id="${p.id}">🗑️</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+        // ============ PRODUCTS PAGE ============
+        function renderProducts() {
+            document.getElementById('app-container').innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📦 Gestion des produits</h3>
+                        <div class="btn-group">
+                            <input type="text" class="search-input" placeholder="🔍 Rechercher un produit..." onkeyup="filterProducts(this.value)">
+                            <button class="btn btn-primary" onclick="openProductModal()">➕ Ajouter</button>
+                            <button class="btn btn-success" onclick="openImportModal()">📤 Importer Excel</button>
+                            <button class="btn btn-warning" onclick="exportProducts()">📥 Exporter Excel</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="products-table">
+                            <thead>
+                                <tr>
+                                    <th>Image</th>
+                                    <th>Nom</th>
+                                    <th>Référence</th>
+                                    <th>Code-barres</th>
+                                    <th>Catégorie</th>
+                                    <th>Marque</th>
+                                    <th>Stock</th>
+                                    <th>Prix</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${renderProductRows()}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
         }
 
-        function attachProductsEvents() {
-            console.log('=== ATTACH PRODUCTS EVENTS ===');
-            
-            // Recherche
-            const searchInput = document.getElementById('search-products');
-            if (searchInput) {
-                searchInput.oninput = (e) => renderProductsTable(e.target.value);
+        function renderProductRows(filteredProducts = products) {
+            if (filteredProducts.length === 0) {
+                return '<tr><td colspan="9" class="text-center">Aucun produit trouvé</td></tr>';
             }
             
-            renderProductsTable();
-            
-            // Select all
-            const selectAll = document.getElementById('select-all');
-            if (selectAll) {
-                selectAll.onchange = function() {
-                    console.log('Select all:', this.checked);
-                    document.querySelectorAll('.product-check').forEach(cb => {
-                        cb.checked = this.checked;
-                    });
-                };
-            }
-            
-            // Bouton ajouter
-            const btnAdd = document.getElementById('btn-add-product');
-            if (btnAdd) {
-                btnAdd.onclick = () => {
-                    console.log('Bouton Ajouter cliqué');
-                    openProductModal();
-                };
-            }
-            
-            // Boutons éditer
-            setTimeout(() => {
-                document.querySelectorAll('.btn-edit-product').forEach(btn => {
-                    btn.onclick = function() {
-                        console.log('Edit product:', this.dataset.id);
-                        const id = parseInt(this.dataset.id);
-                        const product = APP.products.find(p => p.id === id);
-                        if (product) openProductModal(product);
-                    };
-                });
-                
-                // Boutons supprimer
-                document.querySelectorAll('.btn-delete-product').forEach(btn => {
-                    btn.onclick = function() {
-                        console.log('Delete product:', this.dataset.id);
-                        const id = parseInt(this.dataset.id);
-                        deleteProduct(id);
-                    };
-                });
-            }, 100);
-            
-            // Supprimer sélection
-            const btnDeleteSelected = document.getElementById('btn-delete-selected');
-            if (btnDeleteSelected) {
-                btnDeleteSelected.onclick = function() {
-                    console.log('=== DELETE SELECTED ===');
-                    
-                    const checked = document.querySelectorAll('.product-check:checked');
-                    const ids = Array.from(checked).map(cb => parseInt(cb.dataset.id));
-                    
-                    console.log('Produits cochés:', ids.length);
-                    console.log('IDs:', ids);
-                    
-                    if (ids.length === 0) {
-                        showToast('Attention', 'Veuillez sélectionner au moins un produit', 'warning');
-                        return;
-                    }
-                    
-                    showConfirm(
-                        'Supprimer les produits',
-                        `Voulez-vous vraiment supprimer ${ids.length} produit(s) ?`,
-                        () => {
-                            console.log('Confirmation OK, suppression...');
-                            const before = APP.products.length;
-                            APP.products = APP.products.filter(p => !ids.includes(p.id));
-                            console.log('Produits avant:', before, 'après:', APP.products.length);
-                            save();
-                            render();
-                            showToast('Succès', `${ids.length} produit(s) supprimé(s)`, 'success');
-                        },
-                        '🗑️'
-                    );
-                };
-            }
-            
-            // Import
-            const importFile = document.getElementById('import-products');
-            if (importFile) {
-                importFile.onchange = handleImportProducts;
-            }
-            
-            // Export
-            const btnExport = document.getElementById('btn-export-products');
-            if (btnExport) {
-                btnExport.onclick = exportProducts;
-            }
+            return filteredProducts.map(p => `
+                <tr>
+                    <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22%3E?%3C/text%3E%3C/svg%3E'">` : '📦'}</td>
+                    <td>
+                        <strong>${p.name}</strong>
+                        ${p.conventionalName ? `<br><small style="color: #666;">${p.conventionalName}</small>` : ''}
+                    </td>
+                    <td>${p.reference}</td>
+                    <td>${p.barcode || '-'}</td>
+                    <td>${p.category || '-'}</td>
+                    <td>${p.brand || '-'}</td>
+                    <td><strong>${p.quantity || 0}</strong></td>
+                    <td>${p.price} DH</td>
+                    <td>
+                        <button class="btn btn-primary" onclick='editProduct(${JSON.stringify(p)})' style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">✏️</button>
+                        <button class="btn btn-danger" onclick="deleteProduct('${p.reference}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
         }
 
-        function deleteProduct(id) {
-            console.log('=== DELETE SINGLE PRODUCT ===');
-            console.log('ID:', id);
-            
-            const product = APP.products.find(p => p.id === id);
-            if (!product) {
-                console.error('Produit non trouvé');
-                return;
-            }
-            
-            showConfirm(
-                'Supprimer le produit',
-                `Voulez-vous vraiment supprimer "${product.realName}" ?`,
-                () => {
-                    console.log('Confirmation OK, suppression...');
-                    const before = APP.products.length;
-                    APP.products = APP.products.filter(p => p.id !== id);
-                    console.log('Produits avant:', before, 'après:', APP.products.length);
-                    save();
-                    render();
-                    showToast('Succès', 'Produit supprimé', 'success');
-                },
-                '🗑️'
+        function filterProducts(search) {
+            const filtered = products.filter(p => 
+                p.name.toLowerCase().includes(search.toLowerCase()) ||
+                p.reference.toLowerCase().includes(search.toLowerCase()) ||
+                (p.barcode || '').toLowerCase().includes(search.toLowerCase()) ||
+                (p.category || '').toLowerCase().includes(search.toLowerCase()) ||
+                (p.brand || '').toLowerCase().includes(search.toLowerCase())
             );
+            document.querySelector('#products-table tbody').innerHTML = renderProductRows(filtered);
         }
 
-        function openProductModal(product = null) {
-            APP.editingProduct = product;
-            document.getElementById('modal-title').textContent = product ? 'Modifier le Produit' : 'Ajouter un Produit';
-            
-            if (product) {
-                document.getElementById('form-image').value = product.image || '';
-                document.getElementById('form-realName').value = product.realName || '';
-                document.getElementById('form-conventionalName').value = product.conventionalName || '';
-                document.getElementById('form-barcode').value = product.barcode || '';
-                document.getElementById('form-repetitionBarcode').value = product.repetitionBarcode || '';
-                document.getElementById('form-category').value = product.category || '';
-                document.getElementById('form-brand').value = product.brand || '';
-                document.getElementById('form-reference').value = product.reference || '';
-            } else {
-                document.getElementById('product-form').reset();
-            }
-            
+        // ============ PRODUCT MODAL ============
+        function openProductModal() {
+            editingProduct = null;
+            document.getElementById('modal-title').textContent = 'Ajouter un produit';
+            document.getElementById('product-form').reset();
             document.getElementById('product-modal').classList.add('active');
         }
 
         function closeProductModal() {
             document.getElementById('product-modal').classList.remove('active');
-            APP.editingProduct = null;
+            editingProduct = null;
         }
 
-        document.getElementById('close-modal-btn').onclick = closeProductModal;
-        document.getElementById('cancel-modal-btn').onclick = closeProductModal;
+        function editProduct(product) {
+            editingProduct = product;
+            document.getElementById('modal-title').textContent = 'Modifier le produit';
+            document.getElementById('product-image').value = product.image || '';
+            document.getElementById('product-name').value = product.name;
+            document.getElementById('product-conventional').value = product.conventionalName || '';
+            document.getElementById('product-ref').value = product.reference;
+            document.getElementById('product-barcode').value = product.barcode || '';
+            document.getElementById('product-category').value = product.category || '';
+            document.getElementById('product-brand').value = product.brand || '';
+            document.getElementById('product-price').value = product.price;
+            document.getElementById('product-quantity').value = product.quantity || 0;
+            document.getElementById('product-modal').classList.add('active');
+        }
 
-        document.getElementById('product-form').onsubmit = (e) => {
+        function deleteProduct(reference) {
+            if (confirm('Voulez-vous vraiment supprimer ce produit ?')) {
+                products = products.filter(p => p.reference !== reference);
+                saveProducts();
+                showToast('Produit supprimé avec succès', 'success');
+                renderProducts();
+            }
+        }
+
+        // ============ PRODUCT FORM SUBMIT ============
+        document.getElementById('product-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const data = {
-                image: formatImageUrl(document.getElementById('form-image').value),
-                realName: document.getElementById('form-realName').value,
-                conventionalName: document.getElementById('form-conventionalName').value,
-                barcode: document.getElementById('form-barcode').value,
-                repetitionBarcode: document.getElementById('form-repetitionBarcode').value,
-                category: document.getElementById('form-category').value,
-                brand: document.getElementById('form-brand').value,
-                reference: document.getElementById('form-reference').value
+            const productData = {
+                image: document.getElementById('product-image').value,
+                name: document.getElementById('product-name').value,
+                conventionalName: document.getElementById('product-conventional').value,
+                reference: document.getElementById('product-ref').value,
+                barcode: document.getElementById('product-barcode').value,
+                category: document.getElementById('product-category').value,
+                brand: document.getElementById('product-brand').value,
+                price: parseFloat(document.getElementById('product-price').value),
+                quantity: parseInt(document.getElementById('product-quantity').value) || 0
             };
-            
-            if (APP.editingProduct) {
-                const idx = APP.products.findIndex(p => p.id === APP.editingProduct.id);
-                APP.products[idx] = { ...APP.products[idx], ...data };
-            } else {
-                APP.products.push({ id: Date.now(), ...data });
-            }
-            
-            save();
-            closeProductModal();
-            render();
-            alert('✅ Produit enregistré');
-        };
 
-        async function handleImportProducts(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            try {
-                const progressBar = document.getElementById('import-progress');
-                const progressFill = document.getElementById('progress-fill');
-                const progressText = document.getElementById('progress-text');
-                
-                progressBar.classList.remove('hidden');
-                progressFill.style.width = '0%';
-                
-                const data = await file.arrayBuffer();
-                const wb = XLSX.read(data);
-                const ws = wb.Sheets[wb.SheetNames[0]];
-                const rows = XLSX.utils.sheet_to_json(ws);
-                
-                const headers = Object.keys(rows[0]);
-                const qtyColumns = headers.filter(h => h.toUpperCase().startsWith('QTY '));
-                const storeNames = qtyColumns.map(c => c.replace(/^QTY /i, '').trim());
-                
-                // Créer PDV si nécessaire
-                const storesMap = {};
-                storeNames.forEach((name, idx) => {
-                    let store = APP.stores.find(s => s.name.toUpperCase() === name.toUpperCase());
-                    if (!store) {
-                        store = { id: Date.now() + idx, name, responsable: '', stocks: {} };
-                        APP.stores.push(store);
-                    }
-                    storesMap[name] = store;
-                });
-                
-                let newCount = 0;
-                
-                for (let i = 0; i < rows.length; i++) {
-                    const row = rows[i];
-                    const realName = row['Real Name'];
-                    if (!realName) continue;
-                    
-                    const reference = row['Référence'] || '';
-                    let product = APP.products.find(p => 
-                        p.realName === realName || (reference && p.reference === reference)
-                    );
-                    
-                    if (!product) {
-                        product = {
-                            id: Date.now() + Math.random(),
-                            image: formatImageUrl(row['IMAGE'] || ''),
-                            realName,
-                            conventionalName: row['Conventional Name'] || '',
-                            reference,
-                            barcode: row['Barcode'] || '',
-                            repetitionBarcode: row['Repetition'] || '',
-                            category: row['Category'] || '',
-                            brand: row['Brand'] || ''
-                        };
-                        APP.products.push(product);
-                        newCount++;
-                    }
-                    
-                    storeNames.forEach((name, idx) => {
-                        const qty = parseInt(row[qtyColumns[idx]]) || 0;
-                        storesMap[name].stocks[product.id] = qty;
-                    });
-                    
-                    const percent = Math.round(((i + 1) / rows.length) * 100);
-                    progressFill.style.width = percent + '%';
-                    progressText.textContent = `${i + 1} / ${rows.length}`;
-                    
-                    if (i % 100 === 0) await new Promise(r => setTimeout(r, 10));
+            if (editingProduct) {
+                const index = products.findIndex(p => p.reference === editingProduct.reference);
+                products[index] = { ...products[index], ...productData };
+                showToast('Produit modifié avec succès', 'success');
+            } else {
+                if (products.some(p => p.reference === productData.reference)) {
+                    showToast('Cette référence existe déjà', 'error');
+                    return;
                 }
-                
-                save();
-                setTimeout(() => {
-                    progressBar.classList.add('hidden');
-                    render();
-                    alert(`✅ Import réussi!\n\n🏪 ${storeNames.length} PDV\n📦 ${newCount} nouveaux produits`);
-                }, 500);
-                
-            } catch (err) {
-                console.error(err);
-                document.getElementById('import-progress').classList.add('hidden');
-                alert('❌ Erreur: ' + err.message);
+                products.push(productData);
+                showToast('Produit ajouté avec succès', 'success');
             }
-            
-            e.target.value = '';
+
+            saveProducts();
+            closeProductModal();
+            renderProducts();
+        });
+
+        // ============ IMPORT EXCEL ============
+        function openImportModal() {
+            document.getElementById('import-modal').classList.add('active');
+            document.getElementById('import-progress').classList.add('hidden');
         }
 
+        function closeImportModal() {
+            document.getElementById('import-modal').classList.remove('active');
+            document.getElementById('excel-file').value = '';
+        }
+
+        async function handleImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            console.log('=== DÉBUT IMPORT EXCEL ===');
+            
+            const progressContainer = document.getElementById('import-progress');
+            const progressFill = document.getElementById('progress-fill');
+            const progressText = document.getElementById('progress-text');
+            
+            progressContainer.classList.remove('hidden');
+            progressFill.style.width = '0%';
+            progressText.textContent = 'Lecture du fichier...';
+
+            try {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data);
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet);
+
+                console.log(`Fichier lu: ${rows.length} lignes`);
+                
+                if (rows.length === 0) {
+                    showToast('Le fichier est vide', 'error');
+                    closeImportModal();
+                    return;
+                }
+
+                progressText.textContent = `Traitement: 0/${rows.length} (0%)`;
+                
+                let imported = 0;
+                const batchSize = 50;
+                
+                for (let i = 0; i < rows.length; i += batchSize) {
+                    const batch = rows.slice(i, i + batchSize);
+                    
+                    for (const row of batch) {
+                        // Convertir l'URL Google Drive si nécessaire
+                        let imageUrl = row['IMAGE'] || '';
+                        if (imageUrl && imageUrl.includes('/file/d/')) {
+                            const match = imageUrl.match(/\/file\/d\/([^/]+)/);
+                            if (match) {
+                                imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                            }
+                        }
+
+                        const product = {
+                            image: imageUrl,
+                            name: row['Real Name'] || row['Nom'] || '',
+                            conventionalName: row['Conventional Name'] || '',
+                            reference: row['Référence'] || row['Reference'] || `REF-${Date.now()}-${i}`,
+                            barcode: row['Barcode'] || '',
+                            category: row['Category'] || row['Catégorie'] || '',
+                            brand: row['Brand'] || row['Marque'] || '',
+                            price: parseFloat(row['Selling Price'] || row['Prix'] || 0),
+                            quantity: parseInt(row['Repetition'] || row['Quantité'] || 0)
+                        };
+
+                        // Vérifier si le produit existe déjà
+                        const existingIndex = products.findIndex(p => p.reference === product.reference);
+                        if (existingIndex >= 0) {
+                            products[existingIndex] = { ...products[existingIndex], ...product };
+                        } else {
+                            products.push(product);
+                        }
+                        
+                        imported++;
+                    }
+
+                    // Mise à jour de la progression
+                    const progress = Math.round((imported / rows.length) * 100);
+                    progressFill.style.width = progress + '%';
+                    progressText.textContent = `Traité: ${imported}/${rows.length} (${progress}%)`;
+                    
+                    // Pause pour ne pas bloquer l'interface
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
+
+                // Sauvegarder les produits
+                saveProducts();
+                
+                console.log(`Import terminé: ${imported} produits`);
+                showToast(`${imported} produit(s) importé(s) avec succès`, 'success');
+                
+                // Fermer le modal après un court délai
+                setTimeout(() => {
+                    closeImportModal();
+                    if (currentPage === 'products') {
+                        renderProducts();
+                    }
+                }, 1000);
+
+            } catch (error) {
+                console.error('Erreur import:', error);
+                showToast('Erreur lors de l\'importation: ' + error.message, 'error');
+                closeImportModal();
+            }
+        }
+
+        // ============ EXPORT EXCEL ============
         function exportProducts() {
-            const data = APP.products.map(p => {
-                const row = {
-                    'IMAGE': p.image || '',
-                    'Real Name': p.realName,
-                    'Conventional Name': p.conventionalName || '',
-                    'Référence': p.reference || '',
-                    'Barcode': p.barcode || '',
-                    'Repetition': p.repetitionBarcode || '',
-                    'Category': p.category || '',
-                    'Brand': p.brand || ''
-                };
-                APP.stores.forEach(s => {
-                    row[`QTY ${s.name}`] = s.stocks[p.id] || 0;
-                });
-                return row;
-            });
-            const ws = XLSX.utils.json_to_sheet(data);
+            if (products.length === 0) {
+                showToast('Aucun produit à exporter', 'warning');
+                return;
+            }
+
+            const exportData = products.map(p => ({
+                'IMAGE': p.image || '',
+                'Real Name': p.name,
+                'Conventional Name': p.conventionalName || '',
+                'Selling Price': p.price,
+                'Barcode': p.barcode || '',
+                'Repetition': p.quantity || 0,
+                'Barcode Category': '',
+                'Category': p.category || '',
+                'Brand': p.brand || '',
+                'Référence': p.reference
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Produits');
-            XLSX.writeFile(wb, `stock_${new Date().toISOString().split('T')[0]}.xlsx`);
+            XLSX.writeFile(wb, `produits_${new Date().toISOString().split('T')[0]}.xlsx`);
+            
+            showToast('Export réussi', 'success');
         }
 
-        // === POINTS DE VENTE ===
-        function renderStoresPage() {
-            return `
+        // ============ MOVEMENTS PAGE ============
+        function renderMovements() {
+            document.getElementById('app-container').innerHTML = `
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">🏪 Points de Vente</h2>
-                        <div class="btn-group">
-                            <button class="btn btn-primary" id="btn-add-store">➕ Ajouter PDV</button>
-                            <label class="btn btn-success">
-                                📤 Importer Excel
-                                <input type="file" id="import-stores" accept=".xlsx,.xls">
-                            </label>
-                        </div>
+                        <h3 class="card-title">🔄 Mouvements de stock</h3>
                     </div>
-                    <div id="stores-list">
-                        ${APP.stores.length === 0 ? '<p>Aucun point de vente. Ajoutez-en un ou importez un fichier Excel.</p>' : ''}
-                        ${APP.stores.map(s => {
-                            const totalStock = APP.products.reduce((sum, p) => sum + (s.stocks[p.id] || 0), 0);
-                            return `
-                                <div class="card" style="margin-bottom: 1rem; border-left: 4px solid #2563eb;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <div>
-                                            <h3>🏪 ${s.name}</h3>
-                                            <p><strong>Responsable:</strong> ${s.responsable || 'Non défini'}</p>
-                                            <p><strong>Stock total:</strong> ${totalStock} unités</p>
-                                        </div>
-                                        <button class="btn btn-danger btn-delete-store" data-id="${s.id}">🗑️</button>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        function attachStoresEvents() {
-            const btnAdd = document.getElementById('btn-add-store');
-            if (btnAdd) {
-                btnAdd.onclick = () => {
-                    console.log('=== ADD STORE ===');
                     
-                    const name = prompt('Nom du point de vente:');
-                    if (!name || !name.trim()) {
-                        console.log('Annulé: nom vide');
-                        return;
-                    }
-                    
-                    const responsable = prompt('Nom du responsable:');
-                    if (!responsable || !responsable.trim()) {
-                        console.log('Annulé: responsable vide');
-                        return;
-                    }
-                    
-                    const newStore = {
-                        id: Date.now(),
-                        name: name.trim(),
-                        responsable: responsable.trim(),
-                        stocks: {}
-                    };
-                    
-                    console.log('Nouveau PDV:', newStore);
-                    APP.stores.push(newStore);
-                    
-                    save();
-                    render();
-                    showToast('Succès', `PDV "${name}" ajouté !`, 'success');
-                };
-            }
-            
-            setTimeout(() => {
-                document.querySelectorAll('.btn-delete-store').forEach(btn => {
-                    btn.onclick = function() {
-                        const id = parseInt(this.dataset.id);
-                        const store = APP.stores.find(s => s.id === id);
-                        if (!store) return;
-                        
-                        showConfirm(
-                            'Supprimer le PDV',
-                            `Voulez-vous vraiment supprimer "${store.name}" ?`,
-                            () => {
-                                APP.stores = APP.stores.filter(s => s.id !== id);
-                                save();
-                                render();
-                                showToast('Succès', 'PDV supprimé', 'success');
-                            },
-                            '🗑️'
-                        );
-                    };
-                });
-            }, 100);
-            
-            const importFile = document.getElementById('import-stores');
-            if (importFile) {
-                importFile.onchange = handleImportProducts;
-            }
-        }
-
-        // === MOUVEMENTS ===
-        function renderMovementsPage() {
-            return `
-                <div class="card">
-                    <h2 class="card-title">📊 Enregistrer un Mouvement</h2>
-                    <div class="form-grid" style="margin: 1.5rem 0;">
-                        <div class="form-group">
-                            <label class="form-label">Type</label>
-                            <select id="movement-type" class="form-select">
-                                <option value="in">Entrée</option>
-                                <option value="out">Sortie</option>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Type de mouvement</label>
+                            <select id="movement-type" class="form-group input" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px;">
+                                <option value="in">Entrée (+)</option>
+                                <option value="out">Sortie (-)</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Raison</label>
-                            <select id="movement-reason" class="form-select">
-                                <option value="">Sélectionner...</option>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Raison</label>
+                            <select id="movement-reason" class="form-group input" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px;">
+                                <option value="Achat">Achat fournisseur</option>
+                                <option value="Retour">Retour client</option>
                                 <option value="Vente">Vente</option>
-                                <option value="Mise en Stock">Mise en Stock</option>
-                                <option value="Retour">Retour</option>
+                                <option value="Transfert">Transfert</option>
+                                <option value="Ajustement">Ajustement inventaire</option>
+                                <option value="Casse">Casse/Perte</option>
                             </select>
                         </div>
-                        <div class="form-group" id="client-group" style="display:none;">
-                            <label class="form-label">Nom Client</label>
-                            <input type="text" id="client-name" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">&nbsp;</label>
-                            <button class="btn btn-primary" id="btn-validate-movement" style="width:100%;height:42px;">✅ Valider</button>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Note (optionnel)</label>
+                            <input type="text" id="movement-note" placeholder="Commentaire..." style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px;">
                         </div>
                     </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th><input type="checkbox" id="select-all-movements"></th>
-                                <th>Produit</th>
-                                <th>Stock Dispo</th>
-                                <th>Quantité</th>
-                            </tr>
-                        </thead>
-                        <tbody id="movements-tbody"></tbody>
-                    </table>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" onchange="toggleAllProducts(this.checked)"></th>
+                                    <th>Image</th>
+                                    <th>Produit</th>
+                                    <th>Référence</th>
+                                    <th>Stock actuel</th>
+                                    <th>Quantité</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movements-table">
+                                ${products.map(p => `
+                                    <tr>
+                                        <td><input type="checkbox" class="product-checkbox" data-ref="${p.reference}"></td>
+                                        <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22%3E?%3C/text%3E%3C/svg%3E'">` : '📦'}</td>
+                                        <td><strong>${p.name}</strong></td>
+                                        <td>${p.reference}</td>
+                                        <td><strong>${p.quantity || 0}</strong></td>
+                                        <td><input type="number" class="quantity-input" data-ref="${p.reference}" min="1" style="width: 100px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" disabled></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="margin-top: 1.5rem; text-align: right;">
+                        <button class="btn btn-success" onclick="validateMovement()" style="font-size: 1rem; padding: 0.8rem 2rem;">✓ Valider le mouvement</button>
+                    </div>
                 </div>
             `;
-        }
 
-        function attachMovementsEvents() {
-            console.log('=== ATTACH MOVEMENTS EVENTS ===');
-            
-            const tbody = document.getElementById('movements-tbody');
-            if (!tbody) return;
-            
-            tbody.innerHTML = APP.products.map(p => {
-                const totalStock = APP.stores.reduce((sum, s) => sum + (s.stocks[p.id] || 0), 0);
-                return `
-                    <tr>
-                        <td><input type="checkbox" class="movement-check" data-id="${p.id}"></td>
-                        <td>${p.realName}</td>
-                        <td>${totalStock}</td>
-                        <td><input type="number" class="form-input" id="qty-${p.id}" min="1" style="width:100px;"></td>
-                    </tr>
-                `;
-            }).join('');
-            
-            const selectAll = document.getElementById('select-all-movements');
-            if (selectAll) {
-                selectAll.onchange = function() {
-                    document.querySelectorAll('.movement-check').forEach(cb => {
-                        cb.checked = this.checked;
-                    });
-                };
-            }
-            
-            const reasonSelect = document.getElementById('movement-reason');
-            if (reasonSelect) {
-                reasonSelect.onchange = function() {
-                    const clientGroup = document.getElementById('client-group');
-                    if (clientGroup) {
-                        clientGroup.style.display = this.value === 'Vente' ? 'block' : 'none';
-                    }
-                };
-            }
-            
-            const btnValidate = document.getElementById('btn-validate-movement');
-            if (btnValidate) {
-                btnValidate.onclick = function() {
-                    console.log('=== VALIDATE MOVEMENT ===');
-                    
-                    const type = document.getElementById('movement-type').value;
-                    const reason = document.getElementById('movement-reason').value;
-                    const clientName = document.getElementById('client-name').value;
-                    
-                    console.log('Type:', type, 'Raison:', reason, 'Client:', clientName);
-                    
-                    if (!reason) {
-                        showToast('Attention', 'Veuillez sélectionner une raison', 'warning');
-                        return;
-                    }
-                    
-                    if (reason === 'Vente' && !clientName.trim()) {
-                        showToast('Attention', 'Veuillez entrer le nom du client', 'warning');
-                        return;
-                    }
-                    
-                    const checked = document.querySelectorAll('.movement-check:checked');
-                    console.log('Produits cochés:', checked.length);
-                    
-                    if (checked.length === 0) {
-                        showToast('Attention', 'Veuillez sélectionner au moins un produit', 'warning');
-                        return;
-                    }
-                    
-                    const toProcess = [];
-                    let hasError = false;
-                    
-                    for (let cb of checked) {
-                        const id = parseInt(cb.dataset.id);
-                        const product = APP.products.find(p => p.id === id);
-                        const qtyInput = document.getElementById(`qty-${id}`);
-                        const qty = parseInt(qtyInput.value) || 0;
-                        
-                        console.log(`Produit: ${product.realName}, Qty: ${qty}`);
-                        
-                        if (qty <= 0) {
-                            showToast('Erreur', `Quantité invalide pour ${product.realName}`, 'error');
-                            hasError = true;
-                            break;
-                        }
-                        
-                        const totalStock = APP.stores.reduce((sum, s) => sum + (s.stocks[product.id] || 0), 0);
-                        
-                        if (type === 'out' && totalStock < qty) {
-                            showToast('Erreur', `Stock insuffisant pour ${product.realName}`, 'error');
-                            hasError = true;
-                            break;
-                        }
-                        
-                        toProcess.push({ product, qty });
-                    }
-                    
-                    if (hasError) {
-                        console.log('Erreur détectée, arrêt');
-                        return;
-                    }
-                    
-                    console.log('Traitement de', toProcess.length, 'produits');
-                    
-                    toProcess.forEach(({ product, qty }) => {
-                        APP.movements.push({
-                            id: Date.now() + Math.random(),
-                            productId: product.id,
-                            productName: product.realName,
-                            type,
-                            reason,
-                            quantity: qty,
-                            clientName: reason === 'Vente' ? clientName : '',
-                            date: new Date().toISOString()
-                        });
-                    });
-                    
-                    save();
-                    render();
-                    showToast('Succès', `${toProcess.length} mouvement(s) enregistré(s)`, 'success');
-                };
-            }
-        }
-
-        // === RETOURS ===
-        function renderReturnsPage() {
-            const sales = APP.movements.filter(m => m.reason === 'Vente');
-            
-            return `
-                <div class="card">
-                    <h2 class="card-title">🛒 Ventes</h2>
-                    <table style="margin-top:1rem;">
-                        <thead>
-                            <tr><th>Date</th><th>Produit</th><th>Client</th><th>Quantité</th><th>Actions</th></tr>
-                        </thead>
-                        <tbody>
-                            ${sales.map(s => `
-                                <tr>
-                                    <td>${new Date(s.date).toLocaleDateString()}</td>
-                                    <td>${s.productName}</td>
-                                    <td>${s.clientName}</td>
-                                    <td>${s.quantity}</td>
-                                    <td><button class="btn btn-orange btn-return" data-id="${s.id}">🔄 Retour</button></td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                <div class="card">
-                    <h2 class="card-title">🔄 Historique Retours</h2>
-                    <table style="margin-top:1rem;">
-                        <thead>
-                            <tr><th>Date</th><th>Produit</th><th>Client</th><th>Quantité</th><th>Raison</th></tr>
-                        </thead>
-                        <tbody>
-                            ${APP.returns.map(r => `
-                                <tr>
-                                    <td>${new Date(r.date).toLocaleDateString()}</td>
-                                    <td>${r.productName}</td>
-                                    <td>${r.clientName}</td>
-                                    <td>${r.quantity}</td>
-                                    <td>${r.reason}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-
-        function attachReturnsEvents() {
-            setTimeout(() => {
-                document.querySelectorAll('.btn-return').forEach(btn => {
-                    btn.onclick = function() {
-                        const id = parseFloat(this.dataset.id);
-                        const sale = APP.movements.find(m => m.id === id);
-                        if (!sale) return;
-                        
-                        const qty = parseInt(prompt(`Quantité à retourner (max: ${sale.quantity}):`));
-                        if (!qty || qty <= 0 || qty > sale.quantity) {
-                            showToast('Erreur', 'Quantité invalide', 'error');
-                            return;
-                        }
-                        
-                        const reason = prompt('Raison du retour:');
-                        if (!reason || !reason.trim()) {
-                            showToast('Erreur', 'Veuillez entrer une raison', 'error');
-                            return;
-                        }
-                        
-                        APP.returns.push({
-                            id: Date.now(),
-                            saleId: sale.id,
-                            productId: sale.productId,
-                            productName: sale.productName,
-                            clientName: sale.clientName,
-                            quantity: qty,
-                            reason: reason.trim(),
-                            date: new Date().toISOString()
-                        });
-                        
-                        save();
-                        render();
-                        showToast('Succès', `Retour enregistré: ${qty} ${sale.productName}`, 'success');
-                    };
+            // Activer/désactiver les champs quantité selon la sélection
+            document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const input = document.querySelector(`.quantity-input[data-ref="${this.dataset.ref}"]`);
+                    input.disabled = !this.checked;
+                    if (!this.checked) input.value = '';
                 });
-            }, 100);
+            });
         }
 
-        // === INIT ===
-        renderNav();
-        render();
-        console.log('✅ Application prête');
-        showToast('Bienvenue', 'Application de gestion de stock chargée !', 'info');
+        function toggleAllProducts(checked) {
+            document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+                checkbox.checked = checked;
+                checkbox.dispatchEvent(new Event('change'));
+            });
+        }
+
+        function validateMovement() {
+            const type = document.getElementById('movement-type').value;
+            const reason = document.getElementById('movement-reason').value;
+            const note = document.getElementById('movement-note').value;
+            
+            const checkedProducts = [];
+            document.querySelectorAll('.product-checkbox:checked').forEach(checkbox => {
+                const ref = checkbox.dataset.ref;
+                const quantityInput = document.querySelector(`.quantity-input[data-ref="${ref}"]`);
+                const quantity = parseInt(quantityInput.value) || 0;
+                
+                if (quantity > 0) {
+                    checkedProducts.push({ reference: ref, quantity });
+                }
+            });
+
+            if (checkedProducts.length === 0) {
+                showToast('Veuillez sélectionner au moins un produit avec une quantité', 'warning');
+                return;
+            }
+
+            console.log('=== VALIDATION MOUVEMENT ===');
+            console.log('Type:', type, 'Raison:', reason);
+            console.log('Produits:', checkedProducts);
+
+            let processedCount = 0;
+
+            checkedProducts.forEach(item => {
+                const product = products.find(p => p.reference === item.reference);
+                if (!product) return;
+
+                const oldQuantity = product.quantity || 0;
+                let newQuantity;
+
+                if (type === 'in') {
+                    newQuantity = oldQuantity + item.quantity;
+                } else {
+                    if (oldQuantity < item.quantity) {
+                        showToast(`Stock insuffisant pour ${product.name} (disponible: ${oldQuantity})`, 'error');
+                        return;
+                    }
+                    newQuantity = oldQuantity - item.quantity;
+                }
+
+                // Mettre à jour le stock
+                product.quantity = newQuantity;
+
+                // Enregistrer le mouvement
+                const movement = {
+                    id: Date.now() + Math.random(),
+                    date: new Date().toISOString(),
+                    type,
+                    reason,
+                    note,
+                    product: product.name,
+                    reference: product.reference,
+                    quantity: item.quantity,
+                    oldQuantity,
+                    newQuantity
+                };
+                
+                movements.push(movement);
+                processedCount++;
+            });
+
+            if (processedCount > 0) {
+                saveProducts();
+                saveMovements();
+                showToast(`${processedCount} mouvement(s) enregistré(s) avec succès`, 'success');
+                renderMovements();
+            }
+        }
+
+        // ============ POINTS DE VENTE ============
+        function renderPointsVente() {
+            document.getElementById('app-container').innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🏪 Points de Vente</h3>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="openAddPDVModal()">➕ Ajouter un point de vente</button>
+                        </div>
+                    </div>
+
+                    <div class="pdv-grid">
+                        ${pointsVente.map(pdv => `
+                            <div class="pdv-card">
+                                <div class="pdv-name">${pdv.name}</div>
+                                <div class="pdv-stock">${pdv.products?.length || 0} produits</div>
+                                <div style="margin-top: 0.5rem;">
+                                    <button class="btn btn-primary" onclick="viewPDV('${pdv.id}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; width: 100%;">Voir détails</button>
+                                </div>
+                            </div>
+                        `).join('') || '<p style="grid-column: 1/-1; text-align: center; color: #666;">Aucun point de vente configuré</p>'}
+                    </div>
+
+                    <div style="margin-top: 2rem;">
+                        <h4 style="margin-bottom: 1rem;">📊 Vue d'ensemble du stock par point de vente</h4>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Produit</th>
+                                        <th>Stock Total</th>
+                                        ${pointsVente.map(pdv => `<th>${pdv.name}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${products.map(product => `
+                                        <tr>
+                                            <td><strong>${product.name}</strong></td>
+                                            <td><strong>${product.quantity || 0}</strong></td>
+                                            ${pointsVente.map(pdv => {
+                                                const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
+                                                return `<td>${pdvProduct?.quantity || 0}</td>`;
+                                            }).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openAddPDVModal() {
+            const name = prompt('Nom du point de vente:');
+            if (name && name.trim()) {
+                const pdv = {
+                    id: Date.now().toString(),
+                    name: name.trim(),
+                    products: []
+                };
+                pointsVente.push(pdv);
+                savePDV();
+                showToast('Point de vente ajouté', 'success');
+                renderPointsVente();
+            }
+        }
+
+        function viewPDV(pdvId) {
+            const pdv = pointsVente.find(p => p.id === pdvId);
+            if (!pdv) return;
+
+            document.getElementById('app-container').innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🏪 ${pdv.name}</h3>
+                        <button class="btn btn-secondary" onclick="renderPointsVente()">← Retour</button>
+                    </div>
+
+                    <h4 style="margin-bottom: 1rem;">Transférer du stock vers ce point de vente</h4>
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    <th>Stock Central</th>
+                                    <th>Stock PDV</th>
+                                    <th>Quantité à transférer</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${products.map(product => {
+                                    const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
+                                    return `
+                                        <tr>
+                                            <td><strong>${product.name}</strong></td>
+                                            <td>${product.quantity || 0}</td>
+                                            <td>${pdvProduct?.quantity || 0}</td>
+                                            <td><input type="number" id="transfer-${product.reference}" min="1" max="${product.quantity || 0}" style="width: 100px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"></td>
+                                            <td><button class="btn btn-primary" onclick="transferToPDV('${pdvId}', '${product.reference}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">➡️ Transférer</button></td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function transferToPDV(pdvId, productRef) {
+            const pdv = pointsVente.find(p => p.id === pdvId);
+            const product = products.find(p => p.reference === productRef);
+            const input = document.getElementById(`transfer-${productRef}`);
+            const quantity = parseInt(input.value) || 0;
+
+            if (quantity <= 0) {
+                showToast('Quantité invalide', 'error');
+                return;
+            }
+
+            if ((product.quantity || 0) < quantity) {
+                showToast('Stock insuffisant', 'error');
+                return;
+            }
+
+            // Retirer du stock central
+            product.quantity = (product.quantity || 0) - quantity;
+
+            // Ajouter au PDV
+            if (!pdv.products) pdv.products = [];
+            const pdvProduct = pdv.products.find(p => p.reference === productRef);
+            if (pdvProduct) {
+                pdvProduct.quantity = (pdvProduct.quantity || 0) + quantity;
+            } else {
+                pdv.products.push({
+                    reference: productRef,
+                    quantity: quantity
+                });
+            }
+
+            // Enregistrer le mouvement
+            movements.push({
+                id: Date.now(),
+                date: new Date().toISOString(),
+                type: 'transfer',
+                reason: 'Transfert vers PDV',
+                note: `Transfert vers ${pdv.name}`,
+                product: product.name,
+                reference: productRef,
+                quantity: quantity,
+                oldQuantity: (product.quantity || 0) + quantity,
+                newQuantity: product.quantity
+            });
+
+            saveProducts();
+            savePDV();
+            saveMovements();
+            showToast(`${quantity} unités transférées vers ${pdv.name}`, 'success');
+            viewPDV(pdvId);
+        }
+
+        // ============ HISTORY PAGE ============
+        function renderHistory() {
+            const sortedMovements = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            document.getElementById('app-container').innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📜 Historique des mouvements</h3>
+                        <button class="btn btn-warning" onclick="exportHistory()">📥 Exporter</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Raison</th>
+                                    <th>Produit</th>
+                                    <th>Quantité</th>
+                                    <th>Stock avant</th>
+                                    <th>Stock après</th>
+                                    <th>Note</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${sortedMovements.map(m => `
+                                    <tr>
+                                        <td>${new Date(m.date).toLocaleString('fr-FR')}</td>
+                                        <td><span style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; background: ${m.type === 'in' ? '#dcfce7' : '#fee2e2'}; color: ${m.type === 'in' ? '#166534' : '#991b1b'};">${m.type === 'in' ? 'ENTRÉE' : 'SORTIE'}</span></td>
+                                        <td>${m.reason}</td>
+                                        <td><strong>${m.product}</strong><br><small>${m.reference}</small></td>
+                                        <td><strong>${m.quantity}</strong></td>
+                                        <td>${m.oldQuantity}</td>
+                                        <td>${m.newQuantity}</td>
+                                        <td>${m.note || '-'}</td>
+                                    </tr>
+                                `).join('') || '<tr><td colspan="8" class="text-center">Aucun mouvement enregistré</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function exportHistory() {
+            if (movements.length === 0) {
+                showToast('Aucun historique à exporter', 'warning');
+                return;
+            }
+
+            const exportData = movements.map(m => ({
+                'Date': new Date(m.date).toLocaleString('fr-FR'),
+                'Type': m.type === 'in' ? 'Entrée' : 'Sortie',
+                'Raison': m.reason,
+                'Produit': m.product,
+                'Référence': m.reference,
+                'Quantité': m.quantity,
+                'Stock Avant': m.oldQuantity,
+                'Stock Après': m.newQuantity,
+                'Note': m.note || ''
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Historique');
+            XLSX.writeFile(wb, `historique_${new Date().toISOString().split('T')[0]}.xlsx`);
+            
+            showToast('Export réussi', 'success');
+        }
+
+        // ============ SAVE FUNCTIONS ============
+        function saveProducts() {
+            localStorage.setItem('products', JSON.stringify(products));
+        }
+
+        function saveMovements() {
+            localStorage.setItem('movements', JSON.stringify(movements));
+        }
+
+        function savePDV() {
+            localStorage.setItem('pointsVente', JSON.stringify(pointsVente));
+        }
+
+        // ============ INIT ============
+        renderDashboard();
     </script>
 </body>
 </html>
