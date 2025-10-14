@@ -995,19 +995,11 @@
 
         // ============ MOVEMENTS PAGE ============
         function renderMovements() {
-            console.log('=== RENDU MOUVEMENTS ===');
-            
-            const container = document.getElementById('app-container');
-            if (!container) {
-                console.error('Container app-container introuvable');
-                return;
-            }
-
-            container.innerHTML = `
+            document.getElementById('app-container').innerHTML = `
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">🔄 Mouvements de stock</h3>
-                        <input type="text" class="search-input" id="movement-search" placeholder="🔍 Rechercher un produit ou référence...">
+                        <input type="text" class="search-input" id="movement-search" placeholder="🔍 Rechercher un produit ou référence..." onkeyup="filterMovementProducts(this.value)">
                     </div>
                     
                     <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border: 2px solid #e5e7eb;">
@@ -1085,21 +1077,10 @@
             document.querySelectorAll('.product-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', function() {
                     const input = document.querySelector(`.quantity-input[data-ref="${this.dataset.ref}"]`);
-                    if (input) {
-                        input.disabled = !this.checked;
-                        if (!this.checked) input.value = '';
-                    }
+                    input.disabled = !this.checked;
+                    if (!this.checked) input.value = '';
                 });
             });
-
-            // Attacher l'événement de recherche
-            const searchInput = document.getElementById('movement-search');
-            if (searchInput) {
-                searchInput.addEventListener('keyup', function() {
-                    filterMovementProducts(this.value);
-                });
-                console.log('✓ Événement de recherche attaché aux mouvements');
-            }
         }
 
         function updateMovementForm() {
@@ -1360,69 +1341,9 @@
 
         // ============ POINTS DE VENTE ============
         function renderPointsVente() {
-            console.log('=== RENDU POINTS DE VENTE ===');
-            
-            const container = document.getElementById('app-container');
-            if (!container) {
-                console.error('Container app-container introuvable');
-                return;
-            }
-
-            container.innerHTML = `
+            document.getElementById('app-container').innerHTML = `
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">🏪 Points de Vente</h3>
-                        <div class="btn-group">
-                            <input type="text" id="pdv-search" class="search-input" placeholder="🔍 Rechercher un produit ou référence...">
-                            <button class="btn btn-primary" onclick="openAddPDVModal()">➕ Ajouter un point de vente</button>
-                        </div>
-                    </div>
-
-                    <div class="pdv-grid">
-                        ${pointsVente.map(pdv => `
-                            <div class="pdv-card">
-                                <div class="pdv-name">${pdv.name}</div>
-                                <div class="pdv-stock">${pdv.products?.length || 0} produits</div>
-                                <div style="margin-top: 0.5rem;">
-                                    <button class="btn btn-primary" onclick="viewPDV('${pdv.id}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; width: 100%;">Voir détails</button>
-                                </div>
-                            </div>
-                        `).join('') || '<p style="grid-column: 1/-1; text-align: center; color: #666;">Aucun point de vente configuré</p>'}
-                    </div>
-
-                    <div style="margin-top: 2rem;">
-                        <h4 style="margin-bottom: 1rem;">📊 Vue d'ensemble du stock par point de vente</h4>
-                        <p style="color: #666; margin-bottom: 1rem; font-size: 0.9rem;">
-                            <strong>Légende :</strong> Le stock total d'un produit = somme de tous les points de vente
-                        </p>
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Produit</th>
-                                        <th>Référence</th>
-                                        <th>Stock Total</th>
-                                        ${pointsVente.map(pdv => `<th>${pdv.name}</th>`).join('')}
-                                    </tr>
-                                </thead>
-                                <tbody id="pdv-overview-body">
-                                    ${renderPDVOverview(products)}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Attacher l'événement de recherche
-            const searchInput = document.getElementById('pdv-search');
-            if (searchInput) {
-                searchInput.addEventListener('keyup', function() {
-                    filterPDVProducts(this.value);
-                });
-                console.log('✓ Événement de recherche attaché aux PDV');
-            }
-        }d-header">
                         <h3 class="card-title">🏪 Points de Vente</h3>
                         <div class="btn-group">
                             <input type="text" id="pdv-search" class="search-input" placeholder="🔍 Rechercher un produit ou référence..." onkeyup="filterPDVProducts(this.value)">
@@ -1630,17 +1551,9 @@
 
         // ============ HISTORY PAGE ============
         function renderHistory() {
-            console.log('=== RENDU HISTORIQUE ===');
-            
-            const container = document.getElementById('app-container');
-            if (!container) {
-                console.error('Container app-container introuvable');
-                return;
-            }
-
             const sortedMovements = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            container.innerHTML = `
+            document.getElementById('app-container').innerHTML = `
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">📜 Historique des mouvements</h3>
@@ -1652,22 +1565,22 @@
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; background: #f9fafb; padding: 1rem; border-radius: 8px;">
                         <div>
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">🔍 Rechercher</label>
-                            <input type="text" id="history-search" class="search-input" placeholder="Produit ou référence..." style="width: 100%;">
+                            <input type="text" id="history-search" class="search-input" placeholder="Produit ou référence..." onkeyup="filterHistory()" style="width: 100%;">
                         </div>
                         
                         <div>
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">📅 Date</label>
-                            <input type="date" id="history-date" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
+                            <input type="date" id="history-date" onchange="filterHistory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
                         </div>
 
                         <div>
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">📆 Mois</label>
-                            <input type="month" id="history-month" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
+                            <input type="month" id="history-month" onchange="filterHistory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
                         </div>
 
                         <div>
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">📅 Année</label>
-                            <select id="history-year" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
+                            <select id="history-year" onchange="filterHistory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
                                 <option value="">Toutes les années</option>
                                 ${getAvailableYears().map(year => `<option value="${year}">${year}</option>`).join('')}
                             </select>
@@ -1675,7 +1588,7 @@
 
                         <div>
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">🏪 Point de vente</label>
-                            <select id="history-pdv" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
+                            <select id="history-pdv" onchange="filterHistory()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px;">
                                 <option value="">Tous les PDV</option>
                                 <option value="Stock Central">Stock Central</option>
                                 ${pointsVente.map(pdv => `<option value="${pdv.name}">${pdv.name}</option>`).join('')}
@@ -1713,36 +1626,6 @@
                     </div>
                 </div>
             `;
-
-            // Attacher tous les événements de filtrage
-            const searchInput = document.getElementById('history-search');
-            const dateInput = document.getElementById('history-date');
-            const monthInput = document.getElementById('history-month');
-            const yearSelect = document.getElementById('history-year');
-            const pdvSelect = document.getElementById('history-pdv');
-
-            if (searchInput) {
-                searchInput.addEventListener('keyup', filterHistory);
-                console.log('✓ Recherche historique attachée');
-            }
-            if (dateInput) {
-                dateInput.addEventListener('change', filterHistory);
-                console.log('✓ Filtre date attaché');
-            }
-            if (monthInput) {
-                monthInput.addEventListener('change', filterHistory);
-                console.log('✓ Filtre mois attaché');
-            }
-            if (yearSelect) {
-                yearSelect.addEventListener('change', filterHistory);
-                console.log('✓ Filtre année attaché');
-            }
-            if (pdvSelect) {
-                pdvSelect.addEventListener('change', filterHistory);
-                console.log('✓ Filtre PDV attaché');
-            }
-
-            console.log('✓ Historique rendu avec succès');
         }
 
         function getAvailableYears() {
@@ -1916,14 +1799,7 @@
         }
 
         // ============ INIT ============
-        console.log('=== INITIALISATION APPLICATION ===');
-        console.log('Produits chargés:', products.length);
-        console.log('Mouvements chargés:', movements.length);
-        console.log('Points de vente chargés:', pointsVente.length);
-        
-        // Démarrer sur le dashboard
         renderDashboard();
-        console.log('✓ Application initialisée avec succès');
     </script>
 </body>
 </html>
