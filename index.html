@@ -460,47 +460,50 @@
             txt.textContent = 'Lecture du fichier...';
 
             try {
-                // Lecture du fichier
                 const data = await file.arrayBuffer();
                 
-                txt.textContent = 'Analyse du fichier...';
+                txt.textContent = 'Analyse...';
                 fill.style.width = '10%';
+                await new Promise(r => setTimeout(r, 50));
                 
-                // Forcer un render
-                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 100)));
-                
-                // Parser Excel avec délai
+                // Parser Excel
                 const wb = XLSX.read(data, {
                     cellFormula: false,
                     cellHTML: false,
                     cellStyles: false,
+                    sheetStubs: false,  // Ignorer cellules vides
                     dense: true
                 });
                 
-                fill.style.width = '20%';
-                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 100)));
-                
-                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {
+                const allRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {
                     raw: false,
-                    defval: ''
+                    defval: '',
+                    blankrows: false  // Ignorer lignes vides
                 });
 
+                // FILTRER LES LIGNES VIDES - C'EST LA CLÉ !
+                const rows = allRows.filter(r => {
+                    // Une ligne est valide si elle a au moins un nom ou une référence
+                    return (r['Real Name'] && r['Real Name'].trim()) || 
+                           (r['Référence'] && r['Référence'].trim());
+                });
+
+                console.log(`Lignes Excel: ${allRows.length}, Produits réels: ${rows.length}`);
+
                 if (rows.length === 0) { 
-                    showToast('Fichier vide', 'error'); 
+                    showToast('Aucun produit valide trouvé', 'error'); 
                     closeImportModal(); 
                     return; 
                 }
 
-                console.log(`Import: ${rows.length} lignes`);
                 txt.textContent = `${rows.length} produits détectés...`;
-                fill.style.width = '30%';
-                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
+                fill.style.width = '20%';
+                await new Promise(r => setTimeout(r, 50));
 
-                // Détecter colonnes
+                // Détecter colonnes PDV
                 const cols = Object.keys(rows[0]);
                 const pdvCols = cols.filter(c => c.toUpperCase().startsWith('QTY'));
-                console.log('Colonnes PDV:', pdvCols);
-
+                
                 // Créer PDV
                 const newPDVs = [];
                 pdvCols.forEach(c => {
@@ -515,18 +518,17 @@
                 });
                 pointsVente.push(...newPDVs);
 
-                fill.style.width = '35%';
-                txt.textContent = 'Traitement des produits...';
-                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 100)));
+                txt.textContent = 'Import en cours...';
+                fill.style.width = '30%';
+                await new Promise(r => setTimeout(r, 50));
 
-                // TRAITEMENT PAR PETITS LOTS AVEC PAUSES LONGUES
-                const batchSize = 50; // Petits lots
+                // TRAITEMENT RAPIDE - Lots de 100
+                const batchSize = 100;
                 const allData = [];
                 
                 for (let i = 0; i < rows.length; i += batchSize) {
                     const batch = rows.slice(i, i + batchSize);
                     
-                    // Traiter le lot
                     batch.forEach(r => {
                         let img = (r['IMAGE'] || '').toString().trim();
                         if (img && img.includes('drive.google.com')) {
@@ -564,20 +566,20 @@
                         });
                     });
 
-                    // Mise à jour progressive
-                    const baseProgress = 35;
-                    const progressRange = 55; // de 35% à 90%
-                    const percent = baseProgress + Math.round(((i + batch.length) / rows.length) * progressRange);
+                    // Progression
+                    const percent = 30 + Math.round(((i + batch.length) / rows.length) * 60);
                     fill.style.width = percent + '%';
-                    txt.textContent = `${i + batch.length}/${rows.length} produits traités...`;
+                    txt.textContent = `${i + batch.length}/${rows.length} produits...`;
                     
-                    // PAUSE IMPORTANTE pour laisser respirer le navigateur
-                    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 50)));
+                    // Pause courte tous les 100 produits
+                    if ((i + batch.length) % 500 === 0) {
+                        await new Promise(r => setTimeout(r, 20));
+                    }
                 }
 
-                fill.style.width = '90%';
                 txt.textContent = 'Enregistrement...';
-                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
+                fill.style.width = '90%';
+                await new Promise(r => setTimeout(r, 50));
 
                 // Mise à jour des produits
                 allData.forEach(({ prod, ref, pdvQtys }) => {
@@ -589,7 +591,7 @@
                         products.push(prod);
                     }
 
-                    // Mise à jour PDV
+                    // MAJ PDV
                     Object.entries(pdvQtys).forEach(([pdvName, qty]) => {
                         const pdv = pointsVente.find(p => p.name === pdvName);
                         if (pdv && qty > 0) {
@@ -604,28 +606,22 @@
                     });
                 });
 
-                fill.style.width = '95%';
-                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 100)));
-
-                // Sauvegarder
                 save();
                 savePDV();
                 
                 fill.style.width = '100%';
                 txt.textContent = `✓ ${allData.length} produits importés !`;
-                console.log(`Import terminé: ${allData.length} produits`);
                 showToast(`${allData.length} produits importés`, 'success');
                 
                 setTimeout(() => {
                     closeImportModal();
                     if (currentPage === 'products') renderProducts();
-                }, 2000);
+                }, 1500);
 
             } catch (err) {
                 console.error('ERREUR:', err);
-                txt.textContent = '❌ Erreur: ' + err.message;
+                txt.textContent = '❌ ' + err.message;
                 showToast('Erreur: ' + err.message, 'error');
-                setTimeout(() => closeImportModal(), 3000);
             }
         }
 
