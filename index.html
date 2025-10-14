@@ -476,25 +476,24 @@
             fill.style.width = '0%';
             txt.textContent = 'Lecture...';
 
+            // Permettre au modal de s'afficher
+            await new Promise(r => setTimeout(r, 100));
+
             try {
                 const data = await file.arrayBuffer();
+                fill.style.width = '20%';
+                
                 const wb = XLSX.read(data);
                 const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-                console.log('TOTAL LIGNES:', rows.length);
-                console.log('COLONNES:', Object.keys(rows[0]));
-                console.log('LIGNE 1:', rows[0]);
-                console.log('LIGNE 2:', rows[1]);
-                console.log('LIGNE 3:', rows[2]);
+                fill.style.width = '40%';
+                txt.textContent = `${rows.length} lignes...`;
 
                 if (rows.length === 0) { 
                     showToast('Fichier vide', 'error'); 
                     closeImportModal(); 
                     return; 
                 }
-
-                txt.textContent = `${rows.length} lignes trouvées`;
-                fill.style.width = '30%';
 
                 // Colonnes PDV
                 const cols = Object.keys(rows[0]);
@@ -511,11 +510,13 @@
                     }
                 });
 
-                txt.textContent = 'Import...';
                 fill.style.width = '50%';
+                txt.textContent = 'Import...';
 
-                // SIMPLE ET RAPIDE
+                // IMPORT DIRECT SANS PAUSE
                 let imported = 0;
+                const newProducts = [];
+                
                 rows.forEach((r, i) => {
                     const name = r['Real Name'] || r['Nom'] || '';
                     const ref = r['Référence'] || r['Reference'] || '';
@@ -529,12 +530,12 @@
                     }
 
                     let qty = 0;
-                    const pdvQtys = {};
+                    const pdvData = {};
                     pdvCols.forEach(c => {
                         const q = parseInt(r[c]) || 0;
                         qty += q;
                         const n = c.replace(/QTY/gi, '').trim();
-                        if (n) pdvQtys[n] = q;
+                        if (n) pdvData[n] = q;
                     });
 
                     const prod = {
@@ -549,35 +550,42 @@
                         quantity: qty
                     };
 
-                    products.push(prod);
+                    newProducts.push({ prod, pdvData });
+                    imported++;
+                });
 
-                    Object.entries(pdvQtys).forEach(([pdvName, q]) => {
+                fill.style.width = '70%';
+                txt.textContent = 'Enregistrement...';
+
+                // Tout enregistrer d'un coup
+                newProducts.forEach(({ prod, pdvData }) => {
+                    products.push(prod);
+                    
+                    Object.entries(pdvData).forEach(([pdvName, q]) => {
                         const pdv = pointsVente.find(p => p.name === pdvName);
                         if (pdv && q > 0) {
                             if (!pdv.products) pdv.products = [];
                             pdv.products.push({ reference: prod.reference, quantity: q });
                         }
                     });
-
-                    imported++;
                 });
 
                 save();
                 savePDV();
                 
                 fill.style.width = '100%';
-                txt.textContent = `✓ ${imported} importés !`;
-                console.log('IMPORTÉS:', imported);
-                showToast(`${imported} produits`, 'success');
+                txt.textContent = `✓ ${imported} produits !`;
+                showToast(`${imported} produits importés`, 'success');
                 
                 setTimeout(() => {
                     closeImportModal();
                     renderProducts();
-                }, 1000);
+                }, 800);
 
             } catch (err) {
                 console.error('ERREUR:', err);
-                alert('ERREUR: ' + err.message);
+                txt.textContent = '❌ Erreur';
+                showToast('Erreur: ' + err.message, 'error');
             }
         }
 
