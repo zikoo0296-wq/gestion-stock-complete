@@ -434,10 +434,15 @@
                 return '<tr><td colspan="10" class="text-center">Aucun produit trouvé</td></tr>';
             }
             
-            return filteredProducts.map(p => `
+            return filteredProducts.map(p => {
+                // Échapper les guillemets dans les données JSON pour éviter les erreurs
+                const productJson = JSON.stringify(p).replace(/"/g, '&quot;');
+                const imageSrc = p.image || '';
+                
+                return `
                 <tr>
                     <td><input type="checkbox" class="product-select-checkbox" data-ref="${p.reference}"></td>
-                    <td>${p.image ? `<img src="${p.image}" class="product-img" onclick="openImageModal('${p.image}')" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';" alt="${p.name}">` : '📦'}</td>
+                    <td>${imageSrc ? `<img src="${imageSrc}" class="product-img" onclick="openImageModal('${imageSrc}')" onerror="console.error('Erreur chargement image:', '${imageSrc}'); this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E';" alt="${p.name}">` : '📦'}</td>
                     <td>
                         <strong>${p.name}</strong>
                         ${p.conventionalName ? `<br><small style="color: #666;">${p.conventionalName}</small>` : ''}
@@ -447,13 +452,21 @@
                     <td>${p.category || '-'}</td>
                     <td>${p.brand || '-'}</td>
                     <td><strong>${p.quantity || 0}</strong></td>
-                    <td>${p.price} DH</td>
+                    <td>${p.price || 0} DH</td>
                     <td>
-                        <button class="btn btn-primary" onclick='editProduct(${JSON.stringify(p)})' style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">✏️</button>
+                        <button class="btn btn-primary" onclick='editProductByRef("${p.reference}")' style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">✏️</button>
                         <button class="btn btn-danger" onclick="deleteProduct('${p.reference}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">🗑️</button>
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
+        }
+
+        function editProductByRef(reference) {
+            const product = products.find(p => p.reference === reference);
+            if (product) {
+                editProduct(product);
+            }
         }
 
         function filterProducts(search) {
@@ -497,11 +510,27 @@
         }
 
         function deleteProduct(reference) {
+            console.log('Suppression du produit:', reference);
             if (confirm('Voulez-vous vraiment supprimer ce produit ?')) {
+                const initialLength = products.length;
                 products = products.filter(p => p.reference !== reference);
+                
+                // Supprimer aussi des PDV
+                pointsVente.forEach(pdv => {
+                    if (pdv.products) {
+                        pdv.products = pdv.products.filter(p => p.reference !== reference);
+                    }
+                });
+                
+                console.log(`Produits avant: ${initialLength}, après: ${products.length}`);
                 saveProducts();
+                savePDV();
                 showToast('Produit supprimé avec succès', 'success');
-                renderProducts();
+                
+                // Recharger la page produits
+                if (currentPage === 'products') {
+                    renderProducts();
+                }
             }
         }
 
@@ -655,12 +684,18 @@
                             quantity: totalQuantity
                         };
 
-                        console.log(`Produit: ${product.name}, Image: ${product.image}`);
+                        console.log(`Produit: ${product.name}, Image URL: ${product.image}`);
 
                         // Vérifier si le produit existe déjà
                         const existingIndex = products.findIndex(p => p.reference === product.reference);
                         if (existingIndex >= 0) {
-                            products[existingIndex] = { ...products[existingIndex], ...product };
+                            // Mise à jour: garder l'ancienne image si la nouvelle est vide
+                            const oldImage = products[existingIndex].image;
+                            products[existingIndex] = { 
+                                ...products[existingIndex], 
+                                ...product,
+                                image: product.image || oldImage
+                            };
                         } else {
                             products.push(product);
                         }
