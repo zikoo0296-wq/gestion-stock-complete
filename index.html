@@ -207,7 +207,14 @@
                 <button class="close-btn" onclick="closeImportModal()">×</button>
             </div>
             <div class="mb-2">
-                <p style="color: #666; margin-bottom: 1rem;">Format attendu : IMAGE | Real Name | Conventional Name | Selling Price | Barcode | Repetition | Barcode Category | Category | Brand | Référence</p>
+                <p style="color: #666; margin-bottom: 1rem;">
+                    <strong>Format Excel attendu :</strong><br>
+                    IMAGE | Real Name | Conventional Name | Référence | Barcode | Repetition | Category | Brand | QTY [Nom PDV] | QTY [Nom PDV] | ...<br>
+                    <small style="color: #999;">
+                        Les colonnes <strong>QTY XXX</strong> représentent le stock de chaque point de vente (ex: QTY Al Baraka, QTY Roche Noire, QTY ALGHAFLA)<br>
+                        Le système détectera automatiquement tous les points de vente et distribuera le stock selon chaque colonne QTY.
+                    </small>
+                </p>
                 <input type="file" id="excel-file" accept=".xlsx,.xls" onchange="handleImport(event)">
                 <button class="btn btn-primary" onclick="document.getElementById('excel-file').click()">📁 Choisir un fichier</button>
             </div>
@@ -570,6 +577,11 @@
                         pdvColumns.forEach(col => {
                             totalQuantity += parseInt(row[col]) || 0;
                         });
+                        
+                        // Si aucune colonne QTY, utiliser Repetition
+                        if (pdvColumns.length === 0 && row['Repetition']) {
+                            totalQuantity = parseInt(row['Repetition']) || 0;
+                        }
 
                         const product = {
                             image: imageUrl,
