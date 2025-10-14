@@ -315,6 +315,10 @@
             const totalValue = products.reduce((sum, p) => sum + ((p.quantity || 0) * (p.price || 0)), 0);
 
             document.getElementById('app-container').innerHTML = `
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <input type="text" id="dashboard-search" class="search-input" placeholder="🔍 Rechercher un produit ou référence..." onkeyup="filterDashboardProducts(this.value)" style="width: 100%;">
+                </div>
+
                 <div class="stats-grid">
                     <div class="stat-card blue">
                         <div class="stat-label">Total Produits</div>
@@ -349,31 +353,53 @@
                                     <th>Prix</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                ${products.filter(p => (p.quantity || 0) < 10).map(p => {
-                                    const imageSrc = p.image || '';
-                                    const idMatch = imageSrc.match(/[?&]id=([^&]+)/);
-                                    const fileId = idMatch ? idMatch[1] : null;
-                                    let imageHtml = '📦';
-                                    
-                                    if (fileId) {
-                                        imageHtml = `<img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w200" class="product-img" onclick="openImageModal('https://drive.google.com/uc?export=view&id=${fileId}')" onerror="if (this.src.includes('thumbnail')) { this.src='https://drive.google.com/uc?export=view&id=${fileId}'; } else { this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E'; }" alt="${p.name}">`;
-                                    }
-                                    
-                                    return `
-                                    <tr>
-                                        <td>${imageHtml}</td>
-                                        <td><strong>${p.name}</strong><br><small>${p.conventionalName || ''}</small></td>
-                                        <td>${p.reference}</td>
-                                        <td><span style="color: #ef4444; font-weight: bold;">${p.quantity || 0}</span></td>
-                                        <td>${p.price} DH</td>
-                                    </tr>
-                                `}).join('') || '<tr><td colspan="5" class="text-center">Aucun produit en alerte</td></tr>'}
+                            <tbody id="dashboard-alerts-body">
+                                ${renderDashboardAlerts(products.filter(p => (p.quantity || 0) < 10))}
                             </tbody>
                         </table>
                     </div>
                 </div>
             `;
+        }
+
+        function renderDashboardAlerts(filteredProducts) {
+            if (filteredProducts.length === 0) {
+                return '<tr><td colspan="5" class="text-center">Aucun produit en alerte</td></tr>';
+            }
+
+            return filteredProducts.map(p => {
+                const imageSrc = p.image || '';
+                const idMatch = imageSrc.match(/[?&]id=([^&]+)/);
+                const fileId = idMatch ? idMatch[1] : null;
+                let imageHtml = '📦';
+                
+                if (fileId) {
+                    imageHtml = `<img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w200" class="product-img" onclick="openImageModal('https://drive.google.com/uc?export=view&id=${fileId}')" onerror="if (this.src.includes('thumbnail')) { this.src='https://drive.google.com/uc?export=view&id=${fileId}'; } else { this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3E?%3C/text%3E%3C/svg%3E'; }" alt="${p.name}">`;
+                }
+                
+                return `
+                    <tr>
+                        <td>${imageHtml}</td>
+                        <td><strong>${p.name}</strong><br><small>${p.conventionalName || ''}</small></td>
+                        <td>${p.reference}</td>
+                        <td><span style="color: #ef4444; font-weight: bold;">${p.quantity || 0}</span></td>
+                        <td>${p.price} DH</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterDashboardProducts(search) {
+            const searchLower = search.toLowerCase().trim();
+            const filtered = products.filter(p => 
+                (p.quantity || 0) < 10 && (
+                    p.name.toLowerCase().includes(searchLower) ||
+                    p.reference.toLowerCase().includes(searchLower) ||
+                    (p.conventionalName || '').toLowerCase().includes(searchLower) ||
+                    (p.barcode || '').toLowerCase().includes(searchLower)
+                )
+            );
+            document.getElementById('dashboard-alerts-body').innerHTML = renderDashboardAlerts(filtered);
         }
 
         // ============ PRODUCTS PAGE ============
@@ -817,6 +843,17 @@
                 
                 console.log(`Import terminé: ${imported} produits`);
                 console.log(`PDV créés/mis à jour: ${pdvColumns.length}`);
+                
+                // Recalculer tous les stocks totaux après import
+                products.forEach(product => {
+                    const totalInAllPDV = pointsVente.reduce((sum, pdv) => {
+                        const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
+                        return sum + (pdvProduct?.quantity || 0);
+                    }, 0);
+                    product.quantity = totalInAllPDV;
+                });
+                saveProducts();
+                
                 showToast(`${imported} produit(s) importé(s) avec succès dans ${pdvColumns.length} point(s) de vente`, 'success');
                 
                 // Fermer le modal après un court délai
@@ -887,21 +924,37 @@
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Type de mouvement</label>
-                                <select id="movement-type" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                                <select id="movement-type" onchange="updateMovementForm()" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
                                     <option value="in">Entrée (+)</option>
                                     <option value="out">Sortie (-)</option>
+                                    <option value="transfer">Transfert entre PDV</option>
                                 </select>
                             </div>
                             
-                            <div>
+                            <div id="reason-container">
                                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Raison</label>
                                 <select id="movement-reason" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
                                     <option value="Achat">Achat fournisseur</option>
                                     <option value="Retour">Retour client</option>
                                     <option value="Vente">Vente</option>
-                                    <option value="Transfert">Transfert</option>
                                     <option value="Ajustement">Ajustement inventaire</option>
                                     <option value="Casse">Casse/Perte</option>
+                                </select>
+                            </div>
+
+                            <div id="pdv-source-container" style="display: none;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Point de vente SOURCE</label>
+                                <select id="pdv-source" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                                    <option value="">-- Stock Central --</option>
+                                    ${pointsVente.map(pdv => `<option value="${pdv.id}">${pdv.name}</option>`).join('')}
+                                </select>
+                            </div>
+
+                            <div id="pdv-dest-container" style="display: none;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Point de vente DESTINATION</label>
+                                <select id="pdv-dest" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                                    <option value="">-- Stock Central --</option>
+                                    ${pointsVente.map(pdv => `<option value="${pdv.id}">${pdv.name}</option>`).join('')}
                                 </select>
                             </div>
                             
@@ -946,6 +999,23 @@
                     if (!this.checked) input.value = '';
                 });
             });
+        }
+
+        function updateMovementForm() {
+            const type = document.getElementById('movement-type').value;
+            const reasonContainer = document.getElementById('reason-container');
+            const pdvSourceContainer = document.getElementById('pdv-source-container');
+            const pdvDestContainer = document.getElementById('pdv-dest-container');
+
+            if (type === 'transfer') {
+                reasonContainer.style.display = 'none';
+                pdvSourceContainer.style.display = 'block';
+                pdvDestContainer.style.display = 'block';
+            } else {
+                reasonContainer.style.display = 'block';
+                pdvSourceContainer.style.display = 'none';
+                pdvDestContainer.style.display = 'none';
+            }
         }
 
         function renderMovementRows(productList) {
@@ -1005,7 +1075,7 @@
 
         function validateMovement() {
             const type = document.getElementById('movement-type').value;
-            const reason = document.getElementById('movement-reason').value;
+            const reason = document.getElementById('movement-reason')?.value;
             const note = document.getElementById('movement-note').value;
             
             const checkedProducts = [];
@@ -1024,6 +1094,108 @@
                 return;
             }
 
+            // Transfert entre PDV
+            if (type === 'transfer') {
+                const pdvSourceId = document.getElementById('pdv-source').value;
+                const pdvDestId = document.getElementById('pdv-dest').value;
+
+                if (pdvSourceId === pdvDestId) {
+                    showToast('Le point de vente source et destination doivent être différents', 'error');
+                    return;
+                }
+
+                console.log('=== TRANSFERT ENTRE PDV ===');
+                console.log('Source:', pdvSourceId || 'Stock Central', 'Destination:', pdvDestId || 'Stock Central');
+                console.log('Produits:', checkedProducts);
+
+                let processedCount = 0;
+
+                checkedProducts.forEach(item => {
+                    const product = products.find(p => p.reference === item.reference);
+                    if (!product) return;
+
+                    // SOURCE: Retirer du stock
+                    if (pdvSourceId === '') {
+                        // Retirer du stock central
+                        if ((product.quantity || 0) < item.quantity) {
+                            showToast(`Stock central insuffisant pour ${product.name}`, 'error');
+                            return;
+                        }
+                        product.quantity = (product.quantity || 0) - item.quantity;
+                    } else {
+                        // Retirer du PDV source
+                        const pdvSource = pointsVente.find(p => p.id === pdvSourceId);
+                        if (!pdvSource.products) pdvSource.products = [];
+                        const pdvProduct = pdvSource.products.find(p => p.reference === item.reference);
+                        
+                        if (!pdvProduct || (pdvProduct.quantity || 0) < item.quantity) {
+                            showToast(`Stock insuffisant dans le PDV source pour ${product.name}`, 'error');
+                            return;
+                        }
+                        
+                        pdvProduct.quantity -= item.quantity;
+                        // Ne pas toucher au stock total du produit lors d'un transfert PDV vers PDV
+                    }
+
+                    // DESTINATION: Ajouter au stock
+                    if (pdvDestId === '') {
+                        // Ajouter au stock central
+                        product.quantity = (product.quantity || 0) + item.quantity;
+                    } else {
+                        // Ajouter au PDV destination
+                        const pdvDest = pointsVente.find(p => p.id === pdvDestId);
+                        if (!pdvDest.products) pdvDest.products = [];
+                        const pdvProductDest = pdvDest.products.find(p => p.reference === item.reference);
+                        
+                        if (pdvProductDest) {
+                            pdvProductDest.quantity = (pdvProductDest.quantity || 0) + item.quantity;
+                        } else {
+                            pdvDest.products.push({
+                                reference: item.reference,
+                                quantity: item.quantity
+                            });
+                        }
+                        // Ne pas toucher au stock total du produit lors d'un transfert PDV vers PDV
+                    }
+
+                    // Recalculer le stock total = somme de tous les PDV
+                    const totalInAllPDV = pointsVente.reduce((sum, pdv) => {
+                        const pdvProd = pdv.products?.find(p => p.reference === item.reference);
+                        return sum + (pdvProd?.quantity || 0);
+                    }, 0);
+                    product.quantity = totalInAllPDV;
+
+                    // Enregistrer le mouvement
+                    const pdvSourceName = pdvSourceId ? pointsVente.find(p => p.id === pdvSourceId)?.name : 'Stock Central';
+                    const pdvDestName = pdvDestId ? pointsVente.find(p => p.id === pdvDestId)?.name : 'Stock Central';
+
+                    movements.push({
+                        id: Date.now() + Math.random(),
+                        date: new Date().toISOString(),
+                        type: 'transfer',
+                        reason: `Transfert: ${pdvSourceName} → ${pdvDestName}`,
+                        note,
+                        product: product.name,
+                        reference: product.reference,
+                        quantity: item.quantity,
+                        pdvSource: pdvSourceName,
+                        pdvDest: pdvDestName
+                    });
+                    
+                    processedCount++;
+                });
+
+                if (processedCount > 0) {
+                    saveProducts();
+                    savePDV();
+                    saveMovements();
+                    showToast(`${processedCount} transfert(s) effectué(s) avec succès`, 'success');
+                    renderMovements();
+                }
+                return;
+            }
+
+            // Mouvements normaux (Entrée/Sortie)
             console.log('=== VALIDATION MOUVEMENT ===');
             console.log('Type:', type, 'Raison:', reason);
             console.log('Produits:', checkedProducts);
@@ -1083,6 +1255,7 @@
                     <div class="card-header">
                         <h3 class="card-title">🏪 Points de Vente</h3>
                         <div class="btn-group">
+                            <input type="text" id="pdv-search" class="search-input" placeholder="🔍 Rechercher un produit ou référence..." onkeyup="filterPDVProducts(this.value)">
                             <button class="btn btn-primary" onclick="openAddPDVModal()">➕ Ajouter un point de vente</button>
                         </div>
                     </div>
@@ -1102,7 +1275,7 @@
                     <div style="margin-top: 2rem;">
                         <h4 style="margin-bottom: 1rem;">📊 Vue d'ensemble du stock par point de vente</h4>
                         <p style="color: #666; margin-bottom: 1rem; font-size: 0.9rem;">
-                            <strong>Légende :</strong> Le stock total d'un produit = Stock Central (si géré) + somme de tous les points de vente
+                            <strong>Légende :</strong> Le stock total d'un produit = somme de tous les points de vente
                         </p>
                         <div class="table-container">
                             <table>
@@ -1114,31 +1287,56 @@
                                         ${pointsVente.map(pdv => `<th>${pdv.name}</th>`).join('')}
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    ${products.length > 0 ? products.map(product => {
-                                        const totalInPDV = pointsVente.reduce((sum, pdv) => {
-                                            const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
-                                            return sum + (pdvProduct?.quantity || 0);
-                                        }, 0);
-                                        
-                                        return `
-                                        <tr>
-                                            <td><strong>${product.name}</strong></td>
-                                            <td>${product.reference}</td>
-                                            <td><strong style="color: #2563eb;">${product.quantity || 0}</strong></td>
-                                            ${pointsVente.map(pdv => {
-                                                const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
-                                                const qty = pdvProduct?.quantity || 0;
-                                                return `<td>${qty}</td>`;
-                                            }).join('')}
-                                        </tr>
-                                    `}).join('') : '<tr><td colspan="100" class="text-center">Aucun produit disponible</td></tr>'}
+                                <tbody id="pdv-overview-body">
+                                    ${renderPDVOverview(products)}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             `;
+        }
+
+        function renderPDVOverview(filteredProducts) {
+            if (filteredProducts.length === 0) {
+                return '<tr><td colspan="100" class="text-center">Aucun produit disponible</td></tr>';
+            }
+
+            return filteredProducts.map(product => {
+                // Calculer le stock total = somme de tous les PDV
+                const totalInAllPDV = pointsVente.reduce((sum, pdv) => {
+                    const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
+                    return sum + (pdvProduct?.quantity || 0);
+                }, 0);
+                
+                // Mettre à jour le stock total du produit si nécessaire
+                if (product.quantity !== totalInAllPDV) {
+                    product.quantity = totalInAllPDV;
+                }
+                
+                return `
+                <tr>
+                    <td><strong>${product.name}</strong></td>
+                    <td>${product.reference}</td>
+                    <td><strong style="color: #2563eb;">${totalInAllPDV}</strong></td>
+                    ${pointsVente.map(pdv => {
+                        const pdvProduct = pdv.products?.find(p => p.reference === product.reference);
+                        const qty = pdvProduct?.quantity || 0;
+                        return `<td>${qty}</td>`;
+                    }).join('')}
+                </tr>
+            `}).join('');
+        }
+
+        function filterPDVProducts(search) {
+            const searchLower = search.toLowerCase().trim();
+            const filtered = products.filter(p => 
+                p.name.toLowerCase().includes(searchLower) ||
+                p.reference.toLowerCase().includes(searchLower) ||
+                (p.conventionalName || '').toLowerCase().includes(searchLower) ||
+                (p.barcode || '').toLowerCase().includes(searchLower)
+            );
+            document.getElementById('pdv-overview-body').innerHTML = renderPDVOverview(filtered);
         }
 
         function openAddPDVModal() {
@@ -1260,7 +1458,10 @@
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">📜 Historique des mouvements</h3>
-                        <button class="btn btn-warning" onclick="exportHistory()">📥 Exporter</button>
+                        <div class="btn-group">
+                            <input type="text" id="history-search" class="search-input" placeholder="🔍 Rechercher un produit ou référence..." onkeyup="filterHistory(this.value)">
+                            <button class="btn btn-warning" onclick="exportHistory()">📥 Exporter</button>
+                        </div>
                     </div>
                     <div class="table-container">
                         <table>
@@ -1270,30 +1471,52 @@
                                     <th>Type</th>
                                     <th>Raison</th>
                                     <th>Produit</th>
+                                    <th>Référence</th>
                                     <th>Quantité</th>
                                     <th>Stock avant</th>
                                     <th>Stock après</th>
                                     <th>Note</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                ${sortedMovements.map(m => `
-                                    <tr>
-                                        <td>${new Date(m.date).toLocaleString('fr-FR')}</td>
-                                        <td><span style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; background: ${m.type === 'in' ? '#dcfce7' : '#fee2e2'}; color: ${m.type === 'in' ? '#166534' : '#991b1b'};">${m.type === 'in' ? 'ENTRÉE' : 'SORTIE'}</span></td>
-                                        <td>${m.reason}</td>
-                                        <td><strong>${m.product}</strong><br><small>${m.reference}</small></td>
-                                        <td><strong>${m.quantity}</strong></td>
-                                        <td>${m.oldQuantity}</td>
-                                        <td>${m.newQuantity}</td>
-                                        <td>${m.note || '-'}</td>
-                                    </tr>
-                                `).join('') || '<tr><td colspan="8" class="text-center">Aucun mouvement enregistré</td></tr>'}
+                            <tbody id="history-table-body">
+                                ${renderHistoryRows(sortedMovements)}
                             </tbody>
                         </table>
                     </div>
                 </div>
             `;
+        }
+
+        function renderHistoryRows(filteredMovements) {
+            if (filteredMovements.length === 0) {
+                return '<tr><td colspan="9" class="text-center">Aucun mouvement enregistré</td></tr>';
+            }
+
+            return filteredMovements.map(m => `
+                <tr>
+                    <td>${new Date(m.date).toLocaleString('fr-FR')}</td>
+                    <td><span style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; background: ${m.type === 'in' ? '#dcfce7' : m.type === 'transfer' ? '#dbeafe' : '#fee2e2'}; color: ${m.type === 'in' ? '#166534' : m.type === 'transfer' ? '#1e40af' : '#991b1b'};">${m.type === 'in' ? 'ENTRÉE' : m.type === 'transfer' ? 'TRANSFERT' : 'SORTIE'}</span></td>
+                    <td>${m.reason}</td>
+                    <td><strong>${m.product}</strong></td>
+                    <td>${m.reference}</td>
+                    <td><strong>${m.quantity}</strong></td>
+                    <td>${m.oldQuantity !== undefined ? m.oldQuantity : '-'}</td>
+                    <td>${m.newQuantity !== undefined ? m.newQuantity : '-'}</td>
+                    <td>${m.note || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        function filterHistory(search) {
+            const searchLower = search.toLowerCase().trim();
+            const sortedMovements = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const filtered = sortedMovements.filter(m => 
+                m.product.toLowerCase().includes(searchLower) ||
+                m.reference.toLowerCase().includes(searchLower) ||
+                (m.reason || '').toLowerCase().includes(searchLower) ||
+                (m.note || '').toLowerCase().includes(searchLower)
+            );
+            document.getElementById('history-table-body').innerHTML = renderHistoryRows(filtered);
         }
 
         function exportHistory() {
