@@ -158,10 +158,6 @@
                 <p style="color:#666;font-size:0.9rem;line-height:1.6;margin-bottom:1rem;">
                     IMAGE | Real Name | Conventional Name | Référence | Barcode | Repetition | Category | Brand | QTY [Nom PDV] | QTY [Nom PDV] | ...
                 </p>
-                <p style="color:#666;font-size:0.85rem;line-height:1.6;margin-bottom:1rem;">
-                    Les colonnes <strong>QTY XXX</strong> représentent le stock de chaque point de vente (ex: QTY Al Baraka, QTY Roche Noire, QTY ALGHAFLA)<br>
-                    Le système détectera automatiquement tous les points de vente et distribuera le stock selon chaque colonne QTY.
-                </p>
                 <input type="file" id="excel-file" accept=".xlsx,.xls" onchange="handleImport(event)">
                 <button class="btn btn-primary" onclick="document.getElementById('excel-file').click()" style="font-size:1rem;">
                     📁 Choisir un fichier
@@ -181,17 +177,13 @@
         let currentPage = 'dashboard';
         let editingProduct = null;
 
-        // Helper function pour trouver une colonne avec plusieurs variantes
         function getColumnValue(row, possibleNames) {
-            // D'abord essayer une correspondance exacte
             for (let name of possibleNames) {
                 if (row[name] !== undefined && row[name] !== null) {
                     const val = row[name].toString().trim();
                     if (val) return val;
                 }
             }
-            
-            // Si pas trouvé, chercher avec normalisation (ignorer espaces et casse)
             const keys = Object.keys(row);
             for (let name of possibleNames) {
                 const normalized = name.toLowerCase().replace(/\s+/g, '');
@@ -203,7 +195,6 @@
                     }
                 }
             }
-            
             return '';
         }
 
@@ -227,7 +218,6 @@
                     b.classList.add('active');
                 }
             });
-            
             if (page === 'dashboard') renderDashboard();
             else if (page === 'products') renderProducts();
             else if (page === 'movements') renderMovements();
@@ -240,7 +230,6 @@
             const stock = products.reduce((s, p) => s + (p.quantity || 0), 0);
             const low = products.filter(p => (p.quantity || 0) < 10).length;
             const value = products.reduce((s, p) => s + ((p.quantity || 0) * (p.price || 0)), 0);
-
             document.getElementById('app-container').innerHTML = `
                 <div class="card"><input type="text" id="dash-search" class="search-input" placeholder="🔍 Rechercher..." style="width:100%;"></div>
                 <div class="stats-grid">
@@ -253,9 +242,7 @@
                     <div class="card-header"><h3 class="card-title">🚨 Alertes (stock < 10)</h3></div>
                     <div class="table-container"><table><thead><tr><th>Produit</th><th>Référence</th><th>Stock</th></tr></thead>
                     <tbody id="dash-body">${renderAlerts(products.filter(p => (p.quantity || 0) < 10))}</tbody></table></div>
-                </div>
-            `;
-
+                </div>`;
             document.getElementById('dash-search').oninput = function() {
                 const s = this.value.toLowerCase();
                 const f = products.filter(p => (p.quantity || 0) < 10 && (p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s)));
@@ -281,38 +268,13 @@
                             <button class="btn btn-danger" onclick="deleteSel()" id="del-btn" style="display:none;">🗑️</button>
                         </div>
                     </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width:50px;"><input type="checkbox" onclick="toggleAll(this)"></th>
-                                    <th style="width:80px;">Image</th>
-                                    <th>Nom</th>
-                                    <th>Référence</th>
-                                    <th>Code-barres</th>
-                                    <th>Catégorie</th>
-                                    <th>Marque</th>
-                                    <th style="width:100px;">Stock</th>
-                                    <th style="width:120px;">Prix</th>
-                                    <th style="width:150px;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="prod-body">${renderProdRows(products)}</tbody>
-                        </table>
-                    </div>
+                    <div class="table-container"><table><thead><tr><th style="width:50px;"><input type="checkbox" onclick="toggleAll(this)"></th><th style="width:80px;">Image</th><th>Nom</th><th>Référence</th><th>Code-barres</th><th>Catégorie</th><th>Marque</th><th style="width:100px;">Stock</th><th style="width:120px;">Prix</th><th style="width:150px;">Actions</th></tr></thead>
+                    <tbody id="prod-body">${renderProdRows(products)}</tbody></table></div>
                     ${products.length === 0 ? '<div style="text-align:center;padding:3rem;color:#666;font-size:1.1rem;">Aucun produit trouvé</div>' : ''}
-                </div>
-            `;
-
+                </div>`;
             document.getElementById('prod-search').oninput = function() {
                 const s = this.value.toLowerCase();
-                const f = products.filter(p => 
-                    p.name.toLowerCase().includes(s) || 
-                    p.reference.toLowerCase().includes(s) ||
-                    (p.barcode || '').toLowerCase().includes(s) ||
-                    (p.category || '').toLowerCase().includes(s) ||
-                    (p.brand || '').toLowerCase().includes(s)
-                );
+                const f = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s) || (p.barcode || '').toLowerCase().includes(s) || (p.category || '').toLowerCase().includes(s) || (p.brand || '').toLowerCase().includes(s));
                 document.getElementById('prod-body').innerHTML = renderProdRows(f);
                 attachCB();
             };
@@ -321,37 +283,16 @@
 
         function renderProdRows(list) {
             if (list.length === 0) return '<tr><td colspan="10" style="text-align:center;padding:2rem;color:#666;">Aucun produit trouvé</td></tr>';
-            
             return list.map(p => {
                 let img = '📦';
                 if (p.image) {
                     const match = p.image.match(/[?&]id=([^&]+)/);
                     if (match) {
                         const id = match[1];
-                        img = `<img src="https://drive.google.com/thumbnail?id=${id}&sz=w200" class="product-img" onclick="openImgModal('${p.image}')" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2224%22%3E📦%3C/text%3E%3C/svg%3E';" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
+                        img = `<img src="https://drive.google.com/thumbnail?id=${id}&sz=w200" class="product-img" onclick="openImgModal('${p.image}')" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23ddd%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2224%22%3E📦%3C/text%3E%3C/svg%3E';">`;
                     }
                 }
-                
-                return `
-                    <tr>
-                        <td><input type="checkbox" class="cb" data-ref="${p.reference}"></td>
-                        <td>${img}</td>
-                        <td>
-                            <strong style="display:block;">${p.name}</strong>
-                            ${p.conventionalName ? `<small style="color:#666;">${p.conventionalName}</small>` : ''}
-                        </td>
-                        <td>${p.reference}</td>
-                        <td>${p.barcode || '-'}</td>
-                        <td>${p.category || '-'}</td>
-                        <td>${p.brand || '-'}</td>
-                        <td><strong style="font-size:1.1rem;">${p.quantity || 0}</strong></td>
-                        <td><strong>${p.price.toFixed(2)} DH</strong></td>
-                        <td>
-                            <button class="btn btn-primary" onclick='editP("${p.reference}")' style="padding:0.4rem 0.8rem;margin-right:0.3rem;">✏️ Modifier</button>
-                            <button class="btn btn-danger" onclick='delP("${p.reference}")' style="padding:0.4rem 0.8rem;">🗑️</button>
-                        </td>
-                    </tr>
-                `;
+                return `<tr><td><input type="checkbox" class="cb" data-ref="${p.reference}"></td><td>${img}</td><td><strong style="display:block;">${p.name}</strong>${p.conventionalName ? `<small style="color:#666;">${p.conventionalName}</small>` : ''}</td><td>${p.reference}</td><td>${p.barcode || '-'}</td><td>${p.category || '-'}</td><td>${p.brand || '-'}</td><td><strong style="font-size:1.1rem;">${p.quantity || 0}</strong></td><td><strong>${p.price.toFixed(2)} DH</strong></td><td><button class="btn btn-primary" onclick='editP("${p.reference}")' style="padding:0.4rem 0.8rem;margin-right:0.3rem;">✏️</button><button class="btn btn-danger" onclick='delP("${p.reference}")' style="padding:0.4rem 0.8rem;">🗑️</button></td></tr>`;
             }).join('');
         }
 
@@ -362,7 +303,6 @@
             if (match) {
                 const id = match[1];
                 img.src = `https://drive.google.com/uc?export=view&id=${id}`;
-                
                 img.onerror = function() {
                     if (this.src.includes('uc?export=view')) {
                         this.src = `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
@@ -460,7 +400,6 @@
                 price: parseFloat(document.getElementById('product-price').value),
                 quantity: parseInt(document.getElementById('product-quantity').value) || 0
             };
-
             if (editingProduct) {
                 const i = products.findIndex(p => p.reference === editingProduct.reference);
                 products[i] = { ...products[i], ...data };
@@ -473,7 +412,6 @@
                 products.push(data);
                 showToast('Ajouté');
             }
-
             save();
             closeProductModal();
             renderProducts();
@@ -491,37 +429,7 @@
         let importWorker = null;
 
         function createImportWorker() {
-            const workerCode = `
-                importScripts('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
-                
-                self.onmessage = function(e) {
-                    const { data, action } = e.data;
-                    
-                    if (action === 'parse') {
-                        try {
-                            const wb = XLSX.read(data, { sheetStubs: false });
-                            const allRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                            
-                            const rows = allRows.filter(r => {
-                                const name = (r['Real Name'] || r['RealName'] || r['real name'] || '').toString().trim();
-                                const ref = (r['Référence'] || r['Reference'] || r['référence'] || r['reference'] || r['REF'] || r['ref'] || '').toString().trim();
-                                return name || ref;
-                            });
-                            
-                            self.postMessage({
-                                success: true,
-                                rows: rows,
-                                total: allRows.length,
-                                valid: rows.length,
-                                columns: rows.length > 0 ? Object.keys(rows[0]) : []
-                            });
-                        } catch (err) {
-                            self.postMessage({ success: false, error: err.message });
-                        }
-                    }
-                };
-            `;
-            
+            const workerCode = `importScripts('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');self.onmessage=function(e){const{data,action}=e.data;if(action==='parse'){try{const wb=XLSX.read(data,{sheetStubs:false});const allRows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);const rows=allRows.filter(r=>{const name=(r['Real Name']||r['RealName']||r['real name']||'').toString().trim();const ref=(r['Référence']||r['Reference']||r['référence']||r['reference']||r['REF']||r['ref']||'').toString().trim();return name||ref;});self.postMessage({success:true,rows:rows,total:allRows.length,valid:rows.length,columns:rows.length>0?Object.keys(rows[0]):[]});}catch(err){self.postMessage({success:false,error:err.message});}}};`;
             const blob = new Blob([workerCode], { type: 'application/javascript' });
             return new Worker(URL.createObjectURL(blob));
         }
@@ -529,104 +437,59 @@
         async function handleImport(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             const pg = document.getElementById('import-progress');
             const fill = document.getElementById('progress-fill');
             const txt = document.getElementById('progress-text');
-            
             pg.classList.remove('hidden');
             fill.style.width = '0%';
             txt.textContent = 'Lecture du fichier...';
-
             try {
                 const data = await file.arrayBuffer();
                 fill.style.width = '20%';
                 txt.textContent = 'Analyse en cours...';
-
                 if (importWorker) importWorker.terminate();
                 importWorker = createImportWorker();
-
                 const result = await new Promise((resolve, reject) => {
                     importWorker.onmessage = (e) => resolve(e.data);
                     importWorker.onerror = (err) => reject(err);
                     importWorker.postMessage({ action: 'parse', data });
                 });
-
-                if (!result.success) {
-                    throw new Error(result.error);
-                }
-
+                if (!result.success) throw new Error(result.error);
                 const { rows, total, valid, columns } = result;
-                
-                console.log(`Total lignes: ${total} → Valides: ${valid}`);
-                console.log('Colonnes détectées:', columns);
-                
-                // DIAGNOSTIC: Afficher les colonnes exactes du fichier
-                if (columns.length > 0) {
-                    console.log('📋 COLONNES EXCEL DÉTECTÉES:');
-                    columns.forEach((col, i) => {
-                        console.log(`  [${i}] "${col}" (${col.length} caractères)`);
-                    });
-                    
-                    // Afficher un exemple de ligne
-                    if (rows.length > 0) {
-                        console.log('📄 EXEMPLE DE LIGNE:');
-                        console.log(rows[0]);
-                    }
-                }
-                
                 fill.style.width = '50%';
                 txt.textContent = `${valid} produits détectés...`;
-
                 if (valid === 0) {
                     showToast('Aucun produit valide', 'error');
                     closeImportModal();
                     return;
                 }
-
                 const pdvCols = columns.filter(c => c.includes('QTY') || c.includes('qty'));
-                
                 pdvCols.forEach(c => {
                     const n = c.replace(/QTY|qty/gi, '').trim();
                     if (n && !pointsVente.find(p => p.name === n)) {
-                        pointsVente.push({ 
-                            id: `pdv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, 
-                            name: n, 
-                            products: [] 
-                        });
+                        pointsVente.push({ id: `pdv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, name: n, products: [] });
                     }
                 });
-
                 fill.style.width = '60%';
                 txt.textContent = 'Import des produits...';
-
                 const batchSize = 100;
                 const newProds = [];
-                
                 for (let i = 0; i < rows.length; i += batchSize) {
                     const batch = rows.slice(i, i + batchSize);
-                    
                     batch.forEach((r, idx) => {
                         const name = getColumnValue(r, ['Real Name', 'RealName', 'real name', 'Nom', 'nom', 'Name', 'name']);
                         const ref = getColumnValue(r, ['Référence', 'Reference', 'référence', 'reference', 'REF', 'ref', 'Ref', 'REFERENCE', 'RÉFÉRENCE']);
-                        
-                        // Si pas de référence trouvée, essayer de la chercher directement dans toutes les clés
                         let finalRef = ref;
                         if (!finalRef) {
                             const keys = Object.keys(r);
                             const refKey = keys.find(k => k.toLowerCase().includes('ref') || k.toLowerCase().includes('réf'));
-                            if (refKey) {
-                                finalRef = (r[refKey] || '').toString().trim();
-                                console.log(`⚠️ Référence trouvée dans colonne: "${refKey}" → valeur: "${finalRef}"`);
-                            }
+                            if (refKey) finalRef = (r[refKey] || '').toString().trim();
                         }
-                        
                         let img = getColumnValue(r, ['IMAGE', 'Image', 'image', 'IMG', 'img']);
                         if (img && img.includes('drive.google.com')) {
                             const m = img.match(/[?&]id=([^&]+)/);
                             if (m) img = `https://drive.google.com/uc?export=view&id=${m[1]}`;
                         }
-
                         let qty = 0;
                         const pdvData = {};
                         pdvCols.forEach(c => {
@@ -635,7 +498,6 @@
                             const n = c.replace(/QTY|qty/gi, '').trim();
                             if (n) pdvData[n] = q;
                         });
-
                         newProds.push({
                             prod: {
                                 image: img,
@@ -651,14 +513,11 @@
                             pdvData
                         });
                     });
-                    
                     const percent = 60 + Math.round(((i + batch.length) / rows.length) * 30);
                     fill.style.width = percent + '%';
                 }
-
                 fill.style.width = '90%';
                 txt.textContent = 'Enregistrement...';
-
                 newProds.forEach(({ prod, pdvData }) => {
                     const idx = products.findIndex(p => p.reference === prod.reference);
                     if (idx >= 0) {
@@ -666,7 +525,6 @@
                     } else {
                         products.push(prod);
                     }
-                    
                     Object.entries(pdvData).forEach(([pdvName, q]) => {
                         const pdv = pointsVente.find(p => p.name === pdvName);
                         if (pdv && q > 0) {
@@ -677,24 +535,19 @@
                         }
                     });
                 });
-
                 save();
                 savePDV();
-                
                 if (importWorker) {
                     importWorker.terminate();
                     importWorker = null;
                 }
-                
                 fill.style.width = '100%';
                 txt.textContent = `✓ ${newProds.length} produits importés !`;
                 showToast(`${newProds.length} produits importés avec succès`, 'success');
-                
                 setTimeout(() => {
                     closeImportModal();
                     renderProducts();
                 }, 1000);
-
             } catch (err) {
                 console.error('Erreur import:', err);
                 txt.textContent = '❌ Erreur: ' + err.message;
@@ -708,7 +561,6 @@
 
         function exportProducts() {
             if (products.length === 0) { showToast('Aucun produit', 'warning'); return; }
-
             const data = products.map(p => {
                 const r = {
                     'IMAGE': p.image || '',
@@ -727,7 +579,6 @@
                 });
                 return r;
             });
-
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Produits');
@@ -749,9 +600,19 @@
                                     <option value="in">Entrée (+)</option><option value="out">Sortie (-)</option><option value="transfer">Transfert</option>
                                 </select>
                             </div>
+                            <div id="pdv-select"><label style="display:block;margin-bottom:0.5rem;font-weight:600;">Point de Vente</label>
+                                <select id="mov-pdv" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:8px;">
+                                    <option value="">Stock Central</option>${pointsVente.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                                </select>
+                            </div>
                             <div id="reas"><label style="display:block;margin-bottom:0.5rem;font-weight:600;">Raison</label>
                                 <select id="mov-reas" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:8px;">
                                     <option value="Achat">Achat</option><option value="Vente">Vente</option><option value="Retour">Retour</option>
+                                </select>
+                            </div>
+                            <div id="payment-method"><label style="display:block;margin-bottom:0.5rem;font-weight:600;">Mode de Paiement</label>
+                                <select id="mov-payment" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:8px;">
+                                    <option value="Espèce">Espèce</option><option value="Virement">Virement</option>
                                 </select>
                             </div>
                             <div id="src" style="display:none;"><label style="display:block;margin-bottom:0.5rem;font-weight:600;">Source</label>
@@ -772,16 +633,13 @@
                     </div>
                     <div class="table-container"><table><thead><tr><th><input type="checkbox" onclick="togMov(this)"></th><th>Produit</th><th>Stock</th><th>Quantité</th></tr></thead>
                     <tbody id="mov-body">${renderMovRows(products)}</tbody></table></div>
-                </div>
-            `;
-
+                </div>`;
             document.querySelectorAll('.mck').forEach(c => {
                 c.onchange = function() {
                     const inp = document.querySelector(`.mqt[data-ref="${this.dataset.ref}"]`);
                     if (inp) { inp.disabled = !this.checked; if (!this.checked) inp.value = ''; }
                 };
             });
-
             document.getElementById('mov-search').oninput = function() {
                 const s = this.value.toLowerCase();
                 const f = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s));
@@ -797,19 +655,14 @@
 
         function renderMovRows(list) {
             if (list.length === 0) return '<tr><td colspan="4" style="text-align:center;">Aucun produit</td></tr>';
-            return list.map(p => `
-                <tr>
-                    <td><input type="checkbox" class="mck" data-ref="${p.reference}"></td>
-                    <td><strong>${p.name}</strong></td>
-                    <td><strong>${p.quantity || 0}</strong></td>
-                    <td><input type="number" class="mqt" data-ref="${p.reference}" min="1" style="width:100px;padding:0.5rem;" disabled></td>
-                </tr>
-            `).join('');
+            return list.map(p => `<tr><td><input type="checkbox" class="mck" data-ref="${p.reference}"></td><td><strong>${p.name}</strong></td><td><strong>${p.quantity || 0}</strong></td><td><input type="number" class="mqt" data-ref="${p.reference}" min="1" style="width:100px;padding:0.5rem;" disabled></td></tr>`).join('');
         }
 
         function updMov() {
             const t = document.getElementById('mov-type').value;
             document.getElementById('reas').style.display = t === 'transfer' ? 'none' : 'block';
+            document.getElementById('payment-method').style.display = t === 'transfer' ? 'none' : 'block';
+            document.getElementById('pdv-select').style.display = t === 'transfer' ? 'none' : 'block';
             document.getElementById('src').style.display = t === 'transfer' ? 'block' : 'none';
             document.getElementById('dst').style.display = t === 'transfer' ? 'block' : 'none';
         }
@@ -821,26 +674,22 @@
         function valMov() {
             const type = document.getElementById('mov-type').value;
             const reas = document.getElementById('mov-reas')?.value;
+            const payment = document.getElementById('mov-payment')?.value;
             const note = document.getElementById('mov-note').value;
-            
             const items = [];
             document.querySelectorAll('.mck:checked').forEach(c => {
                 const q = parseInt(document.querySelector(`.mqt[data-ref="${c.dataset.ref}"]`).value) || 0;
                 if (q > 0) items.push({ reference: c.dataset.ref, quantity: q });
             });
-
             if (items.length === 0) { showToast('Sélectionnez des produits', 'warning'); return; }
-
             if (type === 'transfer') {
                 const src = document.getElementById('pdv-src').value;
                 const dst = document.getElementById('pdv-dst').value;
                 if (src === dst) { showToast('Source ≠ Destination', 'error'); return; }
-
                 let cnt = 0;
                 items.forEach(it => {
                     const p = products.find(x => x.reference === it.reference);
                     if (!p) return;
-
                     if (src === '') {
                         if ((p.quantity || 0) < it.quantity) { showToast(`Stock insuffisant: ${p.name}`, 'error'); return; }
                         p.quantity -= it.quantity;
@@ -850,7 +699,6 @@
                         if (!pp || pp.quantity < it.quantity) { showToast(`PDV insuffisant: ${p.name}`, 'error'); return; }
                         pp.quantity -= it.quantity;
                     }
-
                     if (dst === '') {
                         p.quantity += it.quantity;
                     } else {
@@ -860,16 +708,13 @@
                         if (pp) pp.quantity += it.quantity;
                         else pd.products.push({ reference: it.reference, quantity: it.quantity });
                     }
-
                     const tot = pointsVente.reduce((s, pdv) => {
                         const pp = pdv.products?.find(x => x.reference === it.reference);
                         return s + (pp?.quantity || 0);
                     }, 0);
                     p.quantity = tot;
-
                     const sn = src ? pointsVente.find(x => x.id === src)?.name : 'Central';
                     const dn = dst ? pointsVente.find(x => x.id === dst)?.name : 'Central';
-
                     movements.push({
                         id: Date.now() + Math.random(),
                         date: new Date().toISOString(),
@@ -882,44 +727,62 @@
                     });
                     cnt++;
                 });
-
                 if (cnt > 0) { save(); savePDV(); saveMov(); showToast(`${cnt} transfert(s)`); renderMovements(); }
                 return;
             }
-
+            const pdvId = document.getElementById('mov-pdv').value;
+            const pdvName = pdvId ? pointsVente.find(x => x.id === pdvId)?.name : 'Stock Central';
             let cnt = 0;
             items.forEach(it => {
                 const p = products.find(x => x.reference === it.reference);
                 if (!p) return;
-
-                const old = p.quantity || 0;
-                let newQ;
-
                 if (type === 'in') {
-                    newQ = old + it.quantity;
+                    if (pdvId === '') {
+                        p.quantity += it.quantity;
+                    } else {
+                        const pdv = pointsVente.find(x => x.id === pdvId);
+                        if (!pdv.products) pdv.products = [];
+                        const pp = pdv.products.find(x => x.reference === it.reference);
+                        if (pp) pp.quantity += it.quantity;
+                        else pdv.products.push({ reference: it.reference, quantity: it.quantity });
+                    }
                 } else {
-                    if (old < it.quantity) { showToast(`Stock insuffisant: ${p.name}`, 'error'); return; }
-                    newQ = old - it.quantity;
+                    if (pdvId === '') {
+                        if ((p.quantity || 0) < it.quantity) { 
+                            showToast(`Stock insuffisant: ${p.name}`, 'error'); 
+                            return; 
+                        }
+                        p.quantity -= it.quantity;
+                    } else {
+                        const pdv = pointsVente.find(x => x.id === pdvId);
+                        const pp = pdv.products?.find(x => x.reference === it.reference);
+                        if (!pp || pp.quantity < it.quantity) { 
+                            showToast(`Stock insuffisant dans ${pdvName}: ${p.name}`, 'error'); 
+                            return; 
+                        }
+                        pp.quantity -= it.quantity;
+                    }
                 }
-
-                p.quantity = newQ;
-
+                const tot = pointsVente.reduce((s, pdv) => {
+                    const pp = pdv.products?.find(x => x.reference === it.reference);
+                    return s + (pp?.quantity || 0);
+                }, 0);
+                p.quantity = tot;
                 movements.push({
                     id: Date.now() + Math.random(),
                     date: new Date().toISOString(),
                     type,
                     reason: reas,
+                    payment: payment,
+                    pdv: pdvName,
                     note,
                     product: p.name,
                     reference: it.reference,
-                    quantity: it.quantity,
-                    oldQuantity: old,
-                    newQuantity: newQ
+                    quantity: it.quantity
                 });
                 cnt++;
             });
-
-            if (cnt > 0) { save(); saveMov(); showToast(`${cnt} mouvement(s)`); renderMovements(); }
+            if (cnt > 0) { save(); savePDV(); saveMov(); showToast(`${cnt} mouvement(s)`); renderMovements(); }
         }
 
         function renderPointsVente() {
@@ -940,9 +803,7 @@
                         <div class="table-container"><table><thead><tr><th>Produit</th><th>Total</th>${pointsVente.map(p => `<th>${p.name}</th>`).join('')}</tr></thead>
                         <tbody id="pdv-ov">${renderPDVOv(products)}</tbody></table></div>
                     </div>
-                </div>
-            `;
-
+                </div>`;
             document.getElementById('pdv-search').oninput = function() {
                 const s = this.value.toLowerCase();
                 const f = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s));
@@ -976,7 +837,6 @@
         function viewPDV(id) {
             const pdv = pointsVente.find(p => p.id === id);
             if (!pdv) return;
-
             document.getElementById('app-container').innerHTML = `
                 <div class="card">
                     <div class="card-header">
@@ -992,24 +852,20 @@
                                 <td><button class="btn btn-primary" onclick="transTo('${id}','${p.reference}')" style="padding:0.4rem 0.8rem;">➡️</button></td></tr>`;
                         }).join('')}
                     </tbody></table></div>
-                </div>
-            `;
+                </div>`;
         }
 
         function transTo(pdvId, ref) {
             const pdv = pointsVente.find(p => p.id === pdvId);
             const prod = products.find(p => p.reference === ref);
             const q = parseInt(document.getElementById(`t-${ref}`).value) || 0;
-
             if (q <= 0) { showToast('Quantité invalide', 'error'); return; }
             if ((prod.quantity || 0) < q) { showToast('Stock insuffisant', 'error'); return; }
-
             prod.quantity -= q;
             if (!pdv.products) pdv.products = [];
             const pp = pdv.products.find(p => p.reference === ref);
             if (pp) pp.quantity += q;
             else pdv.products.push({ reference: ref, quantity: q });
-
             movements.push({
                 id: Date.now(),
                 date: new Date().toISOString(),
@@ -1019,7 +875,6 @@
                 reference: ref,
                 quantity: q
             });
-
             save();
             savePDV();
             saveMov();
@@ -1029,7 +884,6 @@
 
         function renderHistory() {
             const sorted = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
-
             document.getElementById('app-container').innerHTML = `
                 <div class="card">
                     <div class="card-header">
@@ -1058,11 +912,9 @@
                     <div style="margin-bottom:1rem;padding:0.75rem;background:#eff6ff;border-radius:8px;">
                         <strong id="hc">${sorted.length}</strong> mouvement(s)
                     </div>
-                    <div class="table-container"><table><thead><tr><th>Date</th><th>Type</th><th>Raison</th><th>Produit</th><th>Quantité</th><th>Note</th></tr></thead>
+                    <div class="table-container"><table><thead><tr><th>Date</th><th>Type</th><th>Raison</th><th>Produit</th><th>Quantité</th><th>PDV/Paiement</th><th>Note</th></tr></thead>
                     <tbody id="hb">${renderHist(sorted)}</tbody></table></div>
-                </div>
-            `;
-
+                </div>`;
             ['hs', 'hd', 'hm', 'hy'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.addEventListener(id === 'hs' ? 'input' : 'change', filtHist);
@@ -1070,7 +922,7 @@
         }
 
         function renderHist(list) {
-            if (!list || list.length === 0) return '<tr><td colspan="6" style="text-align:center;">Aucun mouvement</td></tr>';
+            if (!list || list.length === 0) return '<tr><td colspan="7" style="text-align:center;">Aucun mouvement</td></tr>';
             return list.map(m => {
                 const ic = m.type === 'in' ? '➕' : m.type === 'transfer' ? '🔄' : '➖';
                 const cl = m.type === 'in' ? '#10b981' : m.type === 'transfer' ? '#f59e0b' : '#ef4444';
@@ -1078,7 +930,9 @@
                 return `<tr><td>${new Date(m.date).toLocaleString('fr-FR')}</td>
                     <td><span style="color:${cl};font-weight:bold;">${ic} ${tp}</span></td>
                     <td>${m.reason || '-'}</td><td><strong>${m.product}</strong></td>
-                    <td><strong style="color:${cl};">${m.quantity}</strong></td><td>${m.note || '-'}</td></tr>`;
+                    <td><strong style="color:${cl};">${m.quantity}</strong></td>
+                    <td>${m.pdv || m.payment || '-'}</td>
+                    <td>${m.note || '-'}</td></tr>`;
             }).join('');
         }
 
@@ -1101,29 +955,24 @@
             const d = document.getElementById('hd').value;
             const m = document.getElementById('hm').value;
             const y = document.getElementById('hy').value;
-
             const sorted = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
             const filt = sorted.filter(mv => {
                 const dt = new Date(mv.date);
                 const ds = dt.toISOString().split('T')[0];
                 const ms = dt.toISOString().substring(0, 7);
                 const ys = dt.getFullYear().toString();
-
                 const ms1 = !s || mv.product.toLowerCase().includes(s) || mv.reference.toLowerCase().includes(s);
                 const md = !d || ds === d;
                 const mm = !m || ms === m;
                 const my = !y || ys === y;
-
                 return ms1 && md && mm && my;
             });
-
             document.getElementById('hb').innerHTML = renderHist(filt);
             document.getElementById('hc').textContent = filt.length;
         }
 
         function expHist() {
             if (movements.length === 0) { showToast('Aucun historique', 'warning'); return; }
-
             const data = movements.map(m => ({
                 'Date': new Date(m.date).toLocaleString('fr-FR'),
                 'Type': m.type === 'in' ? 'Entrée' : m.type === 'transfer' ? 'Transfert' : 'Sortie',
@@ -1131,9 +980,10 @@
                 'Produit': m.product,
                 'Référence': m.reference,
                 'Quantité': m.quantity,
+                'PDV': m.pdv || '',
+                'Paiement': m.payment || '',
                 'Note': m.note || ''
             }));
-
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Historique');
