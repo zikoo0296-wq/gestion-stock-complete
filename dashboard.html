@@ -496,25 +496,17 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <div class="custom-select-container" id="mov-select-container">
-                                    <div class="custom-select-button" 
-                                         id="mov-select-btn" 
-                                         onclick="toggleMovDropdown(event)"
-                                         style="z-index:100;">
-                                        Sélectionner un produit...
-                                    </div>
-                                    <div class="custom-select-dropdown" id="mov-dropdown">
-                                        <div class="custom-select-search">
-                                            <input type="text" 
-                                                   id="mov-search-input" 
-                                                   placeholder="🔍 Rechercher..." 
-                                                   oninput="filterMovList()" 
-                                                   onclick="event.stopPropagation()">
-                                        </div>
-                                        <div class="custom-select-list" id="mov-product-list"></div>
-                                    </div>
-                                    <input type="hidden" id="mov-product" required>
-                                </div>
+                                <input type="text" 
+                                       list="mov-products-datalist" 
+                                       id="mov-product-input"
+                                       class="form-input" 
+                                       placeholder="🔍 Cliquez ici et tapez pour chercher..."
+                                       autocomplete="off"
+                                       oninput="updateMovProductSelection()"
+                                       required>
+                                <datalist id="mov-products-datalist">
+                                </datalist>
+                                <input type="hidden" id="mov-product" required>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Point de Vente *</label>
@@ -563,18 +555,17 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <div class="custom-select-container">
-                                    <div class="custom-select-button" id="trans-select-btn" onclick="toggleTransDropdown(event)">
-                                        Sélectionner un produit...
-                                    </div>
-                                    <div class="custom-select-dropdown" id="trans-dropdown">
-                                        <div class="custom-select-search">
-                                            <input type="text" id="trans-search-input" placeholder="🔍 Rechercher..." oninput="filterTransList()" onclick="event.stopPropagation()">
-                                        </div>
-                                        <div class="custom-select-list" id="trans-product-list"></div>
-                                    </div>
-                                    <input type="hidden" id="trans-product" required>
-                                </div>
+                                <input type="text" 
+                                       list="trans-products-datalist" 
+                                       id="trans-product-input"
+                                       class="form-input" 
+                                       placeholder="🔍 Cliquez ici et tapez pour chercher..."
+                                       autocomplete="off"
+                                       oninput="updateTransProductSelection()"
+                                       required>
+                                <datalist id="trans-products-datalist">
+                                </datalist>
+                                <input type="hidden" id="trans-product" required>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">De (Source) *</label>
