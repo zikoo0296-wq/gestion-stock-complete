@@ -168,12 +168,65 @@
             border-bottom: 1px solid #e5e7eb;
         }
         tr:hover { background: #f9fafb; }
-        .search-input {
-            padding: 10px 15px;
+        .search-dropdown {
+            position: relative;
+        }
+        .search-dropdown input {
+            width: 100%;
+            padding: 10px;
             border: 1px solid #d1d5db;
             border-radius: 8px;
-            width: 100%;
-            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+        .search-dropdown input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+        .search-results.active {
+            display: block;
+        }
+        .search-result-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .search-result-item:hover {
+            background: #f3f4f6;
+        }
+        .search-result-item img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+        .search-result-info {
+            flex: 1;
+        }
+        .search-result-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .search-result-ref {
+            font-size: 0.85rem;
+            color: #6b7280;
         }
         .modal {
             display: none;
@@ -237,6 +290,13 @@
         }
         .section { display: none; }
         .section.active { display: block; }
+        .search-input {
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
         .badge {
             display: inline-block;
             padding: 4px 12px;
@@ -405,9 +465,14 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <input type="text" id="mov-product-search" class="form-input" placeholder="🔍 Rechercher un produit..." autocomplete="off">
-                                <select id="mov-product" class="form-select" required style="margin-top:5px;">
-                                    <option value="">Sélectionner...</option>
+                                <input type="text" 
+                                       id="mov-product-filter" 
+                                       class="form-input" 
+                                       placeholder="🔍 Rechercher dans la liste..." 
+                                       oninput="filterMovProductSelect()"
+                                       style="margin-bottom:8px;">
+                                <select id="mov-product" class="form-select" required size="8" style="height:200px;">
+                                    <option value="">Sélectionner un produit...</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -457,9 +522,14 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <input type="text" id="trans-product-search" class="form-input" placeholder="🔍 Rechercher un produit..." autocomplete="off">
-                                <select id="trans-product" class="form-select" required style="margin-top:5px;">
-                                    <option value="">Sélectionner...</option>
+                                <input type="text" 
+                                       id="trans-product-filter" 
+                                       class="form-input" 
+                                       placeholder="🔍 Rechercher dans la liste..." 
+                                       oninput="filterTransProductSelect()"
+                                       style="margin-bottom:8px;">
+                                <select id="trans-product" class="form-select" required size="8" style="height:200px;">
+                                    <option value="">Sélectionner un produit...</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -749,10 +819,25 @@
         function renderProds() {
             const tbody = document.getElementById('prod-body');
             if (!tbody) return;
+            
             tbody.innerHTML = products.map(p => {
-                const img = p.imageUrl ? `<img src="${p.imageUrl}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" onclick="event.stopPropagation();zoomImg('${p.imageUrl}')">` : '📦';
+                let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
+                
+                if (p.imageUrl) {
+                    let cleanUrl = p.imageUrl.toString().trim();
+                    // Nettoyer et valider l'URL
+                    if (cleanUrl.length > 0) {
+                        imgHtml = `<img src="${cleanUrl}" 
+                                        style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;background:#f3f4f6;" 
+                                        onclick="zoomImg('${cleanUrl.replace(/'/g, "\\'")}')"
+                                        onerror="this.onerror=null;this.style.display='none';this.parentElement.innerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;\\'>📦</div>';"
+                                        loading="lazy"
+                                        alt="${p.name}">`;
+                    }
+                }
+                
                 return `<tr>
-                    <td>${img}</td>
+                    <td style="text-align:center;">${imgHtml}</td>
                     <td><strong>${p.name}</strong></td>
                     <td>${p.reference}</td>
                     <td>${p.barcode || '-'}</td>
@@ -767,19 +852,54 @@
 
             document.getElementById('prod-search').oninput = function() {
                 const s = this.value.toLowerCase();
-                const filtered = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s) || (p.barcode && p.barcode.toLowerCase().includes(s)));
+                const filtered = products.filter(p => 
+                    p.name.toLowerCase().includes(s) || 
+                    p.reference.toLowerCase().includes(s) || 
+                    (p.barcode && p.barcode.toString().toLowerCase().includes(s))
+                );
+                
                 tbody.innerHTML = filtered.map(p => {
-                    const img = p.imageUrl ? `<img src="${p.imageUrl}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" onclick="event.stopPropagation();zoomImg('${p.imageUrl}')">` : '📦';
-                    return `<tr><td>${img}</td><td><strong>${p.name}</strong></td><td>${p.reference}</td><td>${p.barcode || '-'}</td><td><span class="badge badge-success">${p.quantity || 0}</span></td><td>${p.repetition || '-'}</td><td><button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button><button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button></td></tr>`;
+                    let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
+                    
+                    if (p.imageUrl) {
+                        let cleanUrl = p.imageUrl.toString().trim();
+                        if (cleanUrl.length > 0) {
+                            imgHtml = `<img src="${cleanUrl}" 
+                                            style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;background:#f3f4f6;" 
+                                            onclick="zoomImg('${cleanUrl.replace(/'/g, "\\'")}')"
+                                            onerror="this.onerror=null;this.style.display='none';this.parentElement.innerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;\\'>📦</div>';"
+                                            loading="lazy"
+                                            alt="${p.name}">`;
+                        }
+                    }
+                    
+                    return `<tr><td style="text-align:center;">${imgHtml}</td><td><strong>${p.name}</strong></td><td>${p.reference}</td><td>${p.barcode || '-'}</td><td><span class="badge badge-success">${p.quantity || 0}</span></td><td>${p.repetition || '-'}</td><td><button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button><button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button></td></tr>`;
                 }).join('');
             };
         }
 
         function zoomImg(url) {
-            if (!url) return;
+            if (!url || url.trim().length === 0) {
+                alert('❌ Aucune image disponible');
+                return;
+            }
+            
+            const cleanUrl = url.trim();
             const overlay = document.createElement('div');
-            overlay.className = 'img-zoom';
-            overlay.innerHTML = `<img src="${url}" alt="Zoom">`;
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:10000;cursor:pointer;';
+            
+            const img = document.createElement('img');
+            img.src = cleanUrl;
+            img.style.cssText = 'max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
+            img.onerror = function() {
+                overlay.remove();
+                alert('❌ Impossible de charger l\'image.\n\nURL: ' + cleanUrl + '\n\nVérifiez que:\n1. L\'image est publique sur Google Drive\n2. L\'URL est correcte\n3. Vous avez une connexion internet');
+            };
+            img.onload = function() {
+                console.log('✅ Image chargée avec succès');
+            };
+            
+            overlay.appendChild(img);
             overlay.onclick = () => overlay.remove();
             document.body.appendChild(overlay);
         }
