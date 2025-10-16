@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Stock Pro</title>
+    <title>Stock Pro - Gestion Interne</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -94,8 +94,8 @@
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
         .btn-success { background: var(--success); color: white; }
         .btn-danger { background: var(--danger); color: white; }
-        .btn-edit { background: #3b82f6; color: white; padding: 6px 12px; border-radius: 6px; margin-right: 5px; }
-        .btn-delete { background: #ef4444; color: white; padding: 6px 12px; border-radius: 6px; }
+        .btn-edit { background: #3b82f6; color: white; padding: 6px 12px; border-radius: 6px; margin-right: 5px; border: none; cursor: pointer; }
+        .btn-delete { background: #ef4444; color: white; padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; }
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -250,7 +250,7 @@
     </style>
 </head>
 <body>
-    <!-- PAGE DE CONNEXION -->
+    <!-- PAGE DE CONNEXION - USERNAME ET PASSWORD UNIQUEMENT -->
     <div id="loginPage" style="display:flex;justify-content:center;align-items:center;min-height:100vh;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
         <div style="background:white;padding:40px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);width:400px;max-width:90%;">
             <div style="text-align:center;margin-bottom:30px;">
@@ -262,31 +262,25 @@
                 <div style="margin-bottom:20px;">
                     <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Nom d'utilisateur</label>
                     <input type="text" id="login-username" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:0.3s;"
-                           onfocus="this.style.borderColor='#667eea'" 
-                           onblur="this.style.borderColor='#e5e7eb'"
+                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;"
                            placeholder="Votre username"
                            autocomplete="username">
                 </div>
                 <div style="margin-bottom:25px;">
                     <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Mot de passe</label>
                     <input type="password" id="login-password" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:0.3s;"
-                           onfocus="this.style.borderColor='#667eea'" 
-                           onblur="this.style.borderColor='#e5e7eb'"
+                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;"
                            placeholder="Votre mot de passe"
                            autocomplete="current-password">
                 </div>
                 <button type="submit" 
-                        style="width:100%;padding:14px;background:linear-gradient(135deg, #667eea, #764ba2);color:white;border:none;border-radius:8px;font-size:1.1rem;font-weight:600;cursor:pointer;transition:0.3s;"
-                        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(102,126,234,0.4)'"
-                        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
+                        style="width:100%;padding:14px;background:linear-gradient(135deg, #667eea, #764ba2);color:white;border:none;border-radius:8px;font-size:1.1rem;font-weight:600;cursor:pointer;">
                     🔓 Connexion
                 </button>
             </form>
             <div style="margin-top:25px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center;">
                 <p style="color:#9ca3af;font-size:0.85rem;margin:0;">
-                    Application privée • Accès réservé
+                    Application privée • Accès réservé aux employés
                 </p>
             </div>
         </div>
@@ -362,7 +356,7 @@
             <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none;" onchange="handleImport(event)">
             <div class="card">
                 <div class="card-body">
-                    <input type="text" id="prod-search" class="search-input" placeholder="🔍 Rechercher par nom, référence...">
+                    <input type="text" id="prod-search" class="search-input" placeholder="🔍 Rechercher par nom, référence, barcode...">
                     <div class="table-container">
                         <table>
                             <thead>
@@ -564,9 +558,11 @@
             </div>
         </div>
     </div>
+    </div>
     <!-- FIN APPLICATION PRINCIPALE -->
 
-    <script>
+    <!-- MODALS -->
+    <!-- MODAL PRODUIT -->
     <div id="productModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -589,7 +585,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">URL Image Google Drive</label>
-                    <input type="url" id="p-img" class="form-input" placeholder="https://drive.google.com/...">
+                    <input type="url" id="p-img" class="form-input" placeholder="https://drive.google.com/uc?export=view&id=...">
                 </div>
                 <button type="submit" class="btn btn-primary" style="margin-top:15px;">💾 Enregistrer</button>
             </form>
@@ -619,15 +615,13 @@
     </div>
 
     <script>
-        // ========== COMPTES UTILISATEURS PRÉDÉFINIS ==========
-        // L'admin modifie directement ici pour ajouter/modifier des comptes
+        // ========== COMPTES UTILISATEURS - MODIFIEZ ICI ==========
         const USERS = [
             { username: 'admin', password: 'admin123', fullName: 'Administrateur', role: 'admin' },
             { username: 'agent1', password: 'pass123', fullName: 'Agent 1', role: 'agent' },
             { username: 'agent2', password: 'pass456', fullName: 'Agent 2', role: 'agent' }
         ];
-        // Pour ajouter un employé, ajoutez une ligne comme :
-        // { username: 'nom_utilisateur', password: 'mot_de_passe', fullName: 'Nom Complet', role: 'agent' }
+        // Pour ajouter un employé : { username: 'nouveau', password: 'mdp123', fullName: 'Nom Complet', role: 'agent' }
         
         let products = JSON.parse(localStorage.getItem('products')) || [];
         let pdvs = JSON.parse(localStorage.getItem('pdvs')) || [
@@ -636,14 +630,12 @@
         ];
         let movements = JSON.parse(localStorage.getItem('movements')) || [];
 
-        // Vérifier authentification au chargement
         function checkAuth() {
             const user = JSON.parse(localStorage.getItem('currentUser'));
             if (!user) {
                 showLoginPage();
                 return false;
             }
-            // Vérifier que l'utilisateur existe toujours dans la liste
             const userExists = USERS.find(u => u.username === user.username);
             if (!userExists) {
                 localStorage.removeItem('currentUser');
@@ -667,11 +659,9 @@
             const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
 
-            // Vérifier les identifiants
             const user = USERS.find(u => u.username === username && u.password === password);
 
             if (user) {
-                // Connexion réussie
                 const userSession = {
                     username: user.username,
                     fullName: user.fullName,
@@ -684,19 +674,10 @@
                 document.getElementById('mainApp').style.display = 'block';
                 renderDash();
             } else {
-                // Identifiants incorrects
                 alert('❌ Nom d\'utilisateur ou mot de passe incorrect !');
             }
         }
 
-        // Vérifier authentification
-        const user = JSON.parse(localStorage.getItem('currentUser'));
-        if (user) {
-            document.getElementById('user-name').textContent = user.fullName || 'Utilisateur';
-            document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur' : 'Agent';
-        }
-
-        // Vérifier l'authentification au chargement
         window.addEventListener('DOMContentLoaded', function() {
             if (!checkAuth()) {
                 return;
@@ -728,7 +709,6 @@
             const total = products.length;
             const stock = products.reduce((sum, p) => sum + (p.quantity || 0), 0);
             const low = products.filter(p => (p.quantity || 0) < 10).length;
-            const value = 0; // Pas de prix dans cette version
 
             document.getElementById('dash-content').innerHTML = `
                 <input type="text" id="dash-search" class="search-input" placeholder="🔍 Rechercher..." style="width:100%;">
@@ -873,13 +853,11 @@
             const pdvSelect = document.getElementById('mov-pdv');
             const searchInput = document.getElementById('mov-product-search');
             
-            // Remplir les sélections
             prodSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
                 products.map(p => `<option value="${p.id}">${p.name} (${p.reference})</option>`).join('');
             pdvSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
                 pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
 
-            // Ajouter la recherche de produit
             searchInput.oninput = function() {
                 const searchTerm = this.value.toLowerCase();
                 const filtered = products.filter(p => 
@@ -916,11 +894,9 @@
                 return;
             }
 
-            // Initialiser pdvStock si nécessaire
             if (!product.pdvStock) product.pdvStock = {};
             if (!product.pdvStock[pdvId]) product.pdvStock[pdvId] = 0;
 
-            // Appliquer le mouvement
             if (type === 'in') {
                 product.pdvStock[pdvId] += quantity;
                 product.quantity = (product.quantity || 0) + quantity;
@@ -958,7 +934,6 @@
             const toSelect = document.getElementById('trans-to');
             const searchInput = document.getElementById('trans-product-search');
             
-            // Remplir les sélections
             prodSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
                 products.map(p => `<option value="${p.id}">${p.name} (${p.reference})</option>`).join('');
             fromSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
@@ -966,7 +941,6 @@
             toSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
                 pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
 
-            // Ajouter la recherche de produit
             searchInput.oninput = function() {
                 const searchTerm = this.value.toLowerCase();
                 const filtered = products.filter(p => 
@@ -1166,7 +1140,6 @@
                     'Brand': p.brand || ''
                 };
 
-                // Ajouter les colonnes QTY pour chaque PDV
                 pdvs.forEach(pdv => {
                     row[`QTY ${pdv.name}`] = p.pdvStock?.[pdv.id] || 0;
                 });
@@ -1196,7 +1169,6 @@
                     let updated = 0;
 
                     rows.forEach(r => {
-                        // Colonnes principales
                         const imageUrl = (r['IMAGE'] || r['Image'] || '').toString().trim();
                         const realName = (r['Real Name'] || r['RealName'] || '').toString().trim();
                         const conventionalName = (r['Conventional Name'] || r['ConventionalName'] || '').toString().trim();
@@ -1206,12 +1178,10 @@
                         const category = (r['Category'] || r['Catégorie'] || '').toString().trim();
                         const brand = (r['Brand'] || r['Marque'] || '').toString().trim();
 
-                        // Utiliser Real Name comme nom principal, sinon Conventional Name
                         const name = realName || conventionalName;
                         
                         if (!name || !reference) return;
 
-                        // Détecter les colonnes de stock par PDV (QTY ...)
                         const pdvStock = {};
                         let totalQty = 0;
 
@@ -1220,14 +1190,12 @@
                                 const pdvName = key.replace('QTY ', '').trim();
                                 const qty = parseInt(r[key]) || 0;
                                 
-                                // Trouver ou créer le PDV correspondant
                                 let pdv = pdvs.find(p => 
                                     p.name.toLowerCase() === pdvName.toLowerCase() ||
                                     p.name.toLowerCase().includes(pdvName.toLowerCase()) ||
                                     pdvName.toLowerCase().includes(p.name.toLowerCase())
                                 );
 
-                                // Si le PDV n'existe pas, le créer
                                 if (!pdv && pdvName) {
                                     const newPdvId = pdvName.toLowerCase().replace(/\s+/g, '-');
                                     pdv = { id: newPdvId, name: pdvName, location: '' };
@@ -1241,11 +1209,9 @@
                             }
                         });
 
-                        // Vérifier si le produit existe déjà
                         const existing = products.find(p => p.reference === reference);
                         
                         if (existing) {
-                            // Mettre à jour le produit existant
                             existing.name = name;
                             existing.realName = realName;
                             existing.conventionalName = conventionalName;
@@ -1258,7 +1224,6 @@
                             existing.quantity = totalQty;
                             updated++;
                         } else {
-                            // Créer un nouveau produit
                             products.push({
                                 id: Date.now().toString() + Math.random(),
                                 name,
@@ -1304,11 +1269,6 @@
                 document.getElementById('login-password').value = '';
             }
         }
-
-        // Initialisation - sera appelée après connexion
     </script>
-
-    <!-- MODALS (en dehors de mainApp pour être accessibles) -->
-    <!-- MODAL PRODUIT --></script>
 </body>
 </html>
