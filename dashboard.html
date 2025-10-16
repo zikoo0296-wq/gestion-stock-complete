@@ -465,15 +465,18 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <input type="text" 
-                                       id="mov-product-filter" 
-                                       class="form-input" 
-                                       placeholder="🔍 Rechercher dans la liste..." 
-                                       oninput="filterMovProductSelect()"
-                                       style="margin-bottom:8px;">
-                                <select id="mov-product" class="form-select" required size="8" style="height:200px;">
-                                    <option value="">Sélectionner un produit...</option>
-                                </select>
+                                <div style="position:relative;">
+                                    <input type="text" 
+                                           id="mov-product-search" 
+                                           class="form-input" 
+                                           placeholder="🔍 Rechercher par nom, référence ou barcode..." 
+                                           autocomplete="off"
+                                           onfocus="showMovDropdown()"
+                                           oninput="filterMovDropdown()">
+                                    <div id="mov-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:400px;overflow-y:auto;background:white;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;">
+                                    </div>
+                                    <input type="hidden" id="mov-product" required>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Point de Vente *</label>
@@ -522,15 +525,18 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <input type="text" 
-                                       id="trans-product-filter" 
-                                       class="form-input" 
-                                       placeholder="🔍 Rechercher dans la liste..." 
-                                       oninput="filterTransProductSelect()"
-                                       style="margin-bottom:8px;">
-                                <select id="trans-product" class="form-select" required size="8" style="height:200px;">
-                                    <option value="">Sélectionner un produit...</option>
-                                </select>
+                                <div style="position:relative;">
+                                    <input type="text" 
+                                           id="trans-product-search" 
+                                           class="form-input" 
+                                           placeholder="🔍 Rechercher par nom, référence ou barcode..." 
+                                           autocomplete="off"
+                                           onfocus="showTransDropdown()"
+                                           oninput="filterTransDropdown()">
+                                    <div id="trans-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:400px;overflow-y:auto;background:white;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;">
+                                    </div>
+                                    <input type="hidden" id="trans-product" required>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">De (Source) *</label>
