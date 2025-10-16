@@ -326,6 +326,7 @@
                                     <th>Image</th>
                                     <th>Nom</th>
                                     <th>Référence</th>
+                                    <th>Barcode</th>
                                     <th>Stock Total</th>
                                     <th>Répétition</th>
                                     <th>Actions</th>
@@ -650,6 +651,7 @@
                     <td>${img}</td>
                     <td><strong>${p.name}</strong></td>
                     <td>${p.reference}</td>
+                    <td>${p.barcode || '-'}</td>
                     <td><span class="badge badge-success">${p.quantity || 0}</span></td>
                     <td>${p.repetition || '-'}</td>
                     <td>
@@ -661,10 +663,10 @@
 
             document.getElementById('prod-search').oninput = function() {
                 const s = this.value.toLowerCase();
-                const filtered = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s));
+                const filtered = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s) || (p.barcode && p.barcode.toLowerCase().includes(s)));
                 tbody.innerHTML = filtered.map(p => {
                     const img = p.imageUrl ? `<img src="${p.imageUrl}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;" onclick="zoomImg('${p.imageUrl}')">` : '📦';
-                    return `<tr><td>${img}</td><td><strong>${p.name}</strong></td><td>${p.reference}</td><td><span class="badge badge-success">${p.quantity || 0}</span></td><td>${p.repetition || '-'}</td><td><button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button><button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button></td></tr>`;
+                    return `<tr><td>${img}</td><td><strong>${p.name}</strong></td><td>${p.reference}</td><td>${p.barcode || '-'}</td><td><span class="badge badge-success">${p.quantity || 0}</span></td><td>${p.repetition || '-'}</td><td><button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button><button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button></td></tr>`;
                 }).join('');
             };
         }
@@ -1005,13 +1007,25 @@
         }
 
         function exportToExcel() {
-            const data = products.map(p => ({
-                'Nom': p.name,
-                'Référence': p.reference,
-                'Répétition': p.repetition || '',
-                'Quantité': p.quantity || 0,
-                'Image URL': p.imageUrl || ''
-            }));
+            const data = products.map(p => {
+                const row = {
+                    'IMAGE': p.imageUrl || '',
+                    'Real Name': p.realName || p.name,
+                    'Conventional Name': p.conventionalName || '',
+                    'Référence': p.reference,
+                    'Barcode': p.barcode || '',
+                    'Repetition': p.repetition || '',
+                    'Category': p.category || '',
+                    'Brand': p.brand || ''
+                };
+
+                // Ajouter les colonnes QTY pour chaque PDV
+                pdvs.forEach(pdv => {
+                    row[`QTY ${pdv.name}`] = p.pdvStock?.[pdv.id] || 0;
+                });
+
+                return row;
+            });
 
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
@@ -1032,35 +1046,102 @@
                     const rows = XLSX.utils.sheet_to_json(firstSheet);
 
                     let imported = 0;
-                    rows.forEach(r => {
-                        const name = (r['Nom'] || r['nom'] || r['NAME'] || '').toString().trim();
-                        const ref = (r['Référence'] || r['Reference'] || r['référence'] || r['reference'] || r['REF'] || '').toString().trim();
-                        
-                        if (!name || !ref) return;
+                    let updated = 0;
 
-                        const existing = products.find(p => p.reference === ref);
+                    rows.forEach(r => {
+                        // Colonnes principales
+                        const imageUrl = (r['IMAGE'] || r['Image'] || '').toString().trim();
+                        const realName = (r['Real Name'] || r['RealName'] || '').toString().trim();
+                        const conventionalName = (r['Conventional Name'] || r['ConventionalName'] || '').toString().trim();
+                        const reference = (r['Référence'] || r['Reference'] || '').toString().trim();
+                        const barcode = (r['Barcode'] || '').toString().trim();
+                        const repetition = (r['Repetition'] || r['Répétition'] || '').toString().trim();
+                        const category = (r['Category'] || r['Catégorie'] || '').toString().trim();
+                        const brand = (r['Brand'] || r['Marque'] || '').toString().trim();
+
+                        // Utiliser Real Name comme nom principal, sinon Conventional Name
+                        const name = realName || conventionalName;
+                        
+                        if (!name || !reference) return;
+
+                        // Détecter les colonnes de stock par PDV (QTY ...)
+                        const pdvStock = {};
+                        let totalQty = 0;
+
+                        Object.keys(r).forEach(key => {
+                            if (key.startsWith('QTY ')) {
+                                const pdvName = key.replace('QTY ', '').trim();
+                                const qty = parseInt(r[key]) || 0;
+                                
+                                // Trouver ou créer le PDV correspondant
+                                let pdv = pdvs.find(p => 
+                                    p.name.toLowerCase() === pdvName.toLowerCase() ||
+                                    p.name.toLowerCase().includes(pdvName.toLowerCase()) ||
+                                    pdvName.toLowerCase().includes(p.name.toLowerCase())
+                                );
+
+                                // Si le PDV n'existe pas, le créer
+                                if (!pdv && pdvName) {
+                                    const newPdvId = pdvName.toLowerCase().replace(/\s+/g, '-');
+                                    pdv = { id: newPdvId, name: pdvName, location: '' };
+                                    pdvs.push(pdv);
+                                }
+
+                                if (pdv) {
+                                    pdvStock[pdv.id] = qty;
+                                    totalQty += qty;
+                                }
+                            }
+                        });
+
+                        // Vérifier si le produit existe déjà
+                        const existing = products.find(p => p.reference === reference);
+                        
                         if (existing) {
+                            // Mettre à jour le produit existant
                             existing.name = name;
-                            existing.repetition = (r['Répétition'] || r['Repetition'] || '').toString().trim();
-                            existing.imageUrl = (r['Image URL'] || r['ImageURL'] || '').toString().trim();
+                            existing.realName = realName;
+                            existing.conventionalName = conventionalName;
+                            existing.imageUrl = imageUrl;
+                            existing.barcode = barcode;
+                            existing.repetition = repetition;
+                            existing.category = category;
+                            existing.brand = brand;
+                            existing.pdvStock = pdvStock;
+                            existing.quantity = totalQty;
+                            updated++;
                         } else {
+                            // Créer un nouveau produit
                             products.push({
                                 id: Date.now().toString() + Math.random(),
                                 name,
-                                reference: ref,
-                                repetition: (r['Répétition'] || r['Repetition'] || '').toString().trim(),
-                                imageUrl: (r['Image URL'] || r['ImageURL'] || '').toString().trim(),
-                                quantity: parseInt(r['Quantité'] || r['Quantite'] || r['Quantity'] || 0),
-                                pdvStock: {}
+                                realName,
+                                conventionalName,
+                                reference,
+                                barcode,
+                                repetition,
+                                category,
+                                brand,
+                                imageUrl,
+                                quantity: totalQty,
+                                pdvStock
                             });
+                            imported++;
                         }
-                        imported++;
                     });
 
                     save();
                     renderProds();
-                    alert(`✅ ${imported} produit(s) importé(s) avec succès !`);
+                    renderPdv();
+                    
+                    let message = '✅ Import terminé !\n\n';
+                    if (imported > 0) message += `➕ ${imported} nouveau(x) produit(s)\n`;
+                    if (updated > 0) message += `🔄 ${updated} produit(s) mis à jour\n`;
+                    message += `\n📍 ${pdvs.length} point(s) de vente détecté(s)`;
+                    
+                    alert(message);
                 } catch (err) {
+                    console.error('Erreur import:', err);
                     alert('❌ Erreur lors de l\'import : ' + err.message);
                 }
             };
