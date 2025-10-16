@@ -168,65 +168,96 @@
             border-bottom: 1px solid #e5e7eb;
         }
         tr:hover { background: #f9fafb; }
-        .search-dropdown {
+        .custom-select-container {
             position: relative;
-        }
-        .search-dropdown input {
             width: 100%;
-            padding: 10px;
+            z-index: 10;
+        }
+        .custom-select-button {
+            width: 100%;
+            padding: 10px 35px 10px 10px;
             border: 1px solid #d1d5db;
             border-radius: 8px;
+            background: white;
+            text-align: left;
+            cursor: pointer;
             font-size: 1rem;
+            position: relative;
+            user-select: none;
+            -webkit-user-select: none;
+            pointer-events: auto !important;
         }
-        .search-dropdown input:focus {
-            outline: none;
-            border-color: var(--primary);
+        .custom-select-button:hover {
+            border-color: #667eea;
+            background: #f9fafb;
         }
-        .search-results {
+        .custom-select-button:active {
+            background: #f3f4f6;
+        }
+        .custom-select-button::after {
+            content: '▼';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8rem;
+            color: #6b7280;
+            pointer-events: none;
+        }
+        .custom-select-button.open::after {
+            content: '▲';
+        }
+        .custom-select-dropdown {
+            display: none;
             position: absolute;
             top: 100%;
             left: 0;
             right: 0;
-            max-height: 300px;
-            overflow-y: auto;
+            margin-top: 4px;
             background: white;
-            border: 1px solid #d1d5db;
-            border-top: none;
-            border-radius: 0 0 8px 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            z-index: 1000;
-            display: none;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+            max-height: 400px;
         }
-        .search-results.active {
+        .custom-select-dropdown.show {
             display: block;
         }
-        .search-result-item {
+        .custom-select-search {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 1;
+        }
+        .custom-select-search input {
+            width: 100%;
             padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+        .custom-select-search input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .custom-select-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .custom-select-item {
+            padding: 12px;
             cursor: pointer;
             border-bottom: 1px solid #f3f4f6;
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
-        .search-result-item:hover {
-            background: #f3f4f6;
+        .custom-select-item:hover {
+            background: #f9fafb;
         }
-        .search-result-item img {
-            width: 40px;
-            height: 40px;
-            object-fit: cover;
-            border-radius: 6px;
-        }
-        .search-result-info {
-            flex: 1;
-        }
-        .search-result-name {
+        .custom-select-item.selected {
+            background: #ede9fe;
             font-weight: 600;
-            color: #1f2937;
-        }
-        .search-result-ref {
-            font-size: 0.85rem;
-            color: #6b7280;
         }
         .modal {
             display: none;
@@ -465,15 +496,25 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <select id="mov-product" class="form-select" required size="10" style="height:250px;font-size:0.95rem;">
-                                    <option value="">Chargement des produits...</option>
-                                </select>
-                                <input type="text" 
-                                       id="mov-product-filter" 
-                                       class="form-input" 
-                                       placeholder="🔍 Tapez pour filtrer la liste ci-dessus..." 
-                                       style="margin-top:8px;"
-                                       oninput="filterMovProducts()">
+                                <div class="custom-select-container" id="mov-select-container">
+                                    <div class="custom-select-button" 
+                                         id="mov-select-btn" 
+                                         onclick="toggleMovDropdown(event)"
+                                         style="z-index:100;">
+                                        Sélectionner un produit...
+                                    </div>
+                                    <div class="custom-select-dropdown" id="mov-dropdown">
+                                        <div class="custom-select-search">
+                                            <input type="text" 
+                                                   id="mov-search-input" 
+                                                   placeholder="🔍 Rechercher..." 
+                                                   oninput="filterMovList()" 
+                                                   onclick="event.stopPropagation()">
+                                        </div>
+                                        <div class="custom-select-list" id="mov-product-list"></div>
+                                    </div>
+                                    <input type="hidden" id="mov-product" required>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Point de Vente *</label>
@@ -522,15 +563,18 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <select id="trans-product" class="form-select" required size="10" style="height:250px;font-size:0.95rem;">
-                                    <option value="">Chargement des produits...</option>
-                                </select>
-                                <input type="text" 
-                                       id="trans-product-filter" 
-                                       class="form-input" 
-                                       placeholder="🔍 Tapez pour filtrer la liste ci-dessus..." 
-                                       style="margin-top:8px;"
-                                       oninput="filterTransProducts()">
+                                <div class="custom-select-container">
+                                    <div class="custom-select-button" id="trans-select-btn" onclick="toggleTransDropdown(event)">
+                                        Sélectionner un produit...
+                                    </div>
+                                    <div class="custom-select-dropdown" id="trans-dropdown">
+                                        <div class="custom-select-search">
+                                            <input type="text" id="trans-search-input" placeholder="🔍 Rechercher..." oninput="filterTransList()" onclick="event.stopPropagation()">
+                                        </div>
+                                        <div class="custom-select-list" id="trans-product-list"></div>
+                                    </div>
+                                    <input type="hidden" id="trans-product" required>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">De (Source) *</label>
