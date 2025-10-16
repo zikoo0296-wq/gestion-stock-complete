@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Stock Pro</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">📦</span>
+                <span class="logo-text">Stock Pro</span>
+            </div>
+            <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+        </div>
+
+        <div class="user-profile">
+            <div class="user-avatar" id="user-avatar">👤</div>
+            <div class="user-info">
+                <div class="user-name" id="user-name">Chargement...</div>
+                <div class="user-email" id="user-email">email@example.com</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-page="products" onclick="showPage('products')">
+                <span class="nav-icon">📦</span>
+                <span class="nav-text">Produits</span>
+            </a>
+            <a href="#" class="nav-item" data-page="movements" onclick="showPage('movements')">
+                <span class="nav-icon">🔄</span>
+                <span class="nav-text">Mouvements</span>
+            </a>
+            <a href="#" class="nav-item" data-page="pointsVente" onclick="showPage('pointsVente')">
+                <span class="nav-icon">🏪</span>
+                <span class="nav-text">Points de Vente</span>
+            </a>
+            <a href="#" class="nav-item" data-page="history" onclick="showPage('history')">
+                <span class="nav-icon">📜</span>
+                <span class="nav-text">Historique</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="logout()">
+                <span>🚪</span>
+                <span>Déconnexion</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Bar -->
+        <div class="topbar">
+            <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+            <div class="topbar-title" id="page-title">Dashboard</div>
+            <div class="topbar-actions">
+                <button class="btn-icon" title="Notifications">
+                    <span class="notification-badge">3</span>
+                    🔔
+                </button>
+                <button class="btn-icon" title="Paramètres" onclick="showSettings()">⚙️</button>
+            </div>
+        </div>
+
+        <!-- Page Content -->
+        <div class="content-wrapper" id="app-container">
+            <!-- Le contenu sera injecté ici par JavaScript -->
+        </div>
+    </div>
+
+    <!-- Modal Produit -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Ajouter un produit</h2>
+                <button class="close-btn" onclick="closeProductModal()">×</button>
+            </div>
+            <form id="product-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Image URL</label>
+                        <input type="text" id="product-image" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label>Nom *</label>
+                        <input type="text" id="product-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nom commercial</label>
+                        <input type="text" id="product-conventional">
+                    </div>
+                    <div class="form-group">
+                        <label>Référence *</label>
+                        <input type="text" id="product-ref" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Code-barres</label>
+                        <input type="text" id="product-barcode">
+                    </div>
+                    <div class="form-group">
+                        <label>Catégorie</label>
+                        <input type="text" id="product-category">
+                    </div>
+                    <div class="form-group">
+                        <label>Marque</label>
+                        <input type="text" id="product-brand">
+                    </div>
+                    <div class="form-group">
+                        <label>Prix *</label>
+                        <input type="number" step="0.01" id="product-price" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Quantité</label>
+                        <input type="number" id="product-quantity" value="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeProductModal()">Annuler</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Import Excel -->
+    <div id="import-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Importer depuis Excel</h2>
+                <button class="close-btn" onclick="closeImportModal()">×</button>
+            </div>
+            <div class="import-info">
+                <p><strong>Format Excel attendu :</strong></p>
+                <p class="format-desc">IMAGE | Real Name | Conventional Name | Référence | Barcode | Category | Brand | Selling Price | QTY [Nom PDV] | ...</p>
+            </div>
+            <input type="file" id="excel-file" accept=".xlsx,.xls" onchange="handleImport(event)" style="display:none;">
+            <button class="btn btn-primary" onclick="document.getElementById('excel-file').click()">
+                📁 Choisir un fichier
+            </button>
+            <div id="import-progress" class="progress-container hidden">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-text" id="progress-text"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Image -->
+    <div class="image-modal" id="image-modal" onclick="closeImageModal()">
+        <div class="image-modal-close" onclick="closeImageModal()">✕</div>
+        <img id="modal-image" src="" onclick="event.stopPropagation();">
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden" id="loading">
+        <div class="spinner"></div>
+        <p>Chargement...</p>
+    </div>
+
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/utils.js"></script>
+</body>
+</html>

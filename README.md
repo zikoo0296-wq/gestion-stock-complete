@@ -1,331 +1,201 @@
-# 🏪 Gestion de Stock Pro
+# 📦 Stock Pro - Gestion de Stock Professionnelle
 
-Application web professionnelle de gestion de stock avec backend Node.js + PostgreSQL et frontend HTML/CSS/JavaScript.
+Application web complète de gestion de stock avec authentification et base de données cloud.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Node](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen)
-![PostgreSQL](https://img.shields.io/badge/postgresql-%3E%3D12.0-blue)
+## 🚀 Fonctionnalités
 
-## 📸 Aperçu
+- ✅ Authentification sécurisée (Email/Password + Google)
+- ✅ Base de données Firebase en temps réel
+- ✅ Gestion complète des produits
+- ✅ Points de vente multiples
+- ✅ Mouvements de stock (Entrées/Sorties/Transferts)
+- ✅ Historique détaillé
+- ✅ Import/Export Excel
+- ✅ Interface responsive et moderne
 
-Une application complète pour gérer votre inventaire avec :
-- ✅ Gestion des produits (CRUD complet)
-- ✅ Import/Export Excel massif (2000+ produits)
-- ✅ Entrées et sorties de stock avec traçabilité
-- ✅ Gestion des retours clients
-- ✅ Dashboard avec statistiques et graphiques
-- ✅ Alertes de stock faible
-- ✅ Multi-utilisateurs (fonctionnalité à venir)
-- ✅ API REST complète
-- ✅ Base de données persistante PostgreSQL
+## 📋 Prérequis
 
-## 🚀 Démarrage Rapide
+1. Un compte Firebase (gratuit)
+2. Un navigateur web moderne
+3. Un hébergement web (GitHub Pages, Netlify, etc.)
 
-### Prérequis
+## ⚙️ Installation
 
-- **Node.js** v16+ ([Télécharger](https://nodejs.org/))
-- **PostgreSQL** v12+ ([Télécharger](https://www.postgresql.org/))
-- **npm** ou **yarn**
+### Étape 1 : Créer un projet Firebase
 
-### Installation Rapide (5 minutes)
+1. Allez sur [Firebase Console](https://console.firebase.google.com)
+2. Cliquez sur "Ajouter un projet"
+3. Nom du projet : `stock-management-pro`
+4. Désactivez Google Analytics (optionnel)
+5. Cliquez "Créer le projet"
+
+### Étape 2 : Configurer Firebase Authentication
+
+1. Dans Firebase Console, allez dans **Authentication**
+2. Cliquez sur "Commencer"
+3. Activez ces méthodes de connexion :
+   - **Email/Password** : Activez
+   - **Google** : Activez et configurez
+
+### Étape 3 : Configurer Firestore Database
+
+1. Dans Firebase Console, allez dans **Firestore Database**
+2. Cliquez "Créer une base de données"
+3. Mode : **Production** (ou Test pour développement)
+4. Localisation : Choisissez la plus proche de vos utilisateurs
+5. Cliquez "Activer"
+
+### Étape 4 : Obtenir les identifiants Firebase
+
+1. Dans Firebase Console, cliquez sur l'icône ⚙️ (Paramètres)
+2. Allez dans **Paramètres du projet**
+3. Descendez jusqu'à "Vos applications"
+4. Cliquez sur l'icône Web `</>`
+5. Nom de l'app : `Stock Pro`
+6. Cochez "Configurer Firebase Hosting"
+7. Cliquez "Enregistrer l'application"
+8. **COPIEZ** les identifiants affichés
+
+### Étape 5 : Configurer l'application
+
+1. Ouvrez le fichier `js/firebase-config.js`
+2. Remplacez les valeurs par vos propres identifiants :
+
+```javascript
+const firebaseConfig = {
+    apiKey: "VOTRE_API_KEY",
+    authDomain: "VOTRE_PROJECT_ID.firebaseapp.com",
+    projectId: "VOTRE_PROJECT_ID",
+    storageBucket: "VOTRE_PROJECT_ID.appspot.com",
+    messagingSenderId: "VOTRE_SENDER_ID",
+    appId: "VOTRE_APP_ID"
+};
+```
+
+### Étape 6 : Configurer les règles de sécurité Firestore
+
+Dans Firebase Console > Firestore Database > Règles, collez :
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Règles pour les utilisateurs
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Règles pour les produits
+    match /products/{productId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Règles pour les mouvements
+    match /movements/{movementId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Règles pour les points de vente
+    match /pointsVente/{pdvId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
+
+## 🌐 Déploiement
+
+### Option 1 : GitHub Pages (Recommandé)
+
+1. Créez un repository GitHub
+2. Uploadez tous les fichiers
+3. Allez dans Settings > Pages
+4. Source : "Deploy from branch"
+5. Branch : "main" → folder : "/ (root)"
+6. Votre site sera disponible à : `https://username.github.io/repository-name/`
+
+### Option 2 : Firebase Hosting
 
 ```bash
-# 1. Cloner le projet
-git clone https://github.com/votre-repo/gestion-stock.git
-cd gestion-stock
+# Installer Firebase CLI
+npm install -g firebase-tools
 
-# 2. Installer PostgreSQL et créer la base de données
-psql -U postgres
-CREATE DATABASE gestion_stock;
-\q
+# Se connecter à Firebase
+firebase login
 
-# 3. Configurer le backend
-cd backend
-npm install
-cp .env.example .env
-nano .env  # Modifier le mot de passe PostgreSQL
+# Initialiser Firebase
+firebase init hosting
 
-# 4. Initialiser la base de données
-npm run init-db
-
-# 5. Démarrer le backend
-npm start
-
-# 6. Ouvrir le frontend (nouvel onglet terminal)
-cd ../frontend
-# Ouvrir index.html dans votre navigateur
-# Ou avec un serveur HTTP simple :
-npx serve .
+# Déployer
+firebase deploy
 ```
 
-🎉 **C'est prêt !** Accédez à http://localhost:3000 (backend) et ouvrez `index.html` (frontend)
+### Option 3 : Netlify
 
-## 📁 Structure du Projet
+1. Glissez-déposez le dossier complet sur [netlify.com](https://netlify.com)
+2. Votre site est en ligne instantanément !
+
+## 📁 Structure du projet
 
 ```
-gestion-stock/
-├── backend/                    # API Node.js + Express
-│   ├── server.js              # Serveur principal
-│   ├── init-database.js       # Script d'initialisation BDD
-│   ├── backup-database.js     # Script de sauvegarde
-│   ├── test-api.js            # Tests automatiques
-│   ├── package.json
-│   ├── .env.example
-│   └── Dockerfile
-├── frontend/                   # Application web
-│   └── index.html             # Application single-page
-├── docs/                       # Documentation
-│   ├── GUIDE_INSTALLATION.md
-│   ├── GUIDE_DEPLOIEMENT.md
-│   └── API.md
-├── docker-compose.yml          # Configuration Docker
-├── nginx.conf                  # Configuration Nginx
-├── .gitignore
+stock-management-pro/
+├── index.html              # Page de connexion
+├── register.html           # Page d'inscription
+├── dashboard.html          # Application principale
+├── css/
+│   ├── login.css          # Styles authentification
+│   └── dashboard.css      # Styles application
+├── js/
+│   ├── firebase-config.js # Configuration Firebase
+│   ├── auth.js            # Authentification
+│   ├── app.js             # Logique application
+│   └── utils.js           # Fonctions utilitaires
+├── images/
+│   ├── logo.png
+│   └── placeholder.png
 └── README.md
 ```
 
-## 🛠️ Technologies Utilisées
+## 🔒 Sécurité
 
-### Backend
-- **Node.js** - Runtime JavaScript
-- **Express** - Framework web
-- **PostgreSQL** - Base de données relationnelle
-- **node-pg** - Client PostgreSQL pour Node.js
-- **dotenv** - Gestion des variables d'environnement
-- **cors** - Gestion des requêtes cross-origin
+- Les mots de passe sont cryptés par Firebase
+- Les données sont protégées par des règles Firestore
+- Authentification sécurisée avec tokens JWT
+- Support HTTPS obligatoire
 
-### Frontend
-- **HTML5/CSS3** - Structure et style
-- **Vanilla JavaScript** - Logique applicative
-- **Chart.js** - Graphiques et statistiques
-- **SheetJS (xlsx)** - Import/Export Excel
+## 🆘 Résolution des problèmes
 
-### DevOps
-- **Docker** - Conteneurisation
-- **Docker Compose** - Orchestration multi-conteneurs
-- **Nginx** - Serveur web et reverse proxy
-- **PM2** - Gestionnaire de processus Node.js
+### Erreur "Firebase not initialized"
+- Vérifiez que vous avez bien remplacé les identifiants dans `firebase-config.js`
 
-## 📊 Fonctionnalités Détaillées
+### Erreur "Permission denied"
+- Vérifiez les règles de sécurité Firestore
+- Assurez-vous d'être connecté
 
-### 1. Gestion des Produits
-- Ajout, modification, suppression de produits
-- Champs: Nom réel, nom conventionnel, référence, barcode, catégorie, marque
-- Support des images (Google Drive URLs)
-- Recherche avancée et filtres
-- Import massif via Excel (2000+ produits sans freeze)
-- Export Excel avec tous les champs
+### Page blanche après connexion
+- Ouvrez la console développeur (F12)
+- Vérifiez les erreurs JavaScript
+- Assurez-vous que tous les fichiers sont bien uploadés
 
-### 2. Mouvements de Stock
-- Entrées: Réapprovisionnement, Retour client, Ajustement
-- Sorties: Vente, Transfert, Perte/Casse
-- Sélection multiple de produits par checkbox
-- Validation anti-dépassement de stock
-- Traçabilité complète (date, utilisateur, raison)
+## 📞 Support
 
-### 3. Gestion des Ventes et Retours
-- Enregistrement automatique des ventes
-- Création de retours avec raison
-- Ajout automatique au stock lors d'un retour
-- Historique complet par client
+Pour toute question ou problème :
+1. Vérifiez la console Firebase
+2. Consultez la documentation Firebase
+3. Ouvrez une issue sur GitHub
 
-### 4. Dashboard et Statistiques
-- Statistiques en temps réel
-- Graphiques: Top produits vendus, répartition par catégorie
-- Alertes de stock faible
-- Évolution du stock sur 7 jours
+## 📄 Licence
 
-### 5. Rapports et Exports
-- Export Excel: produits, ventes, retours, alertes
-- Format personnalisable
-- Génération instantanée
-
-## 🔧 Configuration
-
-### Variables d'Environnement (.env)
-
-```bash
-# Base de données
-DB_USER=postgres
-DB_HOST=localhost
-DB_NAME=gestion_stock
-DB_PASSWORD=votre_mot_de_passe
-DB_PORT=5432
-
-# Serveur
-PORT=3000
-NODE_ENV=development
-
-# Sauvegardes
-BACKUP_DIR=./backups
-KEEP_BACKUPS=7
-```
-
-### Format Excel pour Import
-
-Les colonnes requises (ordre important) :
-
-| IMAGE | Real Name | Conventional Name | Selling Price | Barcode | Repetition | Barcode Category | Category | Brand | Référence |
-|-------|-----------|-------------------|---------------|---------|-----------|------------------|----------|-------|-----------|
-
-**Exemple :**
-```
-IMAGE: https://drive.google.com/uc?export=view&id=1Mou...
-Real Name: Ordinateur Portable Dell XPS 13
-Conventional Name: Dell XPS
-Barcode: 1234567890123
-Repetition: 25
-Category: Informatique
-Brand: Dell
-Référence: DELL-XPS-001
-```
-
-## 🔌 API Endpoints
-
-### Products
-```
-GET    /api/products           - Liste tous les produits
-GET    /api/products/:id       - Récupère un produit
-POST   /api/products           - Crée un produit
-POST   /api/products/batch     - Import en masse
-PUT    /api/products/:id       - Modifie un produit
-DELETE /api/products/:id       - Supprime un produit
-```
-
-### Movements
-```
-GET    /api/movements          - Liste tous les mouvements
-POST   /api/movements          - Crée un/des mouvement(s)
-```
-
-### Sales & Returns
-```
-GET    /api/sales              - Liste toutes les ventes
-GET    /api/returns            - Liste tous les retours
-POST   /api/returns            - Crée un retour
-```
-
-### Statistics
-```
-GET    /api/stats              - Statistiques du dashboard
-```
-
-📖 **Documentation complète de l'API :** [API.md](docs/API.md)
-
-## 🐳 Déploiement avec Docker
-
-```bash
-# Lancer avec Docker Compose
-docker-compose up -d
-
-# Initialiser la base de données
-docker-compose exec backend node init-database.js
-
-# Voir les logs
-docker-compose logs -f
-
-# Arrêter
-docker-compose down
-```
-
-## 🧪 Tests
-
-```bash
-# Tester l'API
-cd backend
-node test-api.js
-
-# Tous les tests doivent passer (✅ PASS)
-```
-
-## 💾 Sauvegardes
-
-```bash
-# Créer une sauvegarde manuelle
-cd backend
-node backup-database.js backup
-
-# Lister les sauvegardes
-node backup-database.js list
-
-# Restaurer une sauvegarde
-node backup-database.js restore ./backups/backup_YYYYMMDD_HHMMSS.sql
-
-# Nettoyer les anciennes sauvegardes
-node backup-database.js clean
-```
-
-### Sauvegardes Automatiques
-
-Ajouter au crontab :
-```bash
-# Sauvegarde quotidienne à 2h du matin
-0 2 * * * cd /chemin/vers/backend && node backup-database.js auto
-```
-
-## 📚 Documentation Complète
-
-- [📘 Guide d'Installation](docs/GUIDE_INSTALLATION.md)
-- [🚀 Guide de Déploiement en Production](docs/GUIDE_DEPLOIEMENT.md)
-- [🔌 Documentation API](docs/API.md)
-- [🔧 Dépannage](docs/TROUBLESHOOTING.md)
-
-## 🛣️ Roadmap
-
-### Version 1.0 ✅
-- [x] CRUD Produits
-- [x] Import/Export Excel
-- [x] Entrées/Sorties
-- [x] Retours clients
-- [x] Dashboard
-- [x] API REST
-- [x] Base de données PostgreSQL
-
-### Version 1.1 (En cours)
-- [ ] Authentification JWT
-- [ ] Multi-utilisateurs avec rôles
-- [ ] Historique par utilisateur
-- [ ] Notifications en temps réel
-- [ ] Scanner de codes-barres
-- [ ] Application mobile (PWA)
-
-### Version 2.0 (Futur)
-- [ ] Gestion des fournisseurs
-- [ ] Bons de commande
-- [ ] Factures
-- [ ] Rapports avancés
-- [ ] API GraphQL
-- [ ] Machine Learning pour prédictions de stock
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues !
-
-1. Fork le projet
-2. Créer une branche (`git checkout -b feature/AmazingFeature`)
-3. Commit les changements (`git commit -m 'Add AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
-5. Ouvrir une Pull Request
-
-## 📝 Licence
-
-Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+MIT License - Libre d'utilisation
 
 ## 👨‍💻 Auteur
 
-Développé avec ❤️ pour simplifier la gestion de stock
-
-## 🆘 Support
-
-- 📧 Email: support@votre-domaine.com
-- 💬 Discord: [Rejoindre](https://discord.gg/votre-serveur)
-- 🐛 Issues: [GitHub Issues](https://github.com/votre-repo/gestion-stock/issues)
-
-## ⭐ Remerciements
-
-Merci à tous les contributeurs et utilisateurs de cette application !
+Créé avec ❤️ pour la gestion de stock professionnelle
 
 ---
 
-**Si vous trouvez ce projet utile, n'hésitez pas à mettre une ⭐ sur GitHub !**
+**Version** : 1.0.0  
+**Dernière mise à jour** : 2025
