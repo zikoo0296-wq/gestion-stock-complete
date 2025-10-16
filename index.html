@@ -471,9 +471,24 @@
                                            class="form-input" 
                                            placeholder="🔍 Rechercher par nom, référence ou barcode..." 
                                            autocomplete="off"
+                                           style="position:relative;z-index:1;"
                                            onfocus="showMovDropdown()"
-                                           oninput="filterMovDropdown()">
-                                    <div id="mov-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:400px;overflow-y:auto;background:white;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;">
+                                           oninput="filterMovDropdown()"
+                                           onkeydown="return true;">
+                                    <div id="mov-dropdown" 
+                                         style="display:none;
+                                                position:absolute;
+                                                top:100%;
+                                                left:0;
+                                                right:0;
+                                                max-height:400px;
+                                                overflow-y:auto;
+                                                background:white;
+                                                border:2px solid #667eea;
+                                                border-radius:8px;
+                                                box-shadow:0 4px 12px rgba(0,0,0,0.15);
+                                                z-index:9999;
+                                                margin-top:4px;">
                                     </div>
                                     <input type="hidden" id="mov-product" required>
                                 </div>
@@ -531,9 +546,24 @@
                                            class="form-input" 
                                            placeholder="🔍 Rechercher par nom, référence ou barcode..." 
                                            autocomplete="off"
+                                           style="position:relative;z-index:1;"
                                            onfocus="showTransDropdown()"
-                                           oninput="filterTransDropdown()">
-                                    <div id="trans-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:400px;overflow-y:auto;background:white;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;">
+                                           oninput="filterTransDropdown()"
+                                           onkeydown="return true;">
+                                    <div id="trans-dropdown" 
+                                         style="display:none;
+                                                position:absolute;
+                                                top:100%;
+                                                left:0;
+                                                right:0;
+                                                max-height:400px;
+                                                overflow-y:auto;
+                                                background:white;
+                                                border:2px solid #667eea;
+                                                border-radius:8px;
+                                                box-shadow:0 4px 12px rgba(0,0,0,0.15);
+                                                z-index:9999;
+                                                margin-top:4px;">
                                     </div>
                                     <input type="hidden" id="trans-product" required>
                                 </div>
