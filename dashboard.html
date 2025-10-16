@@ -826,18 +826,21 @@
             const tbody = document.getElementById('prod-body');
             if (!tbody) return;
             
+            console.log('Rendering products:', products.length);
+            
             tbody.innerHTML = products.map(p => {
                 let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
                 
                 if (p.imageUrl) {
-                    let cleanUrl = p.imageUrl.toString().trim();
-                    // Nettoyer et valider l'URL
-                    if (cleanUrl.length > 0) {
-                        imgHtml = `<img src="${cleanUrl}" 
-                                        style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;background:#f3f4f6;" 
-                                        onclick="zoomImg('${cleanUrl.replace(/'/g, "\\'")}')"
-                                        onerror="this.onerror=null;this.style.display='none';this.parentElement.innerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;\\'>📦</div>';"
-                                        loading="lazy"
+                    let url = p.imageUrl.toString().trim();
+                    console.log('Image URL:', url);
+                    
+                    if (url.length > 0) {
+                        imgHtml = `<img src="${url}" 
+                                        style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;" 
+                                        onclick="zoomImg('${url.replace(/'/g, "\\'")}')"
+                                        onerror="console.error('Image failed to load:', '${url}');this.onerror=null;this.outerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;\\'>📦</div>';"
+                                        onload="console.log('Image loaded successfully:', '${url}')"
                                         alt="${p.name}">`;
                     }
                 }
@@ -868,13 +871,12 @@
                     let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
                     
                     if (p.imageUrl) {
-                        let cleanUrl = p.imageUrl.toString().trim();
-                        if (cleanUrl.length > 0) {
-                            imgHtml = `<img src="${cleanUrl}" 
-                                            style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;background:#f3f4f6;" 
-                                            onclick="zoomImg('${cleanUrl.replace(/'/g, "\\'")}')"
-                                            onerror="this.onerror=null;this.style.display='none';this.parentElement.innerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;\\'>📦</div>';"
-                                            loading="lazy"
+                        let url = p.imageUrl.toString().trim();
+                        if (url.length > 0) {
+                            imgHtml = `<img src="${url}" 
+                                            style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;" 
+                                            onclick="zoomImg('${url.replace(/'/g, "\\'")}')"
+                                            onerror="this.onerror=null;this.outerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;\\'>📦</div>';"
                                             alt="${p.name}">`;
                         }
                     }
