@@ -250,6 +250,48 @@
     </style>
 </head>
 <body>
+    <!-- PAGE DE CONNEXION -->
+    <div id="loginPage" style="display:flex;justify-content:center;align-items:center;min-height:100vh;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div style="background:white;padding:40px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);width:400px;max-width:90%;">
+            <div style="text-align:center;margin-bottom:30px;">
+                <div style="font-size:3rem;margin-bottom:10px;">📦</div>
+                <h1 style="font-size:2rem;color:#1f2937;margin:0;">Stock Pro</h1>
+                <p style="color:#6b7280;margin-top:10px;">Connexion Agent</p>
+            </div>
+            <form onsubmit="handleLogin(event)">
+                <div style="margin-bottom:20px;">
+                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Nom d'utilisateur</label>
+                    <input type="text" id="login-username" required 
+                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:0.3s;"
+                           onfocus="this.style.borderColor='#667eea'" 
+                           onblur="this.style.borderColor='#e5e7eb'"
+                           placeholder="Entrez votre username">
+                </div>
+                <div style="margin-bottom:25px;">
+                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Mot de passe</label>
+                    <input type="password" id="login-password" required 
+                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:0.3s;"
+                           onfocus="this.style.borderColor='#667eea'" 
+                           onblur="this.style.borderColor='#e5e7eb'"
+                           placeholder="Entrez votre mot de passe">
+                </div>
+                <button type="submit" 
+                        style="width:100%;padding:14px;background:linear-gradient(135deg, #667eea, #764ba2);color:white;border:none;border-radius:8px;font-size:1.1rem;font-weight:600;cursor:pointer;transition:0.3s;"
+                        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(102,126,234,0.4)'"
+                        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
+                    🔓 Se connecter
+                </button>
+            </form>
+            <div style="margin-top:25px;padding-top:25px;border-top:1px solid #e5e7eb;text-align:center;">
+                <p style="color:#6b7280;font-size:0.9rem;margin:0;">
+                    💡 Comptes de test disponibles
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLICATION PRINCIPALE -->
+    <div id="mainApp" style="display:none;">
     <div class="sidebar">
         <div class="sidebar-header">
             <div class="logo">
@@ -361,7 +403,8 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <select id="mov-product" class="form-select" required>
+                                <input type="text" id="mov-product-search" class="form-input" placeholder="🔍 Rechercher un produit..." autocomplete="off">
+                                <select id="mov-product" class="form-select" required style="margin-top:5px;">
                                     <option value="">Sélectionner...</option>
                                 </select>
                             </div>
@@ -412,7 +455,8 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <select id="trans-product" class="form-select" required>
+                                <input type="text" id="trans-product-search" class="form-input" placeholder="🔍 Rechercher un produit..." autocomplete="off">
+                                <select id="trans-product" class="form-select" required style="margin-top:5px;">
                                     <option value="">Sélectionner...</option>
                                 </select>
                             </div>
@@ -518,8 +562,9 @@
             </div>
         </div>
     </div>
+    <!-- FIN APPLICATION PRINCIPALE -->
 
-    <!-- MODAL PRODUIT -->
+    <script>
     <div id="productModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -572,6 +617,14 @@
     </div>
 
     <script>
+        // ========== COMPTES UTILISATEURS PRÉDÉFINIS ==========
+        // L'admin ajoute les comptes ici
+        const USERS = [
+            { username: 'admin', password: 'admin123', fullName: 'Administrateur', role: 'admin' },
+            { username: 'agent1', password: 'pass123', fullName: 'Agent 1', role: 'agent' },
+            { username: 'agent2', password: 'pass456', fullName: 'Agent 2', role: 'agent' }
+        ];
+        
         let products = JSON.parse(localStorage.getItem('products')) || [];
         let pdvs = JSON.parse(localStorage.getItem('pdvs')) || [
             {id: 'al-baraka', name: 'Al Baraka', location: 'Centre-ville'},
@@ -579,12 +632,73 @@
         ];
         let movements = JSON.parse(localStorage.getItem('movements')) || [];
 
-        // Vérifier authentification (optionnel pour démo)
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (user) {
-            document.getElementById('user-name').textContent = user.fullName || user.email || 'Utilisateur';
-            document.getElementById('user-email').textContent = user.email || 'user@example.com';
+        // Vérifier authentification au chargement
+        function checkAuth() {
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            if (!user) {
+                showLoginPage();
+                return false;
+            }
+            // Vérifier que l'utilisateur existe toujours dans la liste
+            const userExists = USERS.find(u => u.username === user.username);
+            if (!userExists) {
+                localStorage.removeItem('currentUser');
+                showLoginPage();
+                return false;
+            }
+            document.getElementById('user-name').textContent = user.fullName;
+            document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur' : 'Agent';
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            return true;
         }
+
+        function showLoginPage() {
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('mainApp').style.display = 'none';
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+
+            // Vérifier les identifiants
+            const user = USERS.find(u => u.username === username && u.password === password);
+
+            if (user) {
+                // Connexion réussie
+                const userSession = {
+                    username: user.username,
+                    fullName: user.fullName,
+                    role: user.role
+                };
+                localStorage.setItem('currentUser', JSON.stringify(userSession));
+                document.getElementById('user-name').textContent = user.fullName;
+                document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur' : 'Agent';
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                renderDash();
+            } else {
+                // Identifiants incorrects
+                alert('❌ Nom d\'utilisateur ou mot de passe incorrect !');
+            }
+        }
+
+        // Vérifier authentification
+        const user = JSON.parse(localStorage.getItem('currentUser'));
+        if (user) {
+            document.getElementById('user-name').textContent = user.fullName || 'Utilisateur';
+            document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur' : 'Agent';
+        }
+
+        // Vérifier l'authentification au chargement
+        window.addEventListener('DOMContentLoaded', function() {
+            if (!checkAuth()) {
+                return;
+            }
+            renderDash();
+        });
 
         function save() {
             localStorage.setItem('products', JSON.stringify(products));
@@ -646,7 +760,7 @@
             const tbody = document.getElementById('prod-body');
             if (!tbody) return;
             tbody.innerHTML = products.map(p => {
-                const img = p.imageUrl ? `<img src="${p.imageUrl}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" onclick="zoomImg('${p.imageUrl}')">` : '📦';
+                const img = p.imageUrl ? `<img src="${p.imageUrl}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" onclick="event.stopPropagation();zoomImg('${p.imageUrl}')">` : '📦';
                 return `<tr>
                     <td>${img}</td>
                     <td><strong>${p.name}</strong></td>
@@ -665,7 +779,7 @@
                 const s = this.value.toLowerCase();
                 const filtered = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s) || (p.barcode && p.barcode.toLowerCase().includes(s)));
                 tbody.innerHTML = filtered.map(p => {
-                    const img = p.imageUrl ? `<img src="${p.imageUrl}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;" onclick="zoomImg('${p.imageUrl}')">` : '📦';
+                    const img = p.imageUrl ? `<img src="${p.imageUrl}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" onclick="event.stopPropagation();zoomImg('${p.imageUrl}')">` : '📦';
                     return `<tr><td>${img}</td><td><strong>${p.name}</strong></td><td>${p.reference}</td><td>${p.barcode || '-'}</td><td><span class="badge badge-success">${p.quantity || 0}</span></td><td>${p.repetition || '-'}</td><td><button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button><button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button></td></tr>`;
                 }).join('');
             };
@@ -753,10 +867,25 @@
         function renderMovForm() {
             const prodSelect = document.getElementById('mov-product');
             const pdvSelect = document.getElementById('mov-pdv');
+            const searchInput = document.getElementById('mov-product-search');
+            
+            // Remplir les sélections
             prodSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
-                products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+                products.map(p => `<option value="${p.id}">${p.name} (${p.reference})</option>`).join('');
             pdvSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
                 pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+
+            // Ajouter la recherche de produit
+            searchInput.oninput = function() {
+                const searchTerm = this.value.toLowerCase();
+                const filtered = products.filter(p => 
+                    p.name.toLowerCase().includes(searchTerm) || 
+                    p.reference.toLowerCase().includes(searchTerm) ||
+                    (p.barcode && p.barcode.toLowerCase().includes(searchTerm))
+                );
+                prodSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
+                    filtered.map(p => `<option value="${p.id}">${p.name} (${p.reference})</option>`).join('');
+            };
         }
 
         function togglePdvSelect() {
@@ -823,13 +952,27 @@
             const prodSelect = document.getElementById('trans-product');
             const fromSelect = document.getElementById('trans-from');
             const toSelect = document.getElementById('trans-to');
+            const searchInput = document.getElementById('trans-product-search');
             
+            // Remplir les sélections
             prodSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
-                products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+                products.map(p => `<option value="${p.id}">${p.name} (${p.reference})</option>`).join('');
             fromSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
                 pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
             toSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
                 pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+
+            // Ajouter la recherche de produit
+            searchInput.oninput = function() {
+                const searchTerm = this.value.toLowerCase();
+                const filtered = products.filter(p => 
+                    p.name.toLowerCase().includes(searchTerm) || 
+                    p.reference.toLowerCase().includes(searchTerm) ||
+                    (p.barcode && p.barcode.toLowerCase().includes(searchTerm))
+                );
+                prodSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
+                    filtered.map(p => `<option value="${p.id}">${p.name} (${p.reference})</option>`).join('');
+            };
         }
 
         function addTransfer(e) {
@@ -1151,13 +1294,17 @@
 
         function logout() {
             if (confirm('Se déconnecter ?')) {
-                localStorage.removeItem('user');
-                window.location.href = 'index.html';
+                localStorage.removeItem('currentUser');
+                showLoginPage();
+                document.getElementById('login-username').value = '';
+                document.getElementById('login-password').value = '';
             }
         }
 
-        // Initialisation
-        renderDash();
+        // Initialisation - sera appelée après connexion
     </script>
+
+    <!-- MODALS (en dehors de mainApp pour être accessibles) -->
+    <!-- MODAL PRODUIT --></script>
 </body>
 </html>
