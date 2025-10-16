@@ -465,15 +465,16 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <div class="search-dropdown">
+                                <div style="position:relative;">
                                     <input type="text" 
                                            id="mov-product-search" 
                                            class="form-input" 
                                            placeholder="🔍 Rechercher par nom, référence ou barcode..." 
                                            autocomplete="off"
-                                           onfocus="showMovSearchResults()"
-                                           oninput="filterMovProducts()">
-                                    <div id="mov-search-results" class="search-results"></div>
+                                           onfocus="showMovDropdown()"
+                                           oninput="filterMovDropdown()">
+                                    <div id="mov-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:400px;overflow-y:auto;background:white;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;">
+                                    </div>
                                     <input type="hidden" id="mov-product" required>
                                 </div>
                             </div>
@@ -524,15 +525,16 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <div class="search-dropdown">
+                                <div style="position:relative;">
                                     <input type="text" 
                                            id="trans-product-search" 
                                            class="form-input" 
                                            placeholder="🔍 Rechercher par nom, référence ou barcode..." 
                                            autocomplete="off"
-                                           onfocus="showTransSearchResults()"
-                                           oninput="filterTransProducts()">
-                                    <div id="trans-search-results" class="search-results"></div>
+                                           onfocus="showTransDropdown()"
+                                           oninput="filterTransDropdown()">
+                                    <div id="trans-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:400px;overflow-y:auto;background:white;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;">
+                                    </div>
                                     <input type="hidden" id="trans-product" required>
                                 </div>
                             </div>
@@ -823,15 +825,23 @@
         function renderProds() {
             const tbody = document.getElementById('prod-body');
             if (!tbody) return;
+            
             tbody.innerHTML = products.map(p => {
-                let imgHtml = '📦';
-                if (p.imageUrl && p.imageUrl.trim().length > 0) {
-                    imgHtml = `<img src="${p.imageUrl.trim()}" 
-                                    style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;" 
-                                    onclick="zoomImg('${p.imageUrl.trim()}')"
-                                    onerror="this.style.display='none';this.parentElement.innerHTML='📦';"
-                                    loading="lazy">`;
+                let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
+                
+                if (p.imageUrl) {
+                    let cleanUrl = p.imageUrl.toString().trim();
+                    // Nettoyer et valider l'URL
+                    if (cleanUrl.length > 0) {
+                        imgHtml = `<img src="${cleanUrl}" 
+                                        style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;background:#f3f4f6;" 
+                                        onclick="zoomImg('${cleanUrl.replace(/'/g, "\\'")}')"
+                                        onerror="this.onerror=null;this.style.display='none';this.parentElement.innerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;\\'>📦</div>';"
+                                        loading="lazy"
+                                        alt="${p.name}">`;
+                    }
                 }
+                
                 return `<tr>
                     <td style="text-align:center;">${imgHtml}</td>
                     <td><strong>${p.name}</strong></td>
@@ -848,16 +858,27 @@
 
             document.getElementById('prod-search').oninput = function() {
                 const s = this.value.toLowerCase();
-                const filtered = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s) || (p.barcode && p.barcode.toString().toLowerCase().includes(s)));
+                const filtered = products.filter(p => 
+                    p.name.toLowerCase().includes(s) || 
+                    p.reference.toLowerCase().includes(s) || 
+                    (p.barcode && p.barcode.toString().toLowerCase().includes(s))
+                );
+                
                 tbody.innerHTML = filtered.map(p => {
-                    let imgHtml = '📦';
-                    if (p.imageUrl && p.imageUrl.trim().length > 0) {
-                        imgHtml = `<img src="${p.imageUrl.trim()}" 
-                                        style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;" 
-                                        onclick="zoomImg('${p.imageUrl.trim()}')"
-                                        onerror="this.style.display='none';this.parentElement.innerHTML='📦';"
-                                        loading="lazy">`;
+                    let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
+                    
+                    if (p.imageUrl) {
+                        let cleanUrl = p.imageUrl.toString().trim();
+                        if (cleanUrl.length > 0) {
+                            imgHtml = `<img src="${cleanUrl}" 
+                                            style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;background:#f3f4f6;" 
+                                            onclick="zoomImg('${cleanUrl.replace(/'/g, "\\'")}')"
+                                            onerror="this.onerror=null;this.style.display='none';this.parentElement.innerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;\\'>📦</div>';"
+                                            loading="lazy"
+                                            alt="${p.name}">`;
+                        }
                     }
+                    
                     return `<tr><td style="text-align:center;">${imgHtml}</td><td><strong>${p.name}</strong></td><td>${p.reference}</td><td>${p.barcode || '-'}</td><td><span class="badge badge-success">${p.quantity || 0}</span></td><td>${p.repetition || '-'}</td><td><button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button><button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button></td></tr>`;
                 }).join('');
             };
@@ -868,15 +889,22 @@
                 alert('❌ Aucune image disponible');
                 return;
             }
+            
+            const cleanUrl = url.trim();
             const overlay = document.createElement('div');
             overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:10000;cursor:pointer;';
+            
             const img = document.createElement('img');
-            img.src = url.trim();
+            img.src = cleanUrl;
             img.style.cssText = 'max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
             img.onerror = function() {
                 overlay.remove();
-                alert('❌ Impossible de charger l\'image');
+                alert('❌ Impossible de charger l\'image.\n\nURL: ' + cleanUrl + '\n\nVérifiez que:\n1. L\'image est publique sur Google Drive\n2. L\'URL est correcte\n3. Vous avez une connexion internet');
             };
+            img.onload = function() {
+                console.log('✅ Image chargée avec succès');
+            };
+            
             overlay.appendChild(img);
             overlay.onclick = () => overlay.remove();
             document.body.appendChild(overlay);
