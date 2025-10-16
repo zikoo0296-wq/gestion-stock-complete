@@ -168,12 +168,65 @@
             border-bottom: 1px solid #e5e7eb;
         }
         tr:hover { background: #f9fafb; }
-        .search-input {
-            padding: 10px 15px;
+        .search-dropdown {
+            position: relative;
+        }
+        .search-dropdown input {
+            width: 100%;
+            padding: 10px;
             border: 1px solid #d1d5db;
             border-radius: 8px;
-            width: 100%;
-            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+        .search-dropdown input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+        .search-results.active {
+            display: block;
+        }
+        .search-result-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .search-result-item:hover {
+            background: #f3f4f6;
+        }
+        .search-result-item img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+        .search-result-info {
+            flex: 1;
+        }
+        .search-result-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .search-result-ref {
+            font-size: 0.85rem;
+            color: #6b7280;
         }
         .modal {
             display: none;
@@ -237,6 +290,13 @@
         }
         .section { display: none; }
         .section.active { display: block; }
+        .search-input {
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
         .badge {
             display: inline-block;
             padding: 4px 12px;
@@ -405,13 +465,17 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <select id="mov-product" class="form-select" required 
-                                        style="width:100%;"
-                                        onchange="this.style.borderColor='#667eea'"
-                                        onfocus="this.style.borderColor='#667eea'"
-                                        onblur="this.style.borderColor='#d1d5db'">
-                                    <option value="">🔍 Rechercher ou sélectionner un produit...</option>
-                                </select>
+                                <div class="search-dropdown">
+                                    <input type="text" 
+                                           id="mov-product-search" 
+                                           class="form-input" 
+                                           placeholder="🔍 Rechercher par nom, référence ou barcode..." 
+                                           autocomplete="off"
+                                           onfocus="showMovSearchResults()"
+                                           oninput="filterMovProducts()">
+                                    <div id="mov-search-results" class="search-results"></div>
+                                    <input type="hidden" id="mov-product" required>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Point de Vente *</label>
@@ -460,13 +524,17 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
-                                <select id="trans-product" class="form-select" required 
-                                        style="width:100%;"
-                                        onchange="this.style.borderColor='#667eea'"
-                                        onfocus="this.style.borderColor='#667eea'"
-                                        onblur="this.style.borderColor='#d1d5db'">
-                                    <option value="">🔍 Rechercher ou sélectionner un produit...</option>
-                                </select>
+                                <div class="search-dropdown">
+                                    <input type="text" 
+                                           id="trans-product-search" 
+                                           class="form-input" 
+                                           placeholder="🔍 Rechercher par nom, référence ou barcode..." 
+                                           autocomplete="off"
+                                           onfocus="showTransSearchResults()"
+                                           oninput="filterTransProducts()">
+                                    <div id="trans-search-results" class="search-results"></div>
+                                    <input type="hidden" id="trans-product" required>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">De (Source) *</label>
@@ -756,17 +824,16 @@
             const tbody = document.getElementById('prod-body');
             if (!tbody) return;
             tbody.innerHTML = products.map(p => {
-                let img = '📦';
-                if (p.imageUrl && p.imageUrl.length > 0) {
-                    img = `<img src="${p.imageUrl}" 
-                                style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform 0.2s;display:block;" 
-                                onmouseover="this.style.transform='scale(1.1)'" 
-                                onmouseout="this.style.transform='scale(1)'" 
-                                onclick="event.stopPropagation();zoomImg('${p.imageUrl}')"
-                                onerror="this.outerHTML='📦';">`;
+                let imgHtml = '📦';
+                if (p.imageUrl && p.imageUrl.trim().length > 0) {
+                    imgHtml = `<img src="${p.imageUrl.trim()}" 
+                                    style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;" 
+                                    onclick="zoomImg('${p.imageUrl.trim()}')"
+                                    onerror="this.style.display='none';this.parentElement.innerHTML='📦';"
+                                    loading="lazy">`;
                 }
                 return `<tr>
-                    <td>${img}</td>
+                    <td style="text-align:center;">${imgHtml}</td>
                     <td><strong>${p.name}</strong></td>
                     <td>${p.reference}</td>
                     <td>${p.barcode || '-'}</td>
@@ -781,35 +848,37 @@
 
             document.getElementById('prod-search').oninput = function() {
                 const s = this.value.toLowerCase();
-                const filtered = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s) || (p.barcode && p.barcode.toLowerCase().includes(s)));
+                const filtered = products.filter(p => p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s) || (p.barcode && p.barcode.toString().toLowerCase().includes(s)));
                 tbody.innerHTML = filtered.map(p => {
-                    let img = '📦';
-                    if (p.imageUrl && p.imageUrl.length > 0) {
-                        img = `<img src="${p.imageUrl}" 
-                                    style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform 0.2s;display:block;" 
-                                    onmouseover="this.style.transform='scale(1.1)'" 
-                                    onmouseout="this.style.transform='scale(1)'" 
-                                    onclick="event.stopPropagation();zoomImg('${p.imageUrl}')"
-                                    onerror="this.outerHTML='📦';">`;
+                    let imgHtml = '📦';
+                    if (p.imageUrl && p.imageUrl.trim().length > 0) {
+                        imgHtml = `<img src="${p.imageUrl.trim()}" 
+                                        style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;" 
+                                        onclick="zoomImg('${p.imageUrl.trim()}')"
+                                        onerror="this.style.display='none';this.parentElement.innerHTML='📦';"
+                                        loading="lazy">`;
                     }
-                    return `<tr><td>${img}</td><td><strong>${p.name}</strong></td><td>${p.reference}</td><td>${p.barcode || '-'}</td><td><span class="badge badge-success">${p.quantity || 0}</span></td><td>${p.repetition || '-'}</td><td><button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button><button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button></td></tr>`;
+                    return `<tr><td style="text-align:center;">${imgHtml}</td><td><strong>${p.name}</strong></td><td>${p.reference}</td><td>${p.barcode || '-'}</td><td><span class="badge badge-success">${p.quantity || 0}</span></td><td>${p.repetition || '-'}</td><td><button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button><button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button></td></tr>`;
                 }).join('');
             };
         }
 
         function zoomImg(url) {
-            if (!url || url.length === 0) {
+            if (!url || url.trim().length === 0) {
                 alert('❌ Aucune image disponible');
                 return;
             }
             const overlay = document.createElement('div');
-            overlay.className = 'img-zoom';
-            overlay.innerHTML = `<img src="${url}" alt="Zoom" onerror="this.parentElement.remove();alert('❌ Impossible de charger l\'image');">`;
-            overlay.onclick = function(e) {
-                if (e.target === overlay) {
-                    overlay.remove();
-                }
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:10000;cursor:pointer;';
+            const img = document.createElement('img');
+            img.src = url.trim();
+            img.style.cssText = 'max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
+            img.onerror = function() {
+                overlay.remove();
+                alert('❌ Impossible de charger l\'image');
             };
+            overlay.appendChild(img);
+            overlay.onclick = () => overlay.remove();
             document.body.appendChild(overlay);
         }
 
