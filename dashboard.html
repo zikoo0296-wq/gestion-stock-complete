@@ -18,6 +18,14 @@
             --light: #f3f4f6;
         }
         body { font-family: 'Segoe UI', sans-serif; background: #f9fafb; }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes zoomIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
         .sidebar {
             position: fixed;
             left: 0;
@@ -511,7 +519,7 @@
                         </div>
                     </div>
                     <table>
-                        <thead><tr><th>Nom</th><th>Référence</th><th>Catégorie</th><th>Stock</th><th>Prix</th><th>Actions</th></tr></thead>
+                        <thead><tr><th>Image</th><th>Nom</th><th>Référence</th><th>Catégorie</th><th>Stock</th><th>Prix</th><th>Actions</th></tr></thead>
                         <tbody id="prod-body">${renderProdRows(products)}</tbody>
                     </table>
                 </div>
@@ -528,9 +536,9 @@
                     const match = p.image.match(/[?&]id=([^&]+)/);
                     if (match) {
                         const id = match[1];
-                        imgHtml = `<img src="https://drive.google.com/thumbnail?id=${id}&sz=w200" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onerror="this.style.display='none';this.parentElement.innerHTML='📦';">`;
+                        imgHtml = `<img src="https://drive.google.com/thumbnail?id=${id}&sz=w200" onclick="openImageModal('${p.image}')" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform 0.3s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" onerror="this.style.display='none';this.parentElement.innerHTML='📦';">`;
                     } else if (p.image.startsWith('http')) {
-                        imgHtml = `<img src="${p.image}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onerror="this.style.display='none';this.parentElement.innerHTML='📦';">`;
+                        imgHtml = `<img src="${p.image}" onclick="openImageModal('${p.image}')" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform 0.3s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" onerror="this.style.display='none';this.parentElement.innerHTML='📦';">`;
                     }
                 }
                 
@@ -549,6 +557,30 @@
                     </tr>
                 `;
             }).join('');
+        }
+
+        function openImageModal(imageUrl) {
+            const modal = document.createElement('div');
+            modal.id = 'image-zoom-modal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s;';
+            
+            const match = imageUrl.match(/[?&]id=([^&]+)/);
+            let finalUrl = imageUrl;
+            if (match) {
+                const id = match[1];
+                finalUrl = `https://drive.google.com/uc?export=view&id=${id}`;
+            }
+            
+            modal.innerHTML = `
+                <div style="position:absolute;top:20px;right:20px;color:white;font-size:2.5rem;cursor:pointer;background:rgba(0,0,0,0.5);width:60px;height:60px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:0.3s;" onclick="this.parentElement.remove()" onmouseover="this.style.transform='rotate(90deg)'" onmouseout="this.style.transform='rotate(0deg)'">×</div>
+                <img src="${finalUrl}" style="max-width:90%;max-height:90%;border-radius:15px;box-shadow:0 10px 50px rgba(0,0,0,0.5);animation:zoomIn 0.3s;" onclick="event.stopPropagation()">
+            `;
+            
+            modal.onclick = function(e) {
+                if (e.target === modal) modal.remove();
+            };
+            
+            document.body.appendChild(modal);
         }
 
         function filterProducts() {
@@ -651,29 +683,85 @@
 
             try {
                 const data = await file.arrayBuffer();
-                fill.style.width = '30%';
+                fill.style.width = '20%';
                 text.textContent = 'Analyse...';
 
                 const wb = XLSX.read(data);
                 const ws = wb.Sheets[wb.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(ws);
 
+                fill.style.width = '40%';
+                text.textContent = `${rows.length} lignes trouvées...`;
+
+                // Détecter les colonnes QTY (Points de vente)
+                const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+                const pdvCols = columns.filter(c => c.includes('QTY') || c.includes('qty'));
+                
+                console.log('Colonnes QTY détectées:', pdvCols);
+
+                // Créer les points de vente s'ils n'existent pas
+                pdvCols.forEach(col => {
+                    const pdvName = col.replace(/QTY|qty/gi, '').trim();
+                    if (pdvName && !pointsVente.find(p => p.name === pdvName)) {
+                        pointsVente.push({ 
+                            id: Date.now().toString() + Math.random(), 
+                            name: pdvName,
+                            products: []
+                        });
+                        console.log('PDV créé:', pdvName);
+                    }
+                });
+
+                localStorage.setItem('pointsVente', JSON.stringify(pointsVente));
+
                 fill.style.width = '60%';
-                text.textContent = `${rows.length} produits trouvés...`;
+                text.textContent = `${pdvCols.length} points de vente détectés...`;
 
                 let count = 0;
-                rows.forEach(row => {
+                rows.forEach((row, index) => {
                     const product = {
                         image: row['IMAGE'] || row['Image'] || '',
-                        name: row['Real Name'] || row['name'] || '',
-                        conventionalName: row['Conventional Name'] || '',
-                        reference: row['Référence'] || row['Reference'] || `REF_${Date.now()}_${count}`,
-                        barcode: row['Barcode'] || '',
-                        category: row['Category'] || '',
-                        brand: row['Brand'] || '',
-                        price: parseFloat(row['Selling Price'] || row['Prix'] || 0),
-                        quantity: parseInt(row['Quantity'] || row['QTY'] || 0)
+                        name: row['Real Name'] || row['RealName'] || row['name'] || row['Nom'] || '',
+                        conventionalName: row['Conventional Name'] || row['ConventionalName'] || '',
+                        reference: row['Référence'] || row['Reference'] || row['reference'] || `REF_${Date.now()}_${index}`,
+                        barcode: row['Barcode'] || row['barcode'] || '',
+                        category: row['Category'] || row['category'] || row['Catégorie'] || '',
+                        brand: row['Brand'] || row['brand'] || row['Marque'] || '',
+                        price: parseFloat(row['Selling Price'] || row['Prix'] || row['Price'] || 0),
+                        quantity: 0
                     };
+
+                    // Calculer le stock total à partir de Repetition OU des colonnes QTY
+                    let totalQty = 0;
+                    
+                    // Priorité 1: Colonnes QTY (Points de vente)
+                    if (pdvCols.length > 0) {
+                        pdvCols.forEach(col => {
+                            const qty = parseInt(row[col]) || 0;
+                            totalQty += qty;
+                            
+                            // Associer au PDV
+                            const pdvName = col.replace(/QTY|qty/gi, '').trim();
+                            const pdv = pointsVente.find(p => p.name === pdvName);
+                            if (pdv && qty > 0) {
+                                if (!pdv.products) pdv.products = [];
+                                const existingProduct = pdv.products.find(p => p.reference === product.reference);
+                                if (existingProduct) {
+                                    existingProduct.quantity = qty;
+                                } else {
+                                    pdv.products.push({
+                                        reference: product.reference,
+                                        quantity: qty
+                                    });
+                                }
+                            }
+                        });
+                    } else {
+                        // Priorité 2: Colonne Repetition (si pas de colonnes QTY)
+                        totalQty = parseInt(row['Repetition'] || row['repetition'] || row['Quantity'] || row['QTY'] || 0);
+                    }
+
+                    product.quantity = totalQty;
 
                     const existing = products.findIndex(p => p.reference === product.reference);
                     if (existing >= 0) {
@@ -685,15 +773,16 @@
                 });
 
                 localStorage.setItem('products', JSON.stringify(products));
+                localStorage.setItem('pointsVente', JSON.stringify(pointsVente));
 
                 fill.style.width = '100%';
-                text.textContent = `✓ ${count} produits importés !`;
-                showToast(`${count} produits importés avec succès`);
+                text.textContent = `✓ ${count} produits et ${pdvCols.length} PDV importés !`;
+                showToast(`${count} produits importés avec ${pdvCols.length} points de vente`);
 
                 setTimeout(() => {
                     closeImportModal();
                     renderProducts();
-                }, 1500);
+                }, 2000);
 
             } catch (error) {
                 console.error('Erreur import:', error);
@@ -737,19 +826,34 @@
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:15px;">
                             <div class="form-group">
                                 <label>Type</label>
-                                <select id="mov-type">
+                                <select id="mov-type" onchange="updateMovementType()">
                                     <option value="in">Entrée (+)</option>
                                     <option value="out">Sortie (-)</option>
+                                    <option value="transfer">Transfert</option>
                                 </select>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" id="pdv-single">
                                 <label>Point de Vente</label>
                                 <select id="mov-pdv">
                                     <option value="">Stock Central</option>
                                     ${pointsVente.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
                                 </select>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" id="pdv-source" style="display:none;">
+                                <label>Source</label>
+                                <select id="mov-pdv-src">
+                                    <option value="">Stock Central</option>
+                                    ${pointsVente.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="form-group" id="pdv-dest" style="display:none;">
+                                <label>Destination</label>
+                                <select id="mov-pdv-dst">
+                                    <option value="">Stock Central</option>
+                                    ${pointsVente.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="form-group" id="reason-field">
                                 <label>Raison</label>
                                 <select id="mov-reason">
                                     <option value="Achat">Achat</option>
@@ -757,7 +861,7 @@
                                     <option value="Retour">Retour</option>
                                 </select>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" id="payment-field">
                                 <label>Paiement</label>
                                 <select id="mov-payment">
                                     <option value="Espèce">Espèce</option>
@@ -773,6 +877,29 @@
                     </table>
                 </div>
             `;
+        }
+
+        function updateMovementType() {
+            const type = document.getElementById('mov-type').value;
+            const pdvSingle = document.getElementById('pdv-single');
+            const pdvSource = document.getElementById('pdv-source');
+            const pdvDest = document.getElementById('pdv-dest');
+            const reasonField = document.getElementById('reason-field');
+            const paymentField = document.getElementById('payment-field');
+
+            if (type === 'transfer') {
+                pdvSingle.style.display = 'none';
+                pdvSource.style.display = 'block';
+                pdvDest.style.display = 'block';
+                reasonField.style.display = 'none';
+                paymentField.style.display = 'none';
+            } else {
+                pdvSingle.style.display = 'block';
+                pdvSource.style.display = 'none';
+                pdvDest.style.display = 'none';
+                reasonField.style.display = 'block';
+                paymentField.style.display = 'block';
+            }
         }
 
         function renderMovRows() {
@@ -807,9 +934,21 @@
 
         function validateMovement() {
             const type = document.getElementById('mov-type').value;
-            const pdvId = document.getElementById('mov-pdv').value;
-            const reason = document.getElementById('mov-reason').value;
-            const payment = document.getElementById('mov-payment').value;
+            let pdvId, pdvSrcId, pdvDstId, reason, payment;
+
+            if (type === 'transfer') {
+                pdvSrcId = document.getElementById('mov-pdv-src').value;
+                pdvDstId = document.getElementById('mov-pdv-dst').value;
+                
+                if (pdvSrcId === pdvDstId) {
+                    showToast('Source et Destination doivent être différentes', 'error');
+                    return;
+                }
+            } else {
+                pdvId = document.getElementById('mov-pdv').value;
+                reason = document.getElementById('mov-reason').value;
+                payment = document.getElementById('mov-payment').value;
+            }
 
             const items = [];
             document.querySelectorAll('.mov-check:checked').forEach(cb => {
@@ -824,38 +963,130 @@
             }
 
             let count = 0;
-            items.forEach(item => {
-                const product = products.find(p => p.reference === item.reference);
-                if (!product) return;
 
-                if (type === 'in') {
-                    product.quantity = (product.quantity || 0) + item.quantity;
-                } else {
-                    if ((product.quantity || 0) < item.quantity) {
-                        showToast(`Stock insuffisant pour ${product.name}`, 'error');
-                        return;
+            if (type === 'transfer') {
+                // ✅ TRANSFERT entre PDV - NE MODIFIE PAS LE STOCK TOTAL
+                items.forEach(item => {
+                    const product = products.find(p => p.reference === item.reference);
+                    if (!product) return;
+
+                    // Retirer de la source
+                    if (pdvSrcId === '') {
+                        if ((product.quantity || 0) < item.quantity) {
+                            showToast(`Stock insuffisant dans Stock Central pour ${product.name}`, 'error');
+                            return;
+                        }
+                        // On ne modifie PAS product.quantity car c'est juste un transfert
+                    } else {
+                        const srcPDV = pointsVente.find(p => p.id === pdvSrcId);
+                        if (!srcPDV) return;
+                        if (!srcPDV.products) srcPDV.products = [];
+                        const srcProduct = srcPDV.products.find(p => p.reference === item.reference);
+                        if (!srcProduct || srcProduct.quantity < item.quantity) {
+                            showToast(`Stock insuffisant dans ${srcPDV.name} pour ${product.name}`, 'error');
+                            return;
+                        }
+                        srcProduct.quantity -= item.quantity;
                     }
-                    product.quantity -= item.quantity;
-                }
 
-                movements.push({
-                    id: Date.now() + Math.random(),
-                    date: new Date().toISOString(),
-                    type,
-                    productName: product.name,
-                    reference: item.reference,
-                    quantity: item.quantity,
-                    pdv: pdvId ? pointsVente.find(p => p.id === pdvId)?.name : 'Stock Central',
-                    reason,
-                    payment
+                    // Ajouter à la destination
+                    if (pdvDstId === '') {
+                        // Transfert vers Stock Central - on ne modifie PAS product.quantity
+                    } else {
+                        const dstPDV = pointsVente.find(p => p.id === pdvDstId);
+                        if (!dstPDV) return;
+                        if (!dstPDV.products) dstPDV.products = [];
+                        const dstProduct = dstPDV.products.find(p => p.reference === item.reference);
+                        if (dstProduct) {
+                            dstProduct.quantity += item.quantity;
+                        } else {
+                            dstPDV.products.push({ reference: item.reference, quantity: item.quantity });
+                        }
+                    }
+
+                    const srcName = pdvSrcId ? pointsVente.find(p => p.id === pdvSrcId)?.name : 'Stock Central';
+                    const dstName = pdvDstId ? pointsVente.find(p => p.id === pdvDstId)?.name : 'Stock Central';
+
+                    movements.push({
+                        id: Date.now() + Math.random(),
+                        date: new Date().toISOString(),
+                        type: 'transfer',
+                        productName: product.name,
+                        reference: item.reference,
+                        quantity: item.quantity,
+                        pdv: `${srcName} → ${dstName}`,
+                        reason: 'Transfert'
+                    });
+                    count++;
                 });
-                count++;
-            });
+                
+                if (count > 0) {
+                    showToast(`✓ ${count} transfert(s) effectué(s) (stock total inchangé)`);
+                }
+            } else {
+                // ENTRÉE ou SORTIE - MODIFIE LE STOCK TOTAL
+                items.forEach(item => {
+                    const product = products.find(p => p.reference === item.reference);
+                    if (!product) return;
+
+                    if (type === 'in') {
+                        product.quantity = (product.quantity || 0) + item.quantity;
+                        
+                        if (pdvId) {
+                            const pdv = pointsVente.find(p => p.id === pdvId);
+                            if (pdv) {
+                                if (!pdv.products) pdv.products = [];
+                                const pdvProduct = pdv.products.find(p => p.reference === item.reference);
+                                if (pdvProduct) {
+                                    pdvProduct.quantity += item.quantity;
+                                } else {
+                                    pdv.products.push({ reference: item.reference, quantity: item.quantity });
+                                }
+                            }
+                        }
+                    } else {
+                        if ((product.quantity || 0) < item.quantity) {
+                            showToast(`Stock total insuffisant pour ${product.name}`, 'error');
+                            return;
+                        }
+                        product.quantity -= item.quantity;
+                        
+                        if (pdvId) {
+                            const pdv = pointsVente.find(p => p.id === pdvId);
+                            if (pdv) {
+                                const pdvProduct = pdv.products?.find(p => p.reference === item.reference);
+                                if (!pdvProduct || pdvProduct.quantity < item.quantity) {
+                                    showToast(`Stock insuffisant dans ${pdv.name} pour ${product.name}`, 'error');
+                                    return;
+                                }
+                                pdvProduct.quantity -= item.quantity;
+                            }
+                        }
+                    }
+
+                    movements.push({
+                        id: Date.now() + Math.random(),
+                        date: new Date().toISOString(),
+                        type,
+                        productName: product.name,
+                        reference: item.reference,
+                        quantity: item.quantity,
+                        pdv: pdvId ? pointsVente.find(p => p.id === pdvId)?.name : 'Stock Central',
+                        reason,
+                        payment
+                    });
+                    count++;
+                });
+                
+                if (count > 0) {
+                    showToast(`✓ ${count} mouvement(s) enregistré(s)`);
+                }
+            }
 
             if (count > 0) {
                 localStorage.setItem('products', JSON.stringify(products));
                 localStorage.setItem('movements', JSON.stringify(movements));
-                showToast(`${count} mouvement(s) enregistré(s)`);
+                localStorage.setItem('pointsVente', JSON.stringify(pointsVente));
                 renderMovements();
             }
         }
