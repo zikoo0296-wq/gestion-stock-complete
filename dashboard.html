@@ -256,31 +256,37 @@
             <div style="text-align:center;margin-bottom:30px;">
                 <div style="font-size:3rem;margin-bottom:10px;">📦</div>
                 <h1 style="font-size:2rem;color:#1f2937;margin:0;">Stock Pro</h1>
-                <p style="color:#6b7280;margin-top:10px;">Gestion Interne</p>
+                <p style="color:#6b7280;margin-top:10px;">Connexion</p>
             </div>
             <form onsubmit="handleLogin(event)">
                 <div style="margin-bottom:20px;">
                     <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Nom d'utilisateur</label>
                     <input type="text" id="login-username" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;"
-                           placeholder="Votre username"
-                           autocomplete="username">
+                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
+                           placeholder="Entrez votre username"
+                           autocomplete="username"
+                           onfocus="this.style.borderColor='#667eea'" 
+                           onblur="this.style.borderColor='#e5e7eb'">
                 </div>
                 <div style="margin-bottom:25px;">
                     <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Mot de passe</label>
                     <input type="password" id="login-password" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;"
-                           placeholder="Votre mot de passe"
-                           autocomplete="current-password">
+                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
+                           placeholder="Entrez votre mot de passe"
+                           autocomplete="current-password"
+                           onfocus="this.style.borderColor='#667eea'" 
+                           onblur="this.style.borderColor='#e5e7eb'">
                 </div>
                 <button type="submit" 
-                        style="width:100%;padding:14px;background:linear-gradient(135deg, #667eea, #764ba2);color:white;border:none;border-radius:8px;font-size:1.1rem;font-weight:600;cursor:pointer;">
-                    🔓 Connexion
+                        style="width:100%;padding:14px;background:linear-gradient(135deg, #667eea, #764ba2);color:white;border:none;border-radius:8px;font-size:1.1rem;font-weight:600;cursor:pointer;transition:all 0.3s;"
+                        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(102,126,234,0.4)'"
+                        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
+                    🔓 Se connecter
                 </button>
             </form>
             <div style="margin-top:25px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center;">
                 <p style="color:#9ca3af;font-size:0.85rem;margin:0;">
-                    Application privée • Accès réservé aux employés
+                    🔒 Application privée - Accès réservé
                 </p>
             </div>
         </div>
