@@ -618,12 +618,14 @@
 
     <script>
         // ========== COMPTES UTILISATEURS PRÉDÉFINIS ==========
-        // L'admin ajoute les comptes ici
+        // L'admin modifie directement ici pour ajouter/modifier des comptes
         const USERS = [
             { username: 'admin', password: 'admin123', fullName: 'Administrateur', role: 'admin' },
             { username: 'agent1', password: 'pass123', fullName: 'Agent 1', role: 'agent' },
             { username: 'agent2', password: 'pass456', fullName: 'Agent 2', role: 'agent' }
         ];
+        // Pour ajouter un employé, ajoutez une ligne comme :
+        // { username: 'nom_utilisateur', password: 'mot_de_passe', fullName: 'Nom Complet', role: 'agent' }
         
         let products = JSON.parse(localStorage.getItem('products')) || [];
         let pdvs = JSON.parse(localStorage.getItem('pdvs')) || [
