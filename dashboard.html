@@ -519,20 +519,36 @@
         }
 
         function renderProdRows(list) {
-            if (list.length === 0) return '<tr><td colspan="6" style="text-align:center;padding:2rem;">Aucun produit</td></tr>';
-            return list.map(p => `
-                <tr>
-                    <td><strong>${p.name}</strong>${p.conventionalName ? `<br><small style="color:#666;">${p.conventionalName}</small>` : ''}</td>
-                    <td>${p.reference}</td>
-                    <td>${p.category || '-'}</td>
-                    <td><strong style="font-size:1.1rem;">${p.quantity || 0}</strong></td>
-                    <td><strong>${(p.price || 0).toFixed(2)} DH</strong></td>
-                    <td>
-                        <button class="btn btn-primary" onclick='editProduct("${p.reference}")' style="padding:8px 12px;">✏️</button>
-                        <button class="btn btn-danger" onclick='deleteProduct("${p.reference}")' style="padding:8px 12px;">🗑️</button>
-                    </td>
-                </tr>
-            `).join('');
+            if (list.length === 0) return '<tr><td colspan="7" style="text-align:center;padding:2rem;">Aucun produit</td></tr>';
+            return list.map(p => {
+                let imgHtml = '<span style="font-size:2rem;">📦</span>';
+                
+                // Gérer les images Google Drive
+                if (p.image) {
+                    const match = p.image.match(/[?&]id=([^&]+)/);
+                    if (match) {
+                        const id = match[1];
+                        imgHtml = `<img src="https://drive.google.com/thumbnail?id=${id}&sz=w200" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onerror="this.style.display='none';this.parentElement.innerHTML='📦';">`;
+                    } else if (p.image.startsWith('http')) {
+                        imgHtml = `<img src="${p.image}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onerror="this.style.display='none';this.parentElement.innerHTML='📦';">`;
+                    }
+                }
+                
+                return `
+                    <tr>
+                        <td>${imgHtml}</td>
+                        <td><strong>${p.name}</strong>${p.conventionalName ? `<br><small style="color:#666;">${p.conventionalName}</small>` : ''}</td>
+                        <td>${p.reference}</td>
+                        <td>${p.category || '-'}</td>
+                        <td><strong style="font-size:1.1rem;">${p.quantity || 0}</strong></td>
+                        <td><strong>${(p.price || 0).toFixed(2)} DH</strong></td>
+                        <td>
+                            <button class="btn btn-primary" onclick='editProduct("${p.reference}")' style="padding:8px 12px;">✏️</button>
+                            <button class="btn btn-danger" onclick='deleteProduct("${p.reference}")' style="padding:8px 12px;">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function filterProducts() {
