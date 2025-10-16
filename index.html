@@ -488,12 +488,12 @@
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
                                 <div class="custom-select-container">
-                                    <button type="button" class="custom-select-button" id="mov-select-btn" onclick="toggleMovDropdown()">
+                                    <div class="custom-select-button" id="mov-select-btn" onclick="toggleMovDropdown(event)">
                                         Sélectionner un produit...
-                                    </button>
+                                    </div>
                                     <div class="custom-select-dropdown" id="mov-dropdown">
                                         <div class="custom-select-search">
-                                            <input type="text" id="mov-search-input" placeholder="🔍 Rechercher..." oninput="filterMovList()">
+                                            <input type="text" id="mov-search-input" placeholder="🔍 Rechercher..." oninput="filterMovList()" onclick="event.stopPropagation()">
                                         </div>
                                         <div class="custom-select-list" id="mov-product-list"></div>
                                     </div>
@@ -548,12 +548,12 @@
                             <div class="form-group">
                                 <label class="form-label">Produit *</label>
                                 <div class="custom-select-container">
-                                    <button type="button" class="custom-select-button" id="trans-select-btn" onclick="toggleTransDropdown()">
+                                    <div class="custom-select-button" id="trans-select-btn" onclick="toggleTransDropdown(event)">
                                         Sélectionner un produit...
-                                    </button>
+                                    </div>
                                     <div class="custom-select-dropdown" id="trans-dropdown">
                                         <div class="custom-select-search">
-                                            <input type="text" id="trans-search-input" placeholder="🔍 Rechercher..." oninput="filterTransList()">
+                                            <input type="text" id="trans-search-input" placeholder="🔍 Rechercher..." oninput="filterTransList()" onclick="event.stopPropagation()">
                                         </div>
                                         <div class="custom-select-list" id="trans-product-list"></div>
                                     </div>
