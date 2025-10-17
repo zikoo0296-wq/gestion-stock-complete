@@ -602,7 +602,24 @@
                 <button class="btn btn-success" onclick="openModal('pdvModal')">➕ Nouveau PDV</button>
             </div>
             
-            <div id="pdv-cards-container"></div>
+            <div class="card">
+                <div class="card-body">
+                    <input type="text" id="pdv-search" class="search-input" placeholder="🔍 Rechercher un produit par nom ou référence..." oninput="renderPdv()">
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead id="pdv-table-header">
+                                <tr>
+                                    <th>Produit</th>
+                                    <th>Référence</th>
+                                    <th>QTY Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pdv-products-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- HISTORIQUE -->
@@ -1271,65 +1288,52 @@
         }
 
         function renderPdv() {
-            const container = document.getElementById('pdv-cards-container');
-            if (!container) return;
+            const searchTerm = document.getElementById('pdv-search')?.value.toLowerCase() || '';
+            const thead = document.getElementById('pdv-table-header');
+            const tbody = document.getElementById('pdv-products-table');
             
-            container.innerHTML = pdvs.map(pdv => {
-                // Calculer le stock total du PDV
-                const pdvStock = products.reduce((sum, prod) => {
-                    return sum + (prod.pdvStock?.[pdv.id] || 0);
-                }, 0);
-                
-                // Récupérer les produits de ce PDV
-                const pdvProducts = products.filter(p => (p.pdvStock?.[pdv.id] || 0) > 0);
-                
-                // Générer le tableau des produits
-                const productsTable = pdvProducts.length > 0 ? `
-                    <table style="width:100%;margin-top:15px;">
-                        <thead style="background:#f3f4f6;">
-                            <tr>
-                                <th style="padding:10px;text-align:left;">Produit</th>
-                                <th style="padding:10px;text-align:left;">Référence</th>
-                                <th style="padding:10px;text-align:center;">Quantité</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${pdvProducts.map(p => `
-                                <tr style="border-bottom:1px solid #e5e7eb;">
-                                    <td style="padding:10px;"><strong>${p.name}</strong></td>
-                                    <td style="padding:10px;">${p.reference}</td>
-                                    <td style="padding:10px;text-align:center;">
-                                        <span style="background:#10b981;color:white;padding:4px 12px;border-radius:12px;font-weight:bold;">
-                                            ${p.pdvStock[pdv.id]}
-                                        </span>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                ` : '<p style="text-align:center;color:#6b7280;padding:20px;">Aucun produit en stock</p>';
+            if (!thead || !tbody) return;
+            
+            // Créer l'en-tête avec une colonne par PDV
+            thead.innerHTML = `
+                <tr>
+                    <th>Produit</th>
+                    <th>Référence</th>
+                    <th>QTY Total</th>
+                    ${pdvs.map(pdv => `<th style="color:#667eea;">🏪 ${pdv.name}</th>`).join('')}
+                </tr>
+            `;
+            
+            // Filtrer les produits
+            const filtered = products.filter(p => {
+                if (!searchTerm) return true;
+                return p.name.toLowerCase().includes(searchTerm) || 
+                       p.reference.toLowerCase().includes(searchTerm);
+            });
+            
+            // Afficher les résultats
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${3 + pdvs.length}" style="text-align:center;padding:30px;color:#6b7280;">Aucun produit trouvé</td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = filtered.map(product => {
+                const pdvColumns = pdvs.map(pdv => {
+                    const qty = product.pdvStock?.[pdv.id] || 0;
+                    return `<td style="text-align:center;">
+                        ${qty > 0 ? 
+                            `<span style="background:#3b82f6;color:white;padding:6px 14px;border-radius:8px;font-weight:bold;">${qty}</span>` : 
+                            '<span style="color:#9ca3af;">-</span>'}
+                    </td>`;
+                }).join('');
                 
                 return `
-                    <div class="card" style="margin-bottom:20px;">
-                        <div class="card-header" style="background:linear-gradient(135deg, #667eea, #764ba2);color:white;">
-                            <div>
-                                <h3 style="font-size:1.5rem;margin-bottom:5px;">🏪 ${pdv.name}</h3>
-                                <p style="opacity:0.9;font-size:0.9rem;">${pdv.location || 'Emplacement non défini'}</p>
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-size:0.9rem;opacity:0.9;">Stock Total</div>
-                                <div style="font-size:2rem;font-weight:bold;">${pdvStock}</div>
-                                <div style="font-size:0.85rem;opacity:0.9;">${pdvProducts.length} produit(s)</div>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div style="margin-bottom:15px;">
-                                <button onclick="editPdv('${pdv.id}')" class="btn-edit" style="margin-right:10px;">✏️ Modifier</button>
-                                <button onclick="delPdv('${pdv.id}')" class="btn-delete">🗑️ Supprimer</button>
-                            </div>
-                            ${productsTable}
-                        </div>
-                    </div>
+                    <tr>
+                        <td><strong>${product.name}</strong></td>
+                        <td>${product.reference}</td>
+                        <td><span class="badge badge-success">${product.quantity || 0}</span></td>
+                        ${pdvColumns}
+                    </tr>
                 `;
             }).join('');
         }
