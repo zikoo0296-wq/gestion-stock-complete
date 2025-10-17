@@ -601,23 +601,8 @@
                 <h1 class="page-title">🏪 Points de Vente</h1>
                 <button class="btn btn-success" onclick="openModal('pdvModal')">➕ Nouveau PDV</button>
             </div>
-            <div class="card">
-                <div class="card-body">
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Nom</th>
-                                    <th>Emplacement</th>
-                                    <th>Stock Total</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="pdvList"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            
+            <div id="pdv-cards-container"></div>
         </div>
 
         <!-- HISTORIQUE -->
@@ -1286,21 +1271,66 @@
         }
 
         function renderPdv() {
-            const tbody = document.getElementById('pdvList');
-            if (!tbody) return;
-            tbody.innerHTML = pdvs.map(p => {
+            const container = document.getElementById('pdv-cards-container');
+            if (!container) return;
+            
+            container.innerHTML = pdvs.map(pdv => {
+                // Calculer le stock total du PDV
                 const pdvStock = products.reduce((sum, prod) => {
-                    return sum + (prod.pdvStock?.[p.id] || 0);
+                    return sum + (prod.pdvStock?.[pdv.id] || 0);
                 }, 0);
-                return `<tr>
-                    <td><strong>${p.name}</strong></td>
-                    <td>${p.location || '-'}</td>
-                    <td><span style="background:#3b82f6;color:white;padding:4px 12px;border-radius:12px;font-weight:bold;">${pdvStock}</span></td>
-                    <td>
-                        <button onclick="editPdv('${p.id}')" class="btn-edit">✏️</button>
-                        <button onclick="delPdv('${p.id}')" class="btn-delete">🗑️</button>
-                    </td>
-                </tr>`;
+                
+                // Récupérer les produits de ce PDV
+                const pdvProducts = products.filter(p => (p.pdvStock?.[pdv.id] || 0) > 0);
+                
+                // Générer le tableau des produits
+                const productsTable = pdvProducts.length > 0 ? `
+                    <table style="width:100%;margin-top:15px;">
+                        <thead style="background:#f3f4f6;">
+                            <tr>
+                                <th style="padding:10px;text-align:left;">Produit</th>
+                                <th style="padding:10px;text-align:left;">Référence</th>
+                                <th style="padding:10px;text-align:center;">Quantité</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${pdvProducts.map(p => `
+                                <tr style="border-bottom:1px solid #e5e7eb;">
+                                    <td style="padding:10px;"><strong>${p.name}</strong></td>
+                                    <td style="padding:10px;">${p.reference}</td>
+                                    <td style="padding:10px;text-align:center;">
+                                        <span style="background:#10b981;color:white;padding:4px 12px;border-radius:12px;font-weight:bold;">
+                                            ${p.pdvStock[pdv.id]}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<p style="text-align:center;color:#6b7280;padding:20px;">Aucun produit en stock</p>';
+                
+                return `
+                    <div class="card" style="margin-bottom:20px;">
+                        <div class="card-header" style="background:linear-gradient(135deg, #667eea, #764ba2);color:white;">
+                            <div>
+                                <h3 style="font-size:1.5rem;margin-bottom:5px;">🏪 ${pdv.name}</h3>
+                                <p style="opacity:0.9;font-size:0.9rem;">${pdv.location || 'Emplacement non défini'}</p>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:0.9rem;opacity:0.9;">Stock Total</div>
+                                <div style="font-size:2rem;font-weight:bold;">${pdvStock}</div>
+                                <div style="font-size:0.85rem;opacity:0.9;">${pdvProducts.length} produit(s)</div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div style="margin-bottom:15px;">
+                                <button onclick="editPdv('${pdv.id}')" class="btn-edit" style="margin-right:10px;">✏️ Modifier</button>
+                                <button onclick="delPdv('${pdv.id}')" class="btn-delete">🗑️ Supprimer</button>
+                            </div>
+                            ${productsTable}
+                        </div>
+                    </div>
+                `;
             }).join('');
         }
 
@@ -1444,10 +1474,15 @@
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     const rows = XLSX.utils.sheet_to_json(firstSheet);
 
+                    console.log('📊 Import Excel - Nombre de lignes:', rows.length);
+                    if (rows.length > 0) {
+                        console.log('📋 Colonnes détectées:', Object.keys(rows[0]));
+                    }
+
                     let imported = 0;
                     let updated = 0;
 
-                    rows.forEach(r => {
+                    rows.forEach((r, index) => {
                         let imageUrl = (r['IMAGE'] || r['Image'] || '').toString().trim();
                         const realName = (r['Real Name'] || r['RealName'] || '').toString().trim();
                         const conventionalName = (r['Conventional Name'] || r['ConventionalName'] || '').toString().trim();
@@ -1459,36 +1494,54 @@
 
                         const name = realName || conventionalName;
                         
-                        if (!name || !reference) return;
+                        if (!name || !reference) {
+                            console.log(`⚠️ Ligne ${index + 2} ignorée: nom ou référence manquant`);
+                            return;
+                        }
 
                         // Convertir l'URL Google Drive
                         if (imageUrl) {
                             imageUrl = convertGoogleDriveUrl(imageUrl);
+                            console.log(`🖼️ Ligne ${index + 2} - Image convertie pour ${name}`);
                         }
 
                         const pdvStock = {};
                         let totalQty = 0;
 
+                        // Rechercher toutes les colonnes qui contiennent "QTY" ou "qty"
                         Object.keys(r).forEach(key => {
-                            if (key.startsWith('QTY ')) {
-                                const pdvName = key.replace('QTY ', '').trim();
+                            const keyLower = key.toLowerCase();
+                            
+                            // Détecter les colonnes QTY (plusieurs formats possibles)
+                            if (keyLower.includes('qty') || keyLower.startsWith('q ')) {
                                 const qty = parseInt(r[key]) || 0;
                                 
-                                let pdv = pdvs.find(p => 
-                                    p.name.toLowerCase() === pdvName.toLowerCase() ||
-                                    p.name.toLowerCase().includes(pdvName.toLowerCase()) ||
-                                    pdvName.toLowerCase().includes(p.name.toLowerCase())
-                                );
+                                if (qty > 0) {
+                                    // Extraire le nom du PDV de la colonne
+                                    let pdvName = key.replace(/^QTY\s*/i, '').replace(/^qty\s*/i, '').trim();
+                                    
+                                    if (pdvName) {
+                                        // Chercher le PDV existant
+                                        let pdv = pdvs.find(p => 
+                                            p.name.toLowerCase() === pdvName.toLowerCase() ||
+                                            p.name.toLowerCase().includes(pdvName.toLowerCase()) ||
+                                            pdvName.toLowerCase().includes(p.name.toLowerCase())
+                                        );
 
-                                if (!pdv && pdvName) {
-                                    const newPdvId = pdvName.toLowerCase().replace(/\s+/g, '-');
-                                    pdv = { id: newPdvId, name: pdvName, location: '' };
-                                    pdvs.push(pdv);
-                                }
+                                        // Si le PDV n'existe pas, le créer
+                                        if (!pdv) {
+                                            const newPdvId = pdvName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                                            pdv = { id: newPdvId, name: pdvName, location: '' };
+                                            pdvs.push(pdv);
+                                            console.log(`✅ Nouveau PDV créé: ${pdvName} (ID: ${newPdvId})`);
+                                        }
 
-                                if (pdv) {
-                                    pdvStock[pdv.id] = qty;
-                                    totalQty += qty;
+                                        if (pdv) {
+                                            pdvStock[pdv.id] = qty;
+                                            totalQty += qty;
+                                            console.log(`📦 ${name} - ${pdv.name}: ${qty} unités`);
+                                        }
+                                    }
                                 }
                             }
                         });
@@ -1507,6 +1560,7 @@
                             existing.pdvStock = pdvStock;
                             existing.quantity = totalQty;
                             updated++;
+                            console.log(`🔄 Produit mis à jour: ${name} (${reference})`);
                         } else {
                             products.push({
                                 id: Date.now().toString() + Math.random(),
@@ -1523,6 +1577,7 @@
                                 pdvStock
                             });
                             imported++;
+                            console.log(`➕ Nouveau produit: ${name} (${reference})`);
                         }
                     });
 
@@ -1535,9 +1590,10 @@
                     if (updated > 0) message += `🔄 ${updated} produit(s) mis à jour\n`;
                     message += `\n📍 ${pdvs.length} point(s) de vente détecté(s)`;
                     
+                    console.log('📊 Résumé:', { imported, updated, totalPdvs: pdvs.length });
                     alert(message);
                 } catch (err) {
-                    console.error('Erreur import:', err);
+                    console.error('❌ Erreur import:', err);
                     alert('❌ Erreur lors de l\'import : ' + err.message);
                 }
             };
