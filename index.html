@@ -701,7 +701,7 @@
             const name = document.getElementById('productName').value.trim();
             const designation = document.getElementById('productDesignation').value.trim();
             const repetition = document.getElementById('productRepetition').value.trim();
-            const imageUrl = document.getElementById('productImage').value.trim();
+            let imageUrl = document.getElementById('productImage').value.trim();
             const qty = parseInt(document.getElementById('productQty').value) || 0;
             const baraka = parseInt(document.getElementById('productBaraka').value) || 0;
             const ghafla = parseInt(document.getElementById('productGhafla').value) || 0;
@@ -709,6 +709,11 @@
             if (!ref || !name || !designation) {
                 alert('❌ Veuillez remplir les champs obligatoires (Référence, Nom, Désignation)');
                 return;
+            }
+
+            // Convertir l'URL Google Drive au format direct
+            if (imageUrl) {
+                imageUrl = convertGoogleDriveUrl(imageUrl);
             }
 
             const product = {
@@ -788,7 +793,7 @@
             });
 
             tbody.innerHTML = filtered.map(p => {
-                const imageUrl = p.imageUrl || '';
+                const imageUrl = p.imageUrl ? convertGoogleDriveUrl(p.imageUrl) : '';
                 const safeName = p.realName.replace(/'/g, "\\'");
                 const safeUrl = imageUrl.replace(/'/g, "\\'");
                 
@@ -799,8 +804,8 @@
                     <td>${p.designation}</td>
                     <td>${p.repetition || '-'}</td>
                     <td>
-                        ${imageUrl ? `<img src="${imageUrl}" alt="${safeName}" style="width: 50px; height: 50px; object-fit: cover; cursor: pointer; border-radius: 4px; display: block;" crossorigin="anonymous" onclick="showImageZoom('${safeUrl}', '${safeName}')" onerror="console.error('Image load error:', this.src); this.style.display='none'; this.nextElementSibling.style.display='inline';">
-                        <span style="color: #e74c3c; display: none; font-size: 12px;">❌ Image introuvable</span>` : '<span style="color: #95a5a6;">📦</span>'}
+                        ${imageUrl ? `<img src="${imageUrl}" alt="${safeName}" style="width: 50px; height: 50px; object-fit: cover; cursor: pointer; border-radius: 4px; display: block; background: #f0f0f0;" crossorigin="anonymous" onclick="showImageZoom('${safeUrl}', '${safeName}')" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display: none; color: #e74c3c; font-size: 10px; text-align: center;">❌ Image<br>introuvable</div>` : '<span style="color: #95a5a6;">📦</span>'}
                     </td>
                     <td><strong>${p.quantity}</strong></td>
                     <td>${p.pdvStock?.albaraka || 0}</td>
@@ -813,7 +818,36 @@
             }).join('');
         }
 
-        function showImageZoom(imageUrl, productName) {
+        function convertGoogleDriveUrl(url) {
+            if (!url) return '';
+            
+            // Si c'est déjà au bon format, retourner tel quel
+            if (url.includes('drive.google.com/uc?export=view') || url.includes('drive.google.com/thumbnail')) {
+                return url;
+            }
+            
+            // Extraire l'ID du lien Google Drive
+            let fileId = '';
+            
+            // Format: https://drive.google.com/file/d/ID/view
+            if (url.includes('/file/d/')) {
+                const match = url.match(/\/file\/d\/([^\/]+)/);
+                if (match) fileId = match[1];
+            }
+            
+            // Format: https://drive.google.com/open?id=ID
+            if (url.includes('open?id=')) {
+                const match = url.match(/open\?id=([^&]+)/);
+                if (match) fileId = match[1];
+            }
+            
+            // Si on a trouvé un ID, retourner l'URL directe
+            if (fileId) {
+                return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
+            }
+            
+            return url;
+        }
             if (!imageUrl) return;
             
             const modal = document.getElementById('imageZoomModal');
@@ -1137,7 +1171,9 @@
                         if (colIndex.image >= 0 && row[colIndex.image]) {
                             imageUrl = String(row[colIndex.image]).trim();
                             imageUrl = imageUrl.replace(/\s+/g, '');
-                            console.log(`Ligne ${i} - Image URL:`, imageUrl);
+                            // Convertir au format direct
+                            imageUrl = convertGoogleDriveUrl(imageUrl);
+                            console.log(`Ligne ${i} - Image URL convertie:`, imageUrl);
                         }
 
                         // Calculer QTY total
