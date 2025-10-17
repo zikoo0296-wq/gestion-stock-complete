@@ -799,8 +799,8 @@
                     <td>${p.designation}</td>
                     <td>${p.repetition || '-'}</td>
                     <td>
-                        ${imageUrl ? `<img src="${imageUrl}" alt="${safeName}" style="width: 50px; height: 50px; object-fit: cover; cursor: pointer; border-radius: 4px;" onclick="showImageZoom('${safeUrl}', '${safeName}')" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
-                        <span style="color: #e74c3c; display: none;">❌ Erreur</span>` : '<span style="color: #95a5a6;">Pas d\'image</span>'}
+                        ${imageUrl ? `<img src="${imageUrl}" alt="${safeName}" style="width: 50px; height: 50px; object-fit: cover; cursor: pointer; border-radius: 4px; display: block;" crossorigin="anonymous" onclick="showImageZoom('${safeUrl}', '${safeName}')" onerror="console.error('Image load error:', this.src); this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                        <span style="color: #e74c3c; display: none; font-size: 12px;">❌ Image introuvable</span>` : '<span style="color: #95a5a6;">📦</span>'}
                     </td>
                     <td><strong>${p.quantity}</strong></td>
                     <td>${p.pdvStock?.albaraka || 0}</td>
@@ -1088,30 +1088,75 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: false, defval: '' });
 
                     if (rows.length < 2) {
                         alert('❌ Le fichier Excel est vide');
                         return;
                     }
 
+                    // Détecter l'ordre des colonnes depuis la première ligne
+                    const headers = rows[0].map(h => String(h).toLowerCase().trim());
+                    console.log('En-têtes détectés:', headers);
+
+                    const colIndex = {
+                        image: headers.indexOf('image'),
+                        realName: headers.findIndex(h => h.includes('real name') || h.includes('nom réel')),
+                        designation: headers.findIndex(h => h.includes('conventional name') || h.includes('désignation')),
+                        reference: headers.findIndex(h => h.includes('référence') || h.includes('reference')),
+                        barcode: headers.indexOf('barcode'),
+                        repetition: headers.findIndex(h => h.includes('repetition') || h.includes('répétition')),
+                        category: headers.indexOf('category'),
+                        brand: headers.indexOf('brand'),
+                        qty: headers.indexOf('qty'),
+                        albaraka: headers.findIndex(h => h.includes('al baraka')),
+                        rochNoire: headers.findIndex(h => h.includes('roche noire')),
+                        alghafla: headers.findIndex(h => h.includes('alghafla'))
+                    };
+
+                    console.log('Index des colonnes:', colIndex);
+
                     let imported = 0;
+                    let skipped = 0;
+                    
                     for (let i = 1; i < rows.length; i++) {
                         const row = rows[i];
-                        if (!row[0] || !row[1] || !row[2]) continue;
+                        
+                        // Vérifier que la ligne a des données essentielles
+                        const realName = row[colIndex.realName] ? String(row[colIndex.realName]).trim() : '';
+                        const reference = row[colIndex.reference] ? String(row[colIndex.reference]).trim() : '';
+                        const designation = row[colIndex.designation] ? String(row[colIndex.designation]).trim() : '';
+
+                        if (!realName && !reference) {
+                            skipped++;
+                            continue;
+                        }
+
+                        // Nettoyer l'URL de l'image
+                        let imageUrl = '';
+                        if (colIndex.image >= 0 && row[colIndex.image]) {
+                            imageUrl = String(row[colIndex.image]).trim();
+                            imageUrl = imageUrl.replace(/\s+/g, '');
+                            console.log(`Ligne ${i} - Image URL:`, imageUrl);
+                        }
+
+                        // Calculer QTY total
+                        const qtyBaraka = parseInt(row[colIndex.albaraka]) || 0;
+                        const qtyGhafla = parseInt(row[colIndex.alghafla]) || 0;
+                        const qtyTotal = row[colIndex.qty] ? parseInt(row[colIndex.qty]) : (qtyBaraka + qtyGhafla);
 
                         const product = {
-                            id: Date.now() + i,
-                            reference: String(row[0]).trim(),
-                            realName: String(row[1]).trim(),
-                            designation: String(row[2]).trim(),
-                            repetition: row[3] ? String(row[3]).trim() : '',
-                            quantity: parseInt(row[4]) || 0,
+                            id: Date.now() + i + Math.random(),
+                            reference: reference || `REF${Date.now()}`,
+                            realName: realName || designation || 'Produit sans nom',
+                            designation: designation || realName || 'Sans désignation',
+                            repetition: row[colIndex.repetition] ? String(row[colIndex.repetition]).trim() : '',
+                            quantity: qtyTotal,
                             pdvStock: {
-                                albaraka: parseInt(row[5]) || 0,
-                                alghafla: parseInt(row[6]) || 0
+                                albaraka: qtyBaraka,
+                                alghafla: qtyGhafla
                             },
-                            imageUrl: row[7] ? String(row[7]).trim() : ''
+                            imageUrl: imageUrl
                         };
 
                         products.push(product);
@@ -1123,8 +1168,15 @@
                     updateMovementProductSelect();
                     updateTransferProductSelect();
                     updateDashboard();
-                    alert(`✅ Import réussi ! ${imported} produit(s) importé(s)`);
+                    
+                    let message = `✅ Import réussi !\n\n📦 ${imported} produit(s) importé(s)`;
+                    if (skipped > 0) {
+                        message += `\n⚠️ ${skipped} ligne(s) ignorée(s) (données incomplètes)`;
+                    }
+                    alert(message);
+                    
                 } catch (error) {
+                    console.error('Erreur import:', error);
                     alert('❌ Erreur lors de l\'import: ' + error.message);
                 }
             };
