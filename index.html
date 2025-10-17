@@ -3,262 +3,258 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Pro - Gestion Interne</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title>Stock Pro - Gestion Complète</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root {
-            --primary: #667eea;
-            --secondary: #764ba2;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --dark: #1f2937;
-            --gray: #6b7280;
-            --light: #f3f4f6;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        body { font-family: 'Segoe UI', sans-serif; background: #f9fafb; }
-        .sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 260px;
-            height: 100vh;
-            background: linear-gradient(180deg, var(--primary), var(--secondary));
-            color: white;
-            overflow-y: auto;
-            z-index: 1000;
-        }
-        .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .logo { display: flex; align-items: center; gap: 10px; }
-        .logo-icon { font-size: 2rem; }
-        .logo-text { font-size: 1.5rem; font-weight: bold; }
-        .user-profile {
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .user-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-        .user-name { font-weight: 600; }
-        .user-email { font-size: 0.85rem; opacity: 0.8; }
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 20px;
-            color: white;
-            text-decoration: none;
-            transition: 0.3s;
-            cursor: pointer;
-        }
-        .nav-item:hover, .nav-item.active {
-            background: rgba(255,255,255,0.1);
-            border-left: 4px solid white;
-        }
-        .nav-icon { font-size: 1.2rem; }
-        .main-content {
-            margin-left: 260px;
-            padding: 30px;
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            padding: 20px;
         }
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
         }
-        .page-title { font-size: 2rem; font-weight: bold; color: var(--dark); }
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: 0.3s;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            padding: 30px;
+            text-align: center;
         }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
-        .btn-success { background: var(--success); color: white; }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-edit { background: #3b82f6; color: white; padding: 6px 12px; border-radius: 6px; margin-right: 5px; border: none; cursor: pointer; }
-        .btn-delete { background: #ef4444; color: white; padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
         }
-        .stat-card {
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab.active {
             background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            transition: 0.3s;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
         }
-        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
-        .stat-label { font-size: 0.9rem; color: var(--gray); margin-bottom: 8px; }
-        .stat-value { font-size: 2rem; font-weight: bold; }
-        .stat-card.blue .stat-value { color: #3b82f6; }
-        .stat-card.green .stat-value { color: var(--success); }
-        .stat-card.red .stat-value { color: var(--danger); }
-        .stat-card.orange .stat-value { color: var(--warning); }
-        .card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.5s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
             margin-bottom: 20px;
         }
-        .card-header {
-            padding: 20px;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
         }
-        .card-title { font-size: 1.2rem; font-weight: 600; color: var(--dark); }
-        .card-body { padding: 20px; }
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .form-group { display: flex; flex-direction: column; }
-        .form-label { font-weight: 600; margin-bottom: 6px; color: var(--dark); }
+
         .form-input, .form-select {
-            padding: 10px;
-            border: 1px solid #d1d5db;
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 1rem;
+            font-size: 14px;
+            transition: border-color 0.3s;
         }
+
         .form-input:focus, .form-select:focus {
             outline: none;
-            border-color: var(--primary);
+            border-color: #667eea;
         }
-        .table-container { overflow-x: auto; }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
+
         thead {
-            background: var(--light);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
-        th {
-            padding: 12px;
+
+        th, td {
+            padding: 15px;
             text-align: left;
-            font-weight: 600;
-            color: var(--dark);
         }
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #e5e7eb;
+
+        tbody tr {
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.3s;
         }
-        tr:hover { background: #f9fafb; }
-        .custom-select-container {
-            position: relative;
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
             width: 100%;
-            z-index: 10;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
         }
-        .custom-select-button {
-            width: 100%;
-            padding: 10px 35px 10px 10px;
-            border: 1px solid #d1d5db;
+
+        .alert {
+            padding: 15px;
             border-radius: 8px;
-            background: white;
-            text-align: left;
-            cursor: pointer;
-            font-size: 1rem;
-            position: relative;
-            user-select: none;
-            -webkit-user-select: none;
-            pointer-events: auto !important;
+            margin-bottom: 20px;
         }
-        .custom-select-button:hover {
-            border-color: #667eea;
-            background: #f9fafb;
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
-        .custom-select-button:active {
-            background: #f3f4f6;
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
-        .custom-select-button::after {
-            content: '▼';
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.8rem;
-            color: #6b7280;
-            pointer-events: none;
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
         }
-        .custom-select-button.open::after {
-            content: '▲';
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
         }
-        .custom-select-dropdown {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            margin-top: 4px;
-            background: white;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 9999;
-            max-height: 400px;
-        }
-        .custom-select-dropdown.show {
-            display: block;
-        }
-        .custom-select-search {
-            padding: 12px;
-            border-bottom: 1px solid #e5e7eb;
-            position: sticky;
-            top: 0;
-            background: white;
-            z-index: 1;
-        }
-        .custom-select-search input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 0.95rem;
-        }
-        .custom-select-search input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .custom-select-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .custom-select-item {
-            padding: 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #f3f4f6;
-        }
-        .custom-select-item:hover {
-            background: #f9fafb;
-        }
-        .custom-select-item.selected {
-            background: #ede9fe;
-            font-weight: 600;
-        }
+
         .modal {
             display: none;
             position: fixed;
@@ -266,1057 +262,823 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 2000;
-            align-items: center;
+            background: rgba(0,0,0,0.8);
             justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s;
         }
+
         .modal-content {
             background: white;
             padding: 30px;
-            border-radius: 12px;
-            max-width: 600px;
+            border-radius: 15px;
+            max-width: 500px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
         }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+
+        .modal img {
+            max-width: 100%;
+            border-radius: 10px;
         }
-        .modal-title { font-size: 1.5rem; font-weight: bold; }
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
+
+        .close-modal {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
             cursor: pointer;
-            color: var(--gray);
+            color: #999;
         }
-        .img-zoom {
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        #imageZoomModal {
+            display: none;
             position: fixed;
-            top: 0;
+            z-index: 2000;
             left: 0;
+            top: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.95);
-            display: flex;
-            align-items: center;
+            background-color: rgba(0,0,0,0.9);
             justify-content: center;
-            z-index: 10000;
-            cursor: zoom-out;
-            animation: fadeIn 0.2s;
+            align-items: center;
         }
-        .img-zoom img {
+
+        #imageZoomModal img {
             max-width: 90%;
             max-height: 90%;
             object-fit: contain;
-            border-radius: 8px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            border-radius: 10px;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+
+        .image-caption {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 18px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 5px;
         }
-        .section { display: none; }
-        .section.active { display: block; }
-        .search-input {
-            padding: 10px 15px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            width: 100%;
+
+        .filter-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
             margin-bottom: 15px;
         }
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        .badge-success { background: #d1fae5; color: #065f46; }
-        .badge-danger { background: #fee2e2; color: #991b1b; }
-        .badge-warning { background: #fef3c7; color: #92400e; }
     </style>
 </head>
 <body>
-    <!-- PAGE DE CONNEXION - USERNAME ET PASSWORD UNIQUEMENT -->
-    <div id="loginPage" style="display:flex;justify-content:center;align-items:center;min-height:100vh;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div style="background:white;padding:40px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);width:400px;max-width:90%;">
-            <div style="text-align:center;margin-bottom:30px;">
-                <div style="font-size:3rem;margin-bottom:10px;">📦</div>
-                <h1 style="font-size:2rem;color:#1f2937;margin:0;">Stock Pro</h1>
-                <p style="color:#6b7280;margin-top:10px;">Connexion</p>
-            </div>
-            <form onsubmit="handleLogin(event)">
-                <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Nom d'utilisateur</label>
-                    <input type="text" id="login-username" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
-                           placeholder="Entrez votre username"
-                           autocomplete="username"
-                           onfocus="this.style.borderColor='#667eea'" 
-                           onblur="this.style.borderColor='#e5e7eb'">
-                </div>
-                <div style="margin-bottom:25px;">
-                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Mot de passe</label>
-                    <input type="password" id="login-password" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
-                           placeholder="Entrez votre mot de passe"
-                           autocomplete="current-password"
-                           onfocus="this.style.borderColor='#667eea'" 
-                           onblur="this.style.borderColor='#e5e7eb'">
-                </div>
-                <button type="submit" 
-                        style="width:100%;padding:14px;background:linear-gradient(135deg, #667eea, #764ba2);color:white;border:none;border-radius:8px;font-size:1.1rem;font-weight:600;cursor:pointer;transition:all 0.3s;"
-                        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(102,126,234,0.4)'"
-                        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
-                    🔓 Se connecter
-                </button>
-            </form>
-            <div style="margin-top:25px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center;">
-                <p style="color:#9ca3af;font-size:0.85rem;margin:0;">
-                    🔒 Application privée - Accès réservé
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- APPLICATION PRINCIPALE -->
-    <div id="mainApp" style="display:none;">
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo">
-                <div class="logo-icon">📦</div>
-                <div class="logo-text">Stock Pro</div>
-            </div>
-        </div>
-        <div class="user-profile">
-            <div class="user-avatar">👤</div>
-            <div>
-                <div class="user-name" id="user-name">Utilisateur</div>
-                <div class="user-email" id="user-email">user@example.com</div>
-            </div>
-        </div>
-        <nav>
-            <div class="nav-item active" onclick="showSection('dashboard')">
-                <span class="nav-icon">📊</span>
-                <span>Dashboard</span>
-            </div>
-            <div class="nav-item" onclick="showSection('products')">
-                <span class="nav-icon">📦</span>
-                <span>Produits</span>
-            </div>
-            <div class="nav-item" onclick="showSection('movements')">
-                <span class="nav-icon">🔄</span>
-                <span>Mouvements</span>
-            </div>
-            <div class="nav-item" onclick="showSection('transfer')">
-                <span class="nav-icon">🚚</span>
-                <span>Transferts</span>
-            </div>
-            <div class="nav-item" onclick="showSection('pdv')">
-                <span class="nav-icon">🏪</span>
-                <span>Points de Vente</span>
-            </div>
-            <div class="nav-item" onclick="showSection('history')">
-                <span class="nav-icon">📜</span>
-                <span>Historique</span>
-            </div>
-            <div class="nav-item" onclick="logout()">
-                <span class="nav-icon">🚪</span>
-                <span>Déconnexion</span>
-            </div>
-        </nav>
-    </div>
-
-    <div class="main-content">
-        <!-- DASHBOARD -->
-        <div id="dashboard" class="section active">
-            <div class="top-bar">
-                <h1 class="page-title">📊 Dashboard</h1>
-            </div>
-            <div id="dash-content"></div>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Stock Pro</h1>
+            <p>Gestion Complète de Stock</p>
         </div>
 
-        <!-- PRODUITS -->
-        <div id="products" class="section">
-            <div class="top-bar">
-                <h1 class="page-title">📦 Gestion des Produits</h1>
-                <div>
-                    <button class="btn btn-success" onclick="openModal('productModal')">➕ Nouveau Produit</button>
-                    <button class="btn btn-primary" onclick="document.getElementById('importFile').click()">📥 Importer Excel</button>
-                    <button class="btn btn-primary" onclick="exportToExcel()">📤 Exporter Excel</button>
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+            <button class="tab" onclick="switchTab('products')">📦 Produits</button>
+            <button class="tab" onclick="switchTab('movements')">🔄 Mouvements</button>
+            <button class="tab" onclick="switchTab('history')">📜 Historique</button>
+            <button class="tab" onclick="switchTab('pdv')">🏪 Points de Vente</button>
+            <button class="tab" onclick="switchTab('transfer')">🚚 Transferts</button>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="tab-content active">
+            <h2>📊 Tableau de Bord</h2>
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>Total Produits</h3>
+                    <div class="value" id="totalProducts">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Stock Total</h3>
+                    <div class="value" id="totalStock">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Mouvements</h3>
+                    <div class="value" id="totalMovements">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Points de Vente</h3>
+                    <div class="value" id="totalPdv">2</div>
                 </div>
             </div>
-            <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none;" onchange="handleImport(event)">
-            <div class="card">
-                <div class="card-body">
-                    <input type="text" id="prod-search" class="search-input" placeholder="🔍 Rechercher par nom, référence, barcode...">
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Image</th>
-                                    <th>Nom</th>
-                                    <th>Référence</th>
-                                    <th>Barcode</th>
-                                    <th>Stock Total</th>
-                                    <th>Répétition</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="prod-body"></tbody>
-                        </table>
+        </div>
+
+        <!-- Produits -->
+        <div id="products" class="tab-content">
+            <h2>📦 Gestion des Produits</h2>
+            
+            <div class="search-box">
+                <input type="text" id="searchProduct" placeholder="🔍 Rechercher un produit..." oninput="searchProducts()">
+            </div>
+
+            <button class="btn btn-primary" onclick="showAddProductForm()">➕ Nouveau Produit</button>
+            <button class="btn btn-success" onclick="exportToExcel()">📥 Exporter Excel</button>
+            <button class="btn btn-info" onclick="document.getElementById('importFile').click()">📤 Importer Excel</button>
+            <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none" onchange="importFromExcel(event)">
+
+            <div id="productFormDiv" style="display:none; margin-top: 20px; background: #f8f9fa; padding: 20px; border-radius: 10px;">
+                <h3 id="formTitle">➕ Ajouter un Produit</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Référence *</label>
+                        <input type="text" id="productRef" class="form-input" placeholder="REF001">
+                    </div>
+                    <div class="form-group">
+                        <label>Nom Réel *</label>
+                        <input type="text" id="productName" class="form-input" placeholder="Nom du produit">
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- MOUVEMENTS -->
-        <div id="movements" class="section">
-            <div class="top-bar">
-                <h1 class="page-title">🔄 Gestion des Mouvements</h1>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Nouveau Mouvement</h3>
-                </div>
-                <div class="card-body">
-                    <form onsubmit="addMovement(event)">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label">Type *</label>
-                                <select id="mov-type" class="form-select" required onchange="togglePdvSelect()">
-                                    <option value="">Sélectionner...</option>
-                                    <option value="in">Entrée (+)</option>
-                                    <option value="out">Sortie (-)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Produit *</label>
-                                <input type="text" 
-                                       list="mov-products-datalist" 
-                                       id="mov-product-input"
-                                       class="form-input" 
-                                       placeholder="🔍 Cliquez ici et tapez pour chercher..."
-                                       autocomplete="off"
-                                       oninput="updateMovProductSelection()"
-                                       required>
-                                <datalist id="mov-products-datalist">
-                                </datalist>
-                                <input type="hidden" id="mov-product" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Point de Vente *</label>
-                                <select id="mov-pdv" class="form-select" required>
-                                    <option value="">Sélectionner...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Quantité *</label>
-                                <input type="number" id="mov-quantity" class="form-input" min="1" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Mode de Paiement *</label>
-                                <select id="mov-payment" class="form-select" required>
-                                    <option value="">Sélectionner...</option>
-                                    <option value="Espèce">Espèce</option>
-                                    <option value="Virement">Virement</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Raison</label>
-                                <input type="text" id="mov-reason" class="form-input" placeholder="Facultatif">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Note</label>
-                            <input type="text" id="mov-note" class="form-input" placeholder="Facultatif">
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="margin-top:15px;">✅ Enregistrer</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- TRANSFERTS -->
-        <div id="transfer" class="section">
-            <div class="top-bar">
-                <h1 class="page-title">🚚 Transferts entre PDV</h1>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Nouveau Transfert</h3>
-                </div>
-                <div class="card-body">
-                    <form onsubmit="addTransfer(event)">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label">Produit *</label>
-                                <input type="text" 
-                                       list="trans-products-datalist" 
-                                       id="trans-product-input"
-                                       class="form-input" 
-                                       placeholder="🔍 Cliquez ici et tapez pour chercher..."
-                                       autocomplete="off"
-                                       oninput="updateTransProductSelection()"
-                                       required>
-                                <datalist id="trans-products-datalist">
-                                </datalist>
-                                <input type="hidden" id="trans-product" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">De (Source) *</label>
-                                <select id="trans-from" class="form-select" required>
-                                    <option value="">Sélectionner...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Vers (Destination) *</label>
-                                <select id="trans-to" class="form-select" required>
-                                    <option value="">Sélectionner...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Quantité *</label>
-                                <input type="number" id="trans-quantity" class="form-input" min="1" required>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Note</label>
-                            <input type="text" id="trans-note" class="form-input" placeholder="Facultatif">
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="margin-top:15px;">🚚 Transférer</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- POINTS DE VENTE -->
-        <div id="pdv" class="section">
-            <div class="top-bar">
-                <h1 class="page-title">🏪 Points de Vente</h1>
-                <button class="btn btn-success" onclick="openModal('pdvModal')">➕ Nouveau PDV</button>
-            </div>
-            <div class="card">
-                <div class="card-body">
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Nom</th>
-                                    <th>Emplacement</th>
-                                    <th>Stock Total</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="pdvList"></tbody>
-                        </table>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Désignation *</label>
+                        <input type="text" id="productDesignation" class="form-input" placeholder="Description">
+                    </div>
+                    <div class="form-group">
+                        <label>Répétition</label>
+                        <input type="text" id="productRepetition" class="form-input" placeholder="Répétition">
                     </div>
                 </div>
+                <div class="form-group">
+                    <label>URL Image (Google Drive)</label>
+                    <input type="text" id="productImage" class="form-input" placeholder="https://drive.google.com/uc?export=view&id=...">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Quantité Totale</label>
+                        <input type="number" id="productQty" class="form-input" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Al Baraka</label>
+                        <input type="number" id="productBaraka" class="form-input" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Alghafla</label>
+                        <input type="number" id="productGhafla" class="form-input" value="0" min="0">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="saveProduct()">💾 Enregistrer</button>
+                <button class="btn btn-danger" onclick="cancelProductForm()">❌ Annuler</button>
             </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Référence</th>
+                        <th>Nom Réel</th>
+                        <th>Désignation</th>
+                        <th>Répétition</th>
+                        <th>Image</th>
+                        <th>QTY Total</th>
+                        <th>Al Baraka</th>
+                        <th>Alghafla</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="productList"></tbody>
+            </table>
         </div>
 
-        <!-- HISTORIQUE -->
-        <div id="history" class="section">
-            <div class="top-bar">
-                <h1 class="page-title">📜 Historique des Mouvements</h1>
-            </div>
-            <div class="card">
-                <div class="card-body">
-                    <div class="form-grid">
-                        <input type="text" id="hs" class="form-input" placeholder="🔍 Rechercher...">
-                        <input type="date" id="hd" class="form-input" placeholder="Date">
-                        <select id="hm" class="form-select">
-                            <option value="">Tous les mois</option>
-                            <option value="0">Janvier</option>
-                            <option value="1">Février</option>
-                            <option value="2">Mars</option>
-                            <option value="3">Avril</option>
-                            <option value="4">Mai</option>
-                            <option value="5">Juin</option>
-                            <option value="6">Juillet</option>
-                            <option value="7">Août</option>
-                            <option value="8">Septembre</option>
-                            <option value="9">Octobre</option>
-                            <option value="10">Novembre</option>
-                            <option value="11">Décembre</option>
+        <!-- Mouvements -->
+        <div id="movements" class="tab-content">
+            <h2>🔄 Enregistrer un Mouvement</h2>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Type de Mouvement *</label>
+                        <select id="movementType" class="form-select">
+                            <option value="Entrée">📥 Entrée (Ajout de stock)</option>
+                            <option value="Sortie">📤 Sortie (Retrait de stock)</option>
                         </select>
-                        <select id="hy" class="form-select">
-                            <option value="">Toutes les années</option>
+                    </div>
+                    <div class="form-group">
+                        <label>Point de Vente *</label>
+                        <select id="movementPdv" class="form-select">
+                            <option value="">-- Sélectionner --</option>
+                            <option value="Al Baraka">Al Baraka</option>
+                            <option value="Alghafla">Alghafla</option>
                         </select>
-                        <button class="btn btn-primary" onclick="rstHist()">🔄 Réinitialiser</button>
                     </div>
-                    <div class="table-container" style="margin-top:20px;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Type</th>
-                                    <th>Raison</th>
-                                    <th>Produit</th>
-                                    <th>Quantité</th>
-                                    <th>PDV/Paiement</th>
-                                    <th>Note</th>
-                                </tr>
-                            </thead>
-                            <tbody id="hist-body"></tbody>
-                        </table>
+                    <div class="form-group">
+                        <label>Mode de Paiement *</label>
+                        <select id="movementPayment" class="form-select">
+                            <option value="">-- Sélectionner --</option>
+                            <option value="Espèce">💵 Espèce</option>
+                            <option value="Virement">🏦 Virement</option>
+                        </select>
                     </div>
                 </div>
+
+                <div class="form-group">
+                    <label>Produit *</label>
+                    <select id="movementProduct" class="form-select">
+                        <option value="">-- Sélectionner un produit --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Quantité *</label>
+                    <input type="number" id="movementQty" class="form-input" min="1" placeholder="Quantité">
+                </div>
+
+                <div class="form-group">
+                    <label>Remarque</label>
+                    <textarea id="movementNote" class="form-input" rows="3" placeholder="Remarque optionnelle..."></textarea>
+                </div>
+
+                <button class="btn btn-primary" onclick="saveMovement()">💾 Enregistrer le Mouvement</button>
+            </div>
+        </div>
+
+        <!-- Historique -->
+        <div id="history" class="tab-content">
+            <h2>📜 Historique des Mouvements</h2>
+            
+            <div class="filter-section">
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label>🔍 Recherche</label>
+                        <input type="text" id="histSearch" class="form-input" placeholder="Produit, PDV..." oninput="filtHist()">
+                    </div>
+                    <div class="form-group">
+                        <label>📅 Date</label>
+                        <input type="date" id="histDate" class="form-input" onchange="filtHist()">
+                    </div>
+                    <div class="form-group">
+                        <label>📆 Mois</label>
+                        <input type="month" id="histMonth" class="form-input" onchange="filtHist()">
+                    </div>
+                    <div class="form-group">
+                        <label>📅 Année</label>
+                        <input type="number" id="histYear" class="form-input" placeholder="2024" onchange="filtHist()">
+                    </div>
+                </div>
+                <button class="btn btn-warning" onclick="clearHistFilters()">🔄 Réinitialiser les filtres</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Produit</th>
+                        <th>Quantité</th>
+                        <th>Point de Vente</th>
+                        <th>Mode Paiement</th>
+                        <th>Remarque</th>
+                    </tr>
+                </thead>
+                <tbody id="historyList"></tbody>
+            </table>
+        </div>
+
+        <!-- Points de Vente -->
+        <div id="pdv" class="tab-content">
+            <h2>🏪 Points de Vente</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Point de Vente</th>
+                        <th>Stock Total</th>
+                        <th>Nombre de Produits</th>
+                    </tr>
+                </thead>
+                <tbody id="pdvList"></tbody>
+            </table>
+        </div>
+
+        <!-- Transferts -->
+        <div id="transfer" class="tab-content">
+            <h2>🚚 Transfert entre Points de Vente</h2>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Source *</label>
+                        <select id="transferSource" class="form-select">
+                            <option value="">-- Sélectionner --</option>
+                            <option value="Al Baraka">Al Baraka</option>
+                            <option value="Alghafla">Alghafla</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Destination *</label>
+                        <select id="transferDest" class="form-select">
+                            <option value="">-- Sélectionner --</option>
+                            <option value="Al Baraka">Al Baraka</option>
+                            <option value="Alghafla">Alghafla</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Produit *</label>
+                    <select id="transferProduct" class="form-select">
+                        <option value="">-- Sélectionner un produit --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Quantité *</label>
+                    <input type="number" id="transferQty" class="form-input" min="1" placeholder="Quantité à transférer">
+                </div>
+
+                <button class="btn btn-primary" onclick="saveTransfer()">🚚 Effectuer le Transfert</button>
             </div>
         </div>
     </div>
-    </div>
-    <!-- FIN APPLICATION PRINCIPALE -->
 
-    <!-- MODALS -->
-    <!-- MODAL PRODUIT -->
-    <div id="productModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Ajouter un Produit</h2>
-                <button class="close-btn" onclick="closeModal('productModal')">✖</button>
-            </div>
-            <form onsubmit="saveProduct(event)">
-                <input type="hidden" id="edit-id">
-                <div class="form-group">
-                    <label class="form-label">Nom du Produit *</label>
-                    <input type="text" id="p-name" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Référence *</label>
-                    <input type="text" id="p-ref" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Répétition</label>
-                    <input type="text" id="p-rep" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">URL Image Google Drive</label>
-                    <input type="url" id="p-img" class="form-input" placeholder="https://drive.google.com/uc?export=view&id=...">
-                </div>
-                <button type="submit" class="btn btn-primary" style="margin-top:15px;">💾 Enregistrer</button>
-            </form>
-        </div>
+    <!-- Modal Zoom Image -->
+    <div id="imageZoomModal" onclick="closeImageZoom()">
+        <span class="close-modal" style="position: absolute; top: 20px; right: 40px; font-size: 40px; color: white; cursor: pointer;">&times;</span>
+        <img id="zoomedImage" alt="Image agrandie">
+        <div class="image-caption" id="imageCaption"></div>
     </div>
 
-    <!-- MODAL PDV -->
-    <div id="pdvModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Ajouter un Point de Vente</h2>
-                <button class="close-btn" onclick="closeModal('pdvModal')">✖</button>
-            </div>
-            <form onsubmit="savePdv(event)">
-                <input type="hidden" id="pdv-edit-id">
-                <div class="form-group">
-                    <label class="form-label">Nom du PDV *</label>
-                    <input type="text" id="pdv-name" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Emplacement</label>
-                    <input type="text" id="pdv-location" class="form-input">
-                </div>
-                <button type="submit" class="btn btn-primary" style="margin-top:15px;">💾 Enregistrer</button>
-            </form>
-        </div>
-    </div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-        // ========== COMPTES UTILISATEURS - MODIFIEZ ICI ==========
-        const USERS = [
-            { username: 'admin', password: 'admin123', fullName: 'Administrateur', role: 'admin' },
-            { username: 'agent1', password: 'pass123', fullName: 'Agent 1', role: 'agent' },
-            { username: 'agent2', password: 'pass456', fullName: 'Agent 2', role: 'agent' }
+        let products = [];
+        let movements = [];
+        let searchTerm = '';
+        let editingProductId = null;
+        const pdvs = [
+            { name: 'Al Baraka', id: 'albaraka' },
+            { name: 'Alghafla', id: 'alghafla' }
         ];
-        // Pour ajouter un employé : { username: 'nouveau', password: 'mdp123', fullName: 'Nom Complet', role: 'agent' }
-        
-        let products = JSON.parse(localStorage.getItem('products')) || [];
-        let pdvs = JSON.parse(localStorage.getItem('pdvs')) || [
-            {id: 'al-baraka', name: 'Al Baraka', location: 'Centre-ville'},
-            {id: 'alghafla', name: 'Alghafla', location: 'Zone industrielle'}
-        ];
-        let movements = JSON.parse(localStorage.getItem('movements')) || [];
 
-        function checkAuth() {
-            const user = JSON.parse(localStorage.getItem('currentUser'));
-            if (!user) {
-                showLoginPage();
-                return false;
-            }
-            const userExists = USERS.find(u => u.username === user.username);
-            if (!userExists) {
-                localStorage.removeItem('currentUser');
-                showLoginPage();
-                return false;
-            }
-            document.getElementById('user-name').textContent = user.fullName;
-            document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur' : 'Agent';
-            document.getElementById('loginPage').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'block';
-            return true;
-        }
+        // Chargement initial
+        window.onload = function() {
+            loadData();
+            updateDashboard();
+            renderProducts();
+            renderHistory();
+            renderPdv();
+            updateMovementProductSelect();
+            updateTransferProductSelect();
+        };
 
-        function showLoginPage() {
-            document.getElementById('loginPage').style.display = 'flex';
-            document.getElementById('mainApp').style.display = 'none';
-        }
-
-        function handleLogin(event) {
-            event.preventDefault();
-            const username = document.getElementById('login-username').value.trim();
-            const password = document.getElementById('login-password').value;
-
-            const user = USERS.find(u => u.username === username && u.password === password);
-
-            if (user) {
-                const userSession = {
-                    username: user.username,
-                    fullName: user.fullName,
-                    role: user.role
-                };
-                localStorage.setItem('currentUser', JSON.stringify(userSession));
-                document.getElementById('user-name').textContent = user.fullName;
-                document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur' : 'Agent';
-                document.getElementById('loginPage').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'block';
-                renderDash();
-            } else {
-                alert('❌ Nom d\'utilisateur ou mot de passe incorrect !');
+        function loadData() {
+            const saved = localStorage.getItem('stockProData');
+            if (saved) {
+                const data = JSON.parse(saved);
+                products = data.products || [];
+                movements = data.movements || [];
             }
         }
 
-        window.addEventListener('DOMContentLoaded', function() {
-            if (!checkAuth()) {
+        function saveData() {
+            localStorage.setItem('stockProData', JSON.stringify({
+                products,
+                movements
+            }));
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+            
+            if (tabName === 'dashboard') updateDashboard();
+            if (tabName === 'products') renderProducts();
+            if (tabName === 'history') renderHistory();
+            if (tabName === 'pdv') renderPdv();
+        }
+
+        function updateDashboard() {
+            document.getElementById('totalProducts').textContent = products.length;
+            document.getElementById('totalStock').textContent = products.reduce((sum, p) => sum + p.quantity, 0);
+            document.getElementById('totalMovements').textContent = movements.length;
+        }
+
+        function showAddProductForm() {
+            document.getElementById('productFormDiv').style.display = 'block';
+            document.getElementById('formTitle').textContent = '➕ Ajouter un Produit';
+            editingProductId = null;
+            clearProductForm();
+        }
+
+        function cancelProductForm() {
+            document.getElementById('productFormDiv').style.display = 'none';
+            clearProductForm();
+            editingProductId = null;
+        }
+
+        function clearProductForm() {
+            document.getElementById('productRef').value = '';
+            document.getElementById('productName').value = '';
+            document.getElementById('productDesignation').value = '';
+            document.getElementById('productRepetition').value = '';
+            document.getElementById('productImage').value = '';
+            document.getElementById('productQty').value = 0;
+            document.getElementById('productBaraka').value = 0;
+            document.getElementById('productGhafla').value = 0;
+        }
+
+        function saveProduct() {
+            const ref = document.getElementById('productRef').value.trim();
+            const name = document.getElementById('productName').value.trim();
+            const designation = document.getElementById('productDesignation').value.trim();
+            const repetition = document.getElementById('productRepetition').value.trim();
+            const imageUrl = document.getElementById('productImage').value.trim();
+            const qty = parseInt(document.getElementById('productQty').value) || 0;
+            const baraka = parseInt(document.getElementById('productBaraka').value) || 0;
+            const ghafla = parseInt(document.getElementById('productGhafla').value) || 0;
+
+            if (!ref || !name || !designation) {
+                alert('❌ Veuillez remplir les champs obligatoires (Référence, Nom, Désignation)');
                 return;
             }
-            renderDash();
-        });
 
-        function save() {
-            localStorage.setItem('products', JSON.stringify(products));
-            localStorage.setItem('pdvs', JSON.stringify(pdvs));
-            localStorage.setItem('movements', JSON.stringify(movements));
-        }
-
-        function showSection(sec) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById(sec).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-
-            if (sec === 'dashboard') renderDash();
-            if (sec === 'products') renderProds();
-            if (sec === 'movements') { renderMovForm(); }
-            if (sec === 'transfer') { renderTransForm(); }
-            if (sec === 'pdv') renderPdv();
-            if (sec === 'history') renderHist();
-        }
-
-        function renderDash() {
-            const total = products.length;
-            const stock = products.reduce((sum, p) => sum + (p.quantity || 0), 0);
-            const low = products.filter(p => (p.quantity || 0) < 10).length;
-
-            document.getElementById('dash-content').innerHTML = `
-                <input type="text" id="dash-search" class="search-input" placeholder="🔍 Rechercher..." style="width:100%;">
-                <div class="stats-grid">
-                    <div class="stat-card blue"><div class="stat-label">Total Produits</div><div class="stat-value">${total}</div></div>
-                    <div class="stat-card green"><div class="stat-label">Stock Total</div><div class="stat-value">${stock}</div></div>
-                    <div class="stat-card red"><div class="stat-label">Alertes Stock</div><div class="stat-value">${low}</div></div>
-                    <div class="stat-card orange"><div class="stat-label">Points de Vente</div><div class="stat-value">${pdvs.length}</div></div>
-                </div>
-                <div class="card">
-                    <div class="card-header"><h3 class="card-title">🚨 Alertes Stock (< 10 unités)</h3></div>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Produit</th><th>Référence</th><th>Stock</th></tr></thead>
-                            <tbody id="dash-body">${renderAlerts(products.filter(p => (p.quantity || 0) < 10))}</tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-            document.getElementById('dash-search').oninput = function() {
-                const s = this.value.toLowerCase();
-                const f = products.filter(p => (p.quantity || 0) < 10 && (p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s)));
-                document.getElementById('dash-body').innerHTML = renderAlerts(f);
-            };
-        }
-
-        function renderAlerts(list) {
-            if (list.length === 0) return '<tr><td colspan="3" style="text-align:center;">Aucune alerte</td></tr>';
-            return list.map(p => `<tr><td><strong>${p.name}</strong></td><td>${p.reference}</td><td><span class="badge badge-danger">${p.quantity || 0}</span></td></tr>`).join('');
-        }
-
-        function renderProds() {
-            const tbody = document.getElementById('prod-body');
-            if (!tbody) return;
-            
-            console.log('Rendering products:', products.length);
-            
-            tbody.innerHTML = products.map(p => {
-                let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
-                
-                if (p.imageUrl) {
-                    let url = p.imageUrl.toString().trim();
-                    console.log('Image URL:', url);
-                    
-                    if (url.length > 0) {
-                        imgHtml = `<img src="${url}" 
-                                        style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;" 
-                                        onclick="zoomImg('${url.replace(/'/g, "\\'")}')"
-                                        onerror="console.error('Image failed to load:', '${url}');this.onerror=null;this.outerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;\\'>📦</div>';"
-                                        onload="console.log('Image loaded successfully:', '${url}')"
-                                        alt="${p.name}">`;
-                    }
+            const product = {
+                id: editingProductId || Date.now(),
+                reference: ref,
+                realName: name,
+                designation: designation,
+                repetition: repetition,
+                imageUrl: imageUrl,
+                quantity: qty,
+                pdvStock: {
+                    albaraka: baraka,
+                    alghafla: ghafla
                 }
-                
-                return `<tr>
-                    <td style="text-align:center;">${imgHtml}</td>
-                    <td><strong>${p.name}</strong></td>
-                    <td>${p.reference}</td>
-                    <td>${p.barcode || '-'}</td>
-                    <td><span class="badge badge-success">${p.quantity || 0}</span></td>
-                    <td>${p.repetition || '-'}</td>
-                    <td>
-                        <button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button>
-                        <button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button>
-                    </td>
-                </tr>`;
-            }).join('');
-
-            document.getElementById('prod-search').oninput = function() {
-                const s = this.value.toLowerCase();
-                const filtered = products.filter(p => 
-                    p.name.toLowerCase().includes(s) || 
-                    p.reference.toLowerCase().includes(s) || 
-                    (p.barcode && p.barcode.toString().toLowerCase().includes(s))
-                );
-                
-                tbody.innerHTML = filtered.map(p => {
-                    let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
-                    
-                    if (p.imageUrl) {
-                        let url = p.imageUrl.toString().trim();
-                        if (url.length > 0) {
-                            imgHtml = `<img src="${url}" 
-                                            style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;" 
-                                            onclick="zoomImg('${url.replace(/'/g, "\\'")}')"
-                                            onerror="this.onerror=null;this.outerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;\\'>📦</div>';"
-                                            alt="${p.name}">`;
-                        }
-                    }
-                    
-                    return `<tr><td style="text-align:center;">${imgHtml}</td><td><strong>${p.name}</strong></td><td>${p.reference}</td><td>${p.barcode || '-'}</td><td><span class="badge badge-success">${p.quantity || 0}</span></td><td>${p.repetition || '-'}</td><td><button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button><button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button></td></tr>`;
-                }).join('');
             };
-        }
 
-        function zoomImg(url) {
-            if (!url || url.trim().length === 0) {
-                alert('❌ Aucune image disponible');
-                return;
-            }
-            
-            const cleanUrl = url.trim();
-            const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:10000;cursor:pointer;';
-            
-            const img = document.createElement('img');
-            img.src = cleanUrl;
-            img.style.cssText = 'max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
-            img.onerror = function() {
-                overlay.remove();
-                alert('❌ Impossible de charger l\'image.\n\nURL: ' + cleanUrl + '\n\nVérifiez que:\n1. L\'image est publique sur Google Drive\n2. L\'URL est correcte\n3. Vous avez une connexion internet');
-            };
-            img.onload = function() {
-                console.log('✅ Image chargée avec succès');
-            };
-            
-            overlay.appendChild(img);
-            overlay.onclick = () => overlay.remove();
-            document.body.appendChild(overlay);
-        }
-
-        function openModal(id) {
-            document.getElementById(id).style.display = 'flex';
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).style.display = 'none';
-            if (id === 'productModal') {
-                document.getElementById('edit-id').value = '';
-                document.getElementById('p-name').value = '';
-                document.getElementById('p-ref').value = '';
-                document.getElementById('p-rep').value = '';
-                document.getElementById('p-img').value = '';
-            }
-            if (id === 'pdvModal') {
-                document.getElementById('pdv-edit-id').value = '';
-                document.getElementById('pdv-name').value = '';
-                document.getElementById('pdv-location').value = '';
-            }
-        }
-
-        function saveProduct(e) {
-            e.preventDefault();
-            const id = document.getElementById('edit-id').value || Date.now().toString();
-            const name = document.getElementById('p-name').value.trim();
-            const reference = document.getElementById('p-ref').value.trim();
-            const repetition = document.getElementById('p-rep').value.trim();
-            const imageUrl = document.getElementById('p-img').value.trim();
-
-            const existing = products.find(p => p.id === id);
-            if (existing) {
-                existing.name = name;
-                existing.reference = reference;
-                existing.repetition = repetition;
-                existing.imageUrl = imageUrl;
+            if (editingProductId) {
+                const index = products.findIndex(p => p.id === editingProductId);
+                products[index] = product;
             } else {
-                products.push({
-                    id,
-                    name,
-                    reference,
-                    repetition,
-                    imageUrl,
-                    quantity: 0,
-                    pdvStock: {}
-                });
+                products.push(product);
             }
 
-            save();
-            closeModal('productModal');
-            renderProds();
+            saveData();
+            renderProducts();
+            updateMovementProductSelect();
+            updateTransferProductSelect();
+            updateDashboard();
+            cancelProductForm();
             alert('✅ Produit enregistré avec succès !');
         }
 
         function editProduct(id) {
-            const p = products.find(x => x.id === id);
-            if (!p) return;
-            document.getElementById('edit-id').value = p.id;
-            document.getElementById('p-name').value = p.name;
-            document.getElementById('p-ref').value = p.reference;
-            document.getElementById('p-rep').value = p.repetition || '';
-            document.getElementById('p-img').value = p.imageUrl || '';
-            openModal('productModal');
+            const product = products.find(p => p.id === id);
+            if (!product) return;
+
+            editingProductId = id;
+            document.getElementById('formTitle').textContent = '✏️ Modifier le Produit';
+            document.getElementById('productRef').value = product.reference;
+            document.getElementById('productName').value = product.realName;
+            document.getElementById('productDesignation').value = product.designation;
+            document.getElementById('productRepetition').value = product.repetition || '';
+            document.getElementById('productImage').value = product.imageUrl || '';
+            document.getElementById('productQty').value = product.quantity;
+            document.getElementById('productBaraka').value = product.pdvStock?.albaraka || 0;
+            document.getElementById('productGhafla').value = product.pdvStock?.alghafla || 0;
+            document.getElementById('productFormDiv').style.display = 'block';
+            document.getElementById('productFormDiv').scrollIntoView({ behavior: 'smooth' });
         }
 
         function deleteProduct(id) {
-            if (!confirm('Supprimer ce produit ?')) return;
+            if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
+            
             products = products.filter(p => p.id !== id);
-            save();
-            renderProds();
+            saveData();
+            renderProducts();
+            updateMovementProductSelect();
+            updateTransferProductSelect();
+            updateDashboard();
+            alert('✅ Produit supprimé avec succès !');
         }
 
-        function renderMovForm() {
-            const prodSelect = document.getElementById('mov-product');
-            const pdvSelect = document.getElementById('mov-pdv');
-            const searchInput = document.getElementById('mov-product-search');
+        function searchProducts() {
+            searchTerm = document.getElementById('searchProduct').value;
+            renderProducts();
+        }
+
+        function renderProducts() {
+            const tbody = document.getElementById('productList');
+            if (!tbody) return;
             
-            prodSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
-                products.map(p => `<option value="${p.id}">${p.name} (${p.reference})</option>`).join('');
-            pdvSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
-                pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-
-            searchInput.oninput = function() {
-                const searchTerm = this.value.toLowerCase();
-                const filtered = products.filter(p => 
-                    p.name.toLowerCase().includes(searchTerm) || 
-                    p.reference.toLowerCase().includes(searchTerm) ||
-                    (p.barcode && p.barcode.toLowerCase().includes(searchTerm))
-                );
-                prodSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
-                    filtered.map(p => `<option value="${p.id}">${p.name} (${p.reference})</option>`).join('');
-            };
-        }
-
-        function togglePdvSelect() {
-            const type = document.getElementById('mov-type').value;
-            const pdvGroup = document.getElementById('mov-pdv').closest('.form-group');
-            pdvGroup.style.display = type ? 'flex' : 'none';
-        }
-
-        function addMovement(e) {
-            e.preventDefault();
-            const type = document.getElementById('mov-type').value;
-            const productId = document.getElementById('mov-product').value;
-            const pdvId = document.getElementById('mov-pdv').value;
-            const quantity = parseInt(document.getElementById('mov-quantity').value);
-            const payment = document.getElementById('mov-payment').value;
-            const reason = document.getElementById('mov-reason').value.trim();
-            const note = document.getElementById('mov-note').value.trim();
-
-            const product = products.find(p => p.id === productId);
-            const pdv = pdvs.find(v => v.id === pdvId);
-            
-            if (!product || !pdv) {
-                alert('❌ Produit ou PDV invalide');
-                return;
-            }
-
-            if (!product.pdvStock) product.pdvStock = {};
-            if (!product.pdvStock[pdvId]) product.pdvStock[pdvId] = 0;
-
-            if (type === 'in') {
-                product.pdvStock[pdvId] += quantity;
-                product.quantity = (product.quantity || 0) + quantity;
-            } else if (type === 'out') {
-                if (product.pdvStock[pdvId] < quantity) {
-                    alert('❌ Stock insuffisant dans ce PDV');
-                    return;
-                }
-                product.pdvStock[pdvId] -= quantity;
-                product.quantity = (product.quantity || 0) - quantity;
-            }
-
-            movements.push({
-                id: Date.now().toString(),
-                type,
-                product: product.name,
-                productId,
-                pdv: pdv.name,
-                pdvId,
-                quantity,
-                payment,
-                reason,
-                note,
-                date: new Date().toISOString()
+            const filtered = products.filter(p => {
+                const search = searchTerm.toLowerCase();
+                return p.realName.toLowerCase().includes(search) || 
+                       p.reference.toLowerCase().includes(search) ||
+                       p.designation.toLowerCase().includes(search);
             });
 
-            save();
-            e.target.reset();
-            alert(`✅ Mouvement enregistré ! Stock ${pdv.name}: ${product.pdvStock[pdvId]}`);
+            tbody.innerHTML = filtered.map(p => {
+                const imageUrl = p.imageUrl || '';
+                const safeName = p.realName.replace(/'/g, "\\'");
+                const safeUrl = imageUrl.replace(/'/g, "\\'");
+                
+                return `
+                <tr>
+                    <td>${p.reference}</td>
+                    <td>${p.realName}</td>
+                    <td>${p.designation}</td>
+                    <td>${p.repetition || '-'}</td>
+                    <td>
+                        ${imageUrl ? `<img src="${imageUrl}" alt="${safeName}" style="width: 50px; height: 50px; object-fit: cover; cursor: pointer; border-radius: 4px; display: block;" crossorigin="anonymous" onclick="showImageZoom('${safeUrl}', '${safeName}')" onerror="console.error('Image load error:', this.src); this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                        <span style="color: #e74c3c; display: none; font-size: 12px;">❌ Image introuvable</span>` : '<span style="color: #95a5a6;">📦</span>'}
+                    </td>
+                    <td><strong>${p.quantity}</strong></td>
+                    <td>${p.pdvStock?.albaraka || 0}</td>
+                    <td>${p.pdvStock?.alghafla || 0}</td>
+                    <td>
+                        <button class="btn btn-warning" onclick="editProduct(${p.id})" style="padding: 8px 12px; margin: 2px;">✏️</button>
+                        <button class="btn btn-danger" onclick="deleteProduct(${p.id})" style="padding: 8px 12px; margin: 2px;">🗑️</button>
+                    </td>
+                </tr>`;
+            }).join('');
         }
 
-        function renderTransForm() {
-            const prodSelect = document.getElementById('trans-product');
-            const fromSelect = document.getElementById('trans-from');
-            const toSelect = document.getElementById('trans-to');
-            const searchInput = document.getElementById('trans-product-search');
+        function showImageZoom(imageUrl, productName) {
+            if (!imageUrl) return;
             
-            prodSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
-                products.map(p => `<option value="${p.id}">${p.name} (${p.reference})</option>`).join('');
-            fromSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
-                pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-            toSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
-                pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-
-            searchInput.oninput = function() {
-                const searchTerm = this.value.toLowerCase();
-                const filtered = products.filter(p => 
-                    p.name.toLowerCase().includes(searchTerm) || 
-                    p.reference.toLowerCase().includes(searchTerm) ||
-                    (p.barcode && p.barcode.toLowerCase().includes(searchTerm))
-                );
-                prodSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
-                    filtered.map(p => `<option value="${p.id}">${p.name} (${p.reference})</option>`).join('');
+            const modal = document.getElementById('imageZoomModal');
+            const img = document.getElementById('zoomedImage');
+            const caption = document.getElementById('imageCaption');
+            
+            img.src = imageUrl;
+            img.onerror = function() {
+                caption.textContent = productName + ' - ❌ Impossible de charger l\'image';
+                img.style.display = 'none';
             };
+            img.onload = function() {
+                img.style.display = 'block';
+            };
+            
+            caption.textContent = productName;
+            modal.style.display = 'flex';
         }
 
-        function addTransfer(e) {
-            e.preventDefault();
-            const productId = document.getElementById('trans-product').value;
-            const fromId = document.getElementById('trans-from').value;
-            const toId = document.getElementById('trans-to').value;
-            const quantity = parseInt(document.getElementById('trans-quantity').value);
-            const note = document.getElementById('trans-note').value.trim();
+        function closeImageZoom() {
+            document.getElementById('imageZoomModal').style.display = 'none';
+        }
 
-            if (fromId === toId) {
-                alert('❌ Source et destination doivent être différentes');
+        function updateMovementProductSelect() {
+            const select = document.getElementById('movementProduct');
+            select.innerHTML = '<option value="">-- Sélectionner un produit --</option>' +
+                products.map(p => `<option value="${p.id}">${p.realName} (Réf: ${p.reference})</option>`).join('');
+        }
+
+        function updateTransferProductSelect() {
+            const select = document.getElementById('transferProduct');
+            select.innerHTML = '<option value="">-- Sélectionner un produit --</option>' +
+                products.map(p => `<option value="${p.id}">${p.realName} (Réf: ${p.reference})</option>`).join('');
+        }
+
+        function saveMovement() {
+            const type = document.getElementById('movementType').value;
+            const pdv = document.getElementById('movementPdv').value;
+            const payment = document.getElementById('movementPayment').value;
+            const productId = parseInt(document.getElementById('movementProduct').value);
+            const qty = parseInt(document.getElementById('movementQty').value);
+            const note = document.getElementById('movementNote').value.trim();
+
+            if (!pdv || !payment || !productId || !qty) {
+                alert('❌ Veuillez remplir tous les champs obligatoires');
                 return;
             }
 
             const product = products.find(p => p.id === productId);
-            const fromPdv = pdvs.find(v => v.id === fromId);
-            const toPdv = pdvs.find(v => v.id === toId);
-
-            if (!product || !fromPdv || !toPdv) {
-                alert('❌ Sélection invalide');
+            if (!product) {
+                alert('❌ Produit introuvable');
                 return;
             }
 
-            if (!product.pdvStock) product.pdvStock = {};
-            if (!product.pdvStock[fromId]) product.pdvStock[fromId] = 0;
-            if (!product.pdvStock[toId]) product.pdvStock[toId] = 0;
+            const pdvKey = pdv === 'Al Baraka' ? 'albaraka' : 'alghafla';
+            const currentPdvStock = product.pdvStock?.[pdvKey] || 0;
 
-            if (product.pdvStock[fromId] < quantity) {
-                alert('❌ Stock insuffisant dans le PDV source');
+            if (type === 'Sortie' && currentPdvStock < qty) {
+                alert(`❌ Stock insuffisant dans ${pdv}. Stock disponible: ${currentPdvStock}`);
                 return;
             }
 
-            product.pdvStock[fromId] -= quantity;
-            product.pdvStock[toId] += quantity;
+            if (type === 'Entrée') {
+                product.quantity += qty;
+                if (!product.pdvStock) product.pdvStock = { albaraka: 0, alghafla: 0 };
+                product.pdvStock[pdvKey] += qty;
+            } else {
+                product.quantity -= qty;
+                product.pdvStock[pdvKey] -= qty;
+            }
 
-            movements.push({
-                id: Date.now().toString(),
-                type: 'transfer',
-                product: product.name,
-                productId,
-                from: fromPdv.name,
-                to: toPdv.name,
-                fromId,
-                toId,
-                quantity,
-                note,
-                date: new Date().toISOString()
-            });
+            const movement = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                type: type,
+                productId: productId,
+                productName: product.realName,
+                productRef: product.reference,
+                quantity: qty,
+                pdv: pdv,
+                payment: payment,
+                note: note
+            };
 
-            save();
-            e.target.reset();
-            alert(`✅ Transfert réussi ! ${fromPdv.name} → ${toPdv.name}`);
+            movements.push(movement);
+            saveData();
+            renderProducts();
+            renderHistory();
+            updateDashboard();
+
+            document.getElementById('movementQty').value = '';
+            document.getElementById('movementNote').value = '';
+            alert(`✅ ${type} de ${qty} unité(s) enregistrée avec succès pour ${pdv} !`);
+        }
+
+        function renderHistory() {
+            filtHist();
+        }
+
+        function filtHist() {
+            const tbody = document.getElementById('historyList');
+            if (!tbody) return;
+
+            const search = document.getElementById('histSearch').value.toLowerCase();
+            const date = document.getElementById('histDate').value;
+            const month = document.getElementById('histMonth').value;
+            const year = document.getElementById('histYear').value;
+
+            let filtered = [...movements];
+
+            if (search) {
+                filtered = filtered.filter(m => 
+                    m.productName.toLowerCase().includes(search) ||
+                    m.productRef.toLowerCase().includes(search) ||
+                    m.pdv.toLowerCase().includes(search) ||
+                    m.type.toLowerCase().includes(search)
+                );
+            }
+
+            if (date) {
+                filtered = filtered.filter(m => m.date.startsWith(date));
+            }
+
+            if (month) {
+                filtered = filtered.filter(m => m.date.startsWith(month));
+            }
+
+            if (year) {
+                filtered = filtered.filter(m => m.date.startsWith(year));
+            }
+
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            tbody.innerHTML = filtered.map(m => `
+                <tr>
+                    <td>${new Date(m.date).toLocaleString('fr-FR')}</td>
+                    <td><span style="background: ${m.type === 'Entrée' ? '#28a745' : '#dc3545'}; color: white; padding: 5px 10px; border-radius: 5px;">${m.type}</span></td>
+                    <td>${m.productName} (${m.productRef})</td>
+                    <td><strong>${m.quantity}</strong></td>
+                    <td>${m.pdv}</td>
+                    <td>${m.payment}</td>
+                    <td>${m.note || '-'}</td>
+                </tr>
+            `).join('');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">Aucun mouvement trouvé</td></tr>';
+            }
+        }
+
+        function clearHistFilters() {
+            document.getElementById('histSearch').value = '';
+            document.getElementById('histDate').value = '';
+            document.getElementById('histMonth').value = '';
+            document.getElementById('histYear').value = '';
+            filtHist();
         }
 
         function renderPdv() {
             const tbody = document.getElementById('pdvList');
             if (!tbody) return;
-            tbody.innerHTML = pdvs.map(p => {
-                const pdvStock = products.reduce((sum, prod) => {
-                    return sum + (prod.pdvStock?.[p.id] || 0);
+            
+            tbody.innerHTML = pdvs.map(pdv => {
+                const pdvStock = products.reduce((sum, p) => {
+                    return sum + (p.pdvStock?.[pdv.id] || 0);
                 }, 0);
-                return `<tr>
-                    <td><strong>${p.name}</strong></td>
-                    <td>${p.location || '-'}</td>
-                    <td><span style="background:#3b82f6;color:white;padding:4px 12px;border-radius:12px;font-weight:bold;">${pdvStock}</span></td>
-                    <td>
-                        <button onclick="editPdv('${p.id}')" class="btn-edit">✏️</button>
-                        <button onclick="delPdv('${p.id}')" class="btn-delete">🗑️</button>
-                    </td>
+                
+                const pdvProducts = products.filter(p => (p.pdvStock?.[pdv.id] || 0) > 0).length;
+                
+                return `
+                <tr>
+                    <td><strong>${pdv.name}</strong></td>
+                    <td>${pdvStock}</td>
+                    <td>${pdvProducts}</td>
                 </tr>`;
             }).join('');
         }
 
-        function savePdv(e) {
-            e.preventDefault();
-            const id = document.getElementById('pdv-edit-id').value || Date.now().toString();
-            const name = document.getElementById('pdv-name').value.trim();
-            const location = document.getElementById('pdv-location').value.trim();
+        function saveTransfer() {
+            const source = document.getElementById('transferSource').value;
+            const dest = document.getElementById('transferDest').value;
+            const productId = parseInt(document.getElementById('transferProduct').value);
+            const qty = parseInt(document.getElementById('transferQty').value);
 
-            const existing = pdvs.find(p => p.id === id);
-            if (existing) {
-                existing.name = name;
-                existing.location = location;
-            } else {
-                pdvs.push({ id, name, location });
+            if (!source || !dest || !productId || !qty) {
+                alert('❌ Veuillez remplir tous les champs');
+                return;
             }
 
-            save();
-            closeModal('pdvModal');
+            if (source === dest) {
+                alert('❌ La source et la destination doivent être différentes');
+                return;
+            }
+
+            const product = products.find(p => p.id === productId);
+            if (!product) {
+                alert('❌ Produit introuvable');
+                return;
+            }
+
+            const sourceKey = source === 'Al Baraka' ? 'albaraka' : 'alghafla';
+            const destKey = dest === 'Al Baraka' ? 'albaraka' : 'alghafla';
+
+            if (!product.pdvStock) product.pdvStock = { albaraka: 0, alghafla: 0 };
+
+            const sourceStock = product.pdvStock[sourceKey] || 0;
+            if (sourceStock < qty) {
+                alert(`❌ Stock insuffisant dans ${source}. Stock disponible: ${sourceStock}`);
+                return;
+            }
+
+            product.pdvStock[sourceKey] -= qty;
+            product.pdvStock[destKey] += qty;
+
+            const movement = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                type: 'Transfert',
+                productId: productId,
+                productName: product.realName,
+                productRef: product.reference,
+                quantity: qty,
+                pdv: `${source} → ${dest}`,
+                payment: '-',
+                note: `Transfert de ${source} vers ${dest}`
+            };
+
+            movements.push(movement);
+            saveData();
+            renderProducts();
+            renderHistory();
             renderPdv();
-            alert('✅ PDV enregistré !');
-        }
 
-        function editPdv(id) {
-            const p = pdvs.find(x => x.id === id);
-            if (!p) return;
-            document.getElementById('pdv-edit-id').value = p.id;
-            document.getElementById('pdv-name').value = p.name;
-            document.getElementById('pdv-location').value = p.location || '';
-            openModal('pdvModal');
-        }
-
-        function delPdv(id) {
-            if (!confirm('Supprimer ce PDV ?')) return;
-            pdvs = pdvs.filter(p => p.id !== id);
-            save();
-            renderPdv();
-        }
-
-        function renderHist() {
-            const years = getYrs();
-            document.getElementById('hy').innerHTML = '<option value="">Toutes les années</option>' + 
-                years.map(y => `<option value="${y}">${y}</option>`).join('');
-            filtHist();
-            
-            ['hs', 'hd', 'hm', 'hy'].forEach(id => {
-                document.getElementById(id).addEventListener('input', filtHist);
-            });
-        }
-
-        function filtHist() {
-            const s = document.getElementById('hs').value.toLowerCase();
-            const d = document.getElementById('hd').value;
-            const m = document.getElementById('hm').value;
-            const y = document.getElementById('hy').value;
-            
-            const sorted = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
-            
-            const filtered = sorted.filter(mov => {
-                const date = new Date(mov.date);
-                const matchSearch = !s || mov.product.toLowerCase().includes(s) || 
-                    (mov.reason && mov.reason.toLowerCase().includes(s)) ||
-                    (mov.note && mov.note.toLowerCase().includes(s));
-                const matchDate = !d || date.toISOString().split('T')[0] === d;
-                const matchMonth = !m || date.getMonth() === parseInt(m);
-                const matchYear = !y || date.getFullYear() === parseInt(y);
-                return matchSearch && matchDate && matchMonth && matchYear;
-            });
-
-            document.getElementById('hist-body').innerHTML = renderHistTable(filtered);
-        }
-
-        function renderHistTable(list) {
-            if (!list || list.length === 0) return '<tr><td colspan="7" style="text-align:center;">Aucun mouvement</td></tr>';
-            return list.map(m => {
-                const ic = m.type === 'in' ? '➕' : m.type === 'transfer' ? '🔄' : '➖';
-                const cl = m.type === 'in' ? '#10b981' : m.type === 'transfer' ? '#f59e0b' : '#ef4444';
-                const tp = m.type === 'in' ? 'Entrée' : m.type === 'transfer' ? 'Transfert' : 'Sortie';
-                const detail = m.type === 'transfer' ? `${m.from} → ${m.to}` : m.pdv || '-';
-                return `<tr>
-                    <td>${new Date(m.date).toLocaleString('fr-FR')}</td>
-                    <td><span style="color:${cl};font-weight:bold;">${ic} ${tp}</span></td>
-                    <td>${m.reason || '-'}</td>
-                    <td><strong>${m.product}</strong></td>
-                    <td><strong style="color:${cl};">${m.quantity}</strong></td>
-                    <td>${detail}</td>
-                    <td>${m.note || '-'}</td>
-                </tr>`;
-            }).join('');
-        }
-
-        function getYrs() {
-            const y = new Set();
-            movements.forEach(m => y.add(new Date(m.date).getFullYear()));
-            return Array.from(y).sort((a, b) => b - a);
-        }
-
-        function rstHist() {
-            document.getElementById('hs').value = '';
-            document.getElementById('hd').value = '';
-            document.getElementById('hm').value = '';
-            document.getElementById('hy').value = '';
-            filtHist();
+            document.getElementById('transferQty').value = '';
+            alert(`✅ Transfert de ${qty} unité(s) de ${source} vers ${dest} effectué avec succès !\n\n⚠️ Note: Le stock total reste inchangé.`);
         }
 
         function exportToExcel() {
-            const data = products.map(p => {
-                const row = {
-                    'IMAGE': p.imageUrl || '',
-                    'Real Name': p.realName || p.name,
-                    'Conventional Name': p.conventionalName || '',
-                    'Référence': p.reference,
-                    'Barcode': p.barcode || '',
-                    'Repetition': p.repetition || '',
-                    'Category': p.category || '',
-                    'Brand': p.brand || ''
-                };
+            const ws_data = [
+                ['REFERENCE', 'NOM REEL', 'DESIGNATION', 'REPETITION', 'QTY', 'AL BARAKA', 'ALGHAFLA', 'IMAGE URL']
+            ];
 
-                pdvs.forEach(pdv => {
-                    row[`QTY ${pdv.name}`] = p.pdvStock?.[pdv.id] || 0;
-                });
-
-                return row;
+            products.forEach(p => {
+                ws_data.push([
+                    p.reference,
+                    p.realName,
+                    p.designation,
+                    p.repetition || '',
+                    p.quantity,
+                    p.pdvStock?.albaraka || 0,
+                    p.pdvStock?.alghafla || 0,
+                    p.imageUrl || ''
+                ]);
             });
 
-            const ws = XLSX.utils.json_to_sheet(data);
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Produits');
-            XLSX.writeFile(wb, `stock_${new Date().toISOString().split('T')[0]}.xlsx`);
+            
+            const date = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Stock_Export_${date}.xlsx`);
+            alert('✅ Export Excel réussi !');
         }
 
-        function handleImport(event) {
+        function importFromExcel(event) {
             const file = event.target.files[0];
             if (!file) return;
 
@@ -1326,111 +1088,100 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(firstSheet);
+                    const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: false, defval: '' });
+
+                    if (rows.length < 2) {
+                        alert('❌ Le fichier Excel est vide');
+                        return;
+                    }
+
+                    // Détecter l'ordre des colonnes depuis la première ligne
+                    const headers = rows[0].map(h => String(h).toLowerCase().trim());
+                    console.log('En-têtes détectés:', headers);
+
+                    const colIndex = {
+                        image: headers.indexOf('image'),
+                        realName: headers.findIndex(h => h.includes('real name') || h.includes('nom réel')),
+                        designation: headers.findIndex(h => h.includes('conventional name') || h.includes('désignation')),
+                        reference: headers.findIndex(h => h.includes('référence') || h.includes('reference')),
+                        barcode: headers.indexOf('barcode'),
+                        repetition: headers.findIndex(h => h.includes('repetition') || h.includes('répétition')),
+                        category: headers.indexOf('category'),
+                        brand: headers.indexOf('brand'),
+                        qty: headers.indexOf('qty'),
+                        albaraka: headers.findIndex(h => h.includes('al baraka')),
+                        rochNoire: headers.findIndex(h => h.includes('roche noire')),
+                        alghafla: headers.findIndex(h => h.includes('alghafla'))
+                    };
+
+                    console.log('Index des colonnes:', colIndex);
 
                     let imported = 0;
-                    let updated = 0;
-
-                    rows.forEach(r => {
-                        const imageUrl = (r['IMAGE'] || r['Image'] || '').toString().trim();
-                        const realName = (r['Real Name'] || r['RealName'] || '').toString().trim();
-                        const conventionalName = (r['Conventional Name'] || r['ConventionalName'] || '').toString().trim();
-                        const reference = (r['Référence'] || r['Reference'] || '').toString().trim();
-                        const barcode = (r['Barcode'] || '').toString().trim();
-                        const repetition = (r['Repetition'] || r['Répétition'] || '').toString().trim();
-                        const category = (r['Category'] || r['Catégorie'] || '').toString().trim();
-                        const brand = (r['Brand'] || r['Marque'] || '').toString().trim();
-
-                        const name = realName || conventionalName;
+                    let skipped = 0;
+                    
+                    for (let i = 1; i < rows.length; i++) {
+                        const row = rows[i];
                         
-                        if (!name || !reference) return;
+                        // Vérifier que la ligne a des données essentielles
+                        const realName = row[colIndex.realName] ? String(row[colIndex.realName]).trim() : '';
+                        const reference = row[colIndex.reference] ? String(row[colIndex.reference]).trim() : '';
+                        const designation = row[colIndex.designation] ? String(row[colIndex.designation]).trim() : '';
 
-                        const pdvStock = {};
-                        let totalQty = 0;
-
-                        Object.keys(r).forEach(key => {
-                            if (key.startsWith('QTY ')) {
-                                const pdvName = key.replace('QTY ', '').trim();
-                                const qty = parseInt(r[key]) || 0;
-                                
-                                let pdv = pdvs.find(p => 
-                                    p.name.toLowerCase() === pdvName.toLowerCase() ||
-                                    p.name.toLowerCase().includes(pdvName.toLowerCase()) ||
-                                    pdvName.toLowerCase().includes(p.name.toLowerCase())
-                                );
-
-                                if (!pdv && pdvName) {
-                                    const newPdvId = pdvName.toLowerCase().replace(/\s+/g, '-');
-                                    pdv = { id: newPdvId, name: pdvName, location: '' };
-                                    pdvs.push(pdv);
-                                }
-
-                                if (pdv) {
-                                    pdvStock[pdv.id] = qty;
-                                    totalQty += qty;
-                                }
-                            }
-                        });
-
-                        const existing = products.find(p => p.reference === reference);
-                        
-                        if (existing) {
-                            existing.name = name;
-                            existing.realName = realName;
-                            existing.conventionalName = conventionalName;
-                            existing.imageUrl = imageUrl;
-                            existing.barcode = barcode;
-                            existing.repetition = repetition;
-                            existing.category = category;
-                            existing.brand = brand;
-                            existing.pdvStock = pdvStock;
-                            existing.quantity = totalQty;
-                            updated++;
-                        } else {
-                            products.push({
-                                id: Date.now().toString() + Math.random(),
-                                name,
-                                realName,
-                                conventionalName,
-                                reference,
-                                barcode,
-                                repetition,
-                                category,
-                                brand,
-                                imageUrl,
-                                quantity: totalQty,
-                                pdvStock
-                            });
-                            imported++;
+                        if (!realName && !reference) {
+                            skipped++;
+                            continue;
                         }
-                    });
 
-                    save();
-                    renderProds();
-                    renderPdv();
+                        // Nettoyer l'URL de l'image
+                        let imageUrl = '';
+                        if (colIndex.image >= 0 && row[colIndex.image]) {
+                            imageUrl = String(row[colIndex.image]).trim();
+                            imageUrl = imageUrl.replace(/\s+/g, '');
+                            console.log(`Ligne ${i} - Image URL:`, imageUrl);
+                        }
+
+                        // Calculer QTY total
+                        const qtyBaraka = parseInt(row[colIndex.albaraka]) || 0;
+                        const qtyGhafla = parseInt(row[colIndex.alghafla]) || 0;
+                        const qtyTotal = row[colIndex.qty] ? parseInt(row[colIndex.qty]) : (qtyBaraka + qtyGhafla);
+
+                        const product = {
+                            id: Date.now() + i + Math.random(),
+                            reference: reference || `REF${Date.now()}`,
+                            realName: realName || designation || 'Produit sans nom',
+                            designation: designation || realName || 'Sans désignation',
+                            repetition: row[colIndex.repetition] ? String(row[colIndex.repetition]).trim() : '',
+                            quantity: qtyTotal,
+                            pdvStock: {
+                                albaraka: qtyBaraka,
+                                alghafla: qtyGhafla
+                            },
+                            imageUrl: imageUrl
+                        };
+
+                        products.push(product);
+                        imported++;
+                    }
+
+                    saveData();
+                    renderProducts();
+                    updateMovementProductSelect();
+                    updateTransferProductSelect();
+                    updateDashboard();
                     
-                    let message = '✅ Import terminé !\n\n';
-                    if (imported > 0) message += `➕ ${imported} nouveau(x) produit(s)\n`;
-                    if (updated > 0) message += `🔄 ${updated} produit(s) mis à jour\n`;
-                    message += `\n📍 ${pdvs.length} point(s) de vente détecté(s)`;
-                    
+                    let message = `✅ Import réussi !\n\n📦 ${imported} produit(s) importé(s)`;
+                    if (skipped > 0) {
+                        message += `\n⚠️ ${skipped} ligne(s) ignorée(s) (données incomplètes)`;
+                    }
                     alert(message);
-                } catch (err) {
-                    console.error('Erreur import:', err);
-                    alert('❌ Erreur lors de l\'import : ' + err.message);
+                    
+                } catch (error) {
+                    console.error('Erreur import:', error);
+                    alert('❌ Erreur lors de l\'import: ' + error.message);
                 }
             };
             reader.readAsArrayBuffer(file);
             event.target.value = '';
-        }
-
-        function logout() {
-            if (confirm('Se déconnecter ?')) {
-                localStorage.removeItem('currentUser');
-                showLoginPage();
-                document.getElementById('login-username').value = '';
-                document.getElementById('login-password').value = '';
-            }
         }
     </script>
 </body>
