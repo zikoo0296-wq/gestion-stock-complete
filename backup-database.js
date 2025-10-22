@@ -228,4 +228,17 @@ if (require.main === module) {
   main();
 }
 
+
 module.exports = { createBackup, restoreBackup, listBackups, cleanOldBackups };
+import { supabase } from './supabase-config.js'
+
+async function backupProduits() {
+  const { data, error } = await supabase.from('produits').select('*')
+  if (error) {
+    console.error(error)
+  } else {
+    console.log('📦 Liste des produits sauvegardés:', data)
+  }
+}
+
+backupProduits()
