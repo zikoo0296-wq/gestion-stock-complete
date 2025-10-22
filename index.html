@@ -781,8 +781,23 @@
         const SUPABASE_URL = 'https://djnaayhhntopupixzitm.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbmFheWhobnRvcHVwaXh6aXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NzY0NTIsImV4cCI6MjA3NjU1MjQ1Mn0.AzrxJ7h7SNEgn-i8qgdGYPvoEpWdRohX1E8N_Ko_Gc0';
         
+        console.log('🔵 Initialisation Supabase...');
+        console.log('🔵 URL:', SUPABASE_URL);
+        console.log('🔵 Key présente:', SUPABASE_KEY ? 'Oui (longueur: ' + SUPABASE_KEY.length + ')' : 'Non');
+        
+        if (typeof supabase === 'undefined') {
+            console.error('❌ ERREUR CRITIQUE: supabase n\'est pas défini !');
+            console.error('❌ Vérifiez que le script Supabase est bien chargé:');
+            console.error('❌ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>');
+            alert('❌ ERREUR: Supabase n\'est pas chargé. Vérifiez la console (F12).');
+        } else {
+            console.log('✅ Module Supabase chargé');
+        }
+        
         const { createClient } = supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        console.log('✅ Client Supabase créé:', supabaseClient);
         
         let currentUser = null;
         let isSupabaseMode = true;
@@ -792,7 +807,11 @@
             if (session) {
                 currentUser = session.user;
                 console.log('✅ Session active:', currentUser.email);
+            } else {
+                console.log('ℹ️ Aucune session active');
             }
+        }).catch(error => {
+            console.error('❌ Erreur lors de la vérification de session:', error);
         });
 
         // ========== COMPTES UTILISATEURS - MODIFIEZ ICI ==========
@@ -911,21 +930,32 @@
 
         async function handleRegister(event) {
             event.preventDefault();
+            console.log('🔵 Début inscription...');
+            
             const name = document.getElementById('register-name').value.trim();
             const email = document.getElementById('register-email').value.trim();
             const password = document.getElementById('register-password').value;
 
+            console.log('📝 Données:', { name, email, passwordLength: password.length });
+
             if (!name || !email || !password) {
                 alert('❌ Veuillez remplir tous les champs');
+                console.error('❌ Champs manquants');
                 return;
             }
 
             if (password.length < 6) {
                 alert('❌ Le mot de passe doit contenir au moins 6 caractères');
+                console.error('❌ Mot de passe trop court');
                 return;
             }
 
+            console.log('🔵 Tentative de connexion à Supabase...');
+            console.log('🔵 URL Supabase:', SUPABASE_URL);
+            console.log('🔵 Key présente:', SUPABASE_KEY ? 'Oui' : 'Non');
+
             try {
+                console.log('🔵 Appel signUp...');
                 const { data, error } = await supabaseClient.auth.signUp({
                     email: email,
                     password: password,
@@ -936,20 +966,33 @@
                     }
                 });
 
-                if (error) throw error;
+                console.log('📊 Réponse Supabase:', { data, error });
 
+                if (error) {
+                    console.error('❌ Erreur Supabase:', error);
+                    throw error;
+                }
+
+                console.log('✅ Inscription réussie !');
                 alert('✅ Compte créé avec succès ! Vous pouvez maintenant vous connecter.');
                 toggleAuthMode();
                 document.getElementById('login-username').value = email;
             } catch (error) {
-                console.error('❌ Erreur inscription:', error);
+                console.error('❌ ERREUR COMPLÈTE:', error);
+                console.error('❌ Message:', error.message);
+                console.error('❌ Code:', error.code);
+                console.error('❌ Status:', error.status);
                 
-                let message = 'Erreur lors de l\'inscription';
+                let message = 'Erreur lors de l\'inscription: ' + error.message;
                 if (error.message.includes('already registered')) {
                     message = 'Cet email est déjà utilisé';
+                } else if (error.message.includes('Invalid email')) {
+                    message = 'Email invalide';
+                } else if (error.message.includes('not allowed')) {
+                    message = 'Inscription non autorisée. Vérifiez les paramètres Supabase.';
                 }
                 
-                alert('❌ ' + message);
+                alert('❌ ' + message + '\n\nOuvrez la console (F12) pour plus de détails.');
             }
         }
 
