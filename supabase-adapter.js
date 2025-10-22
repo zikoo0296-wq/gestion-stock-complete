@@ -273,3 +273,33 @@ if (document.readyState === 'loading') {
 setInterval(syncWithSupabase, 5 * 60 * 1000);
 
 console.log('✅ Adaptateur Supabase chargé');
+import { supabase } from './supabase-config.js'
+
+/**
+ * Sauvegarder un produit dans Supabase
+ */
+export async function saveProduit(nom, stock) {
+  const { data, error } = await supabase
+    .from('produits')
+    .insert([{ nom, stock }])
+  if (error) {
+    console.error('❌ Erreur sauvegarde Supabase:', error)
+  } else {
+    console.log('✅ Produit sauvegardé dans Supabase !', data)
+  }
+}
+
+/**
+ * Mettre à jour le stock d’un produit existant
+ */
+export async function updateStock(idProduit, nouveauStock) {
+  const { data, error } = await supabase
+    .from('produits')
+    .update({ stock: nouveauStock })
+    .eq('id', idProduit)
+  if (error) {
+    console.error('❌ Erreur mise à jour Supabase:', error)
+  } else {
+    console.log('✅ Stock mis à jour dans Supabase', data)
+  }
+}
