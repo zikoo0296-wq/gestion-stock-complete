@@ -6,7 +6,7 @@
     <title>Stock Pro - Gestion Interne</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Supabase intégré directement -->
+    <script src="supabase-adapter.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -342,22 +342,20 @@
     </style>
 </head>
 <body>
-    <!-- PAGE DE CONNEXION -->
+    <!-- PAGE DE CONNEXION - USERNAME ET PASSWORD UNIQUEMENT -->
     <div id="loginPage" style="display:flex;justify-content:center;align-items:center;min-height:100vh;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
         <div style="background:white;padding:40px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);width:400px;max-width:90%;">
             <div style="text-align:center;margin-bottom:30px;">
                 <div style="font-size:3rem;margin-bottom:10px;">📦</div>
                 <h1 style="font-size:2rem;color:#1f2937;margin:0;">Stock Pro</h1>
-                <p id="auth-title" style="color:#6b7280;margin-top:10px;">Connexion</p>
+                <p style="color:#6b7280;margin-top:10px;">Connexion</p>
             </div>
-            
-            <!-- FORMULAIRE DE CONNEXION -->
-            <form id="loginForm" onsubmit="handleLogin(event)">
+            <form onsubmit="handleLogin(event)">
                 <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Email</label>
-                    <input type="email" id="login-username" required 
+                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Nom d'utilisateur</label>
+                    <input type="text" id="login-username" required 
                            style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
-                           placeholder="votre@email.com"
+                           placeholder="Entrez votre username"
                            autocomplete="username"
                            onfocus="this.style.borderColor='#667eea'" 
                            onblur="this.style.borderColor='#e5e7eb'">
@@ -378,51 +376,7 @@
                     🔓 Se connecter
                 </button>
             </form>
-            
-            <!-- FORMULAIRE D'INSCRIPTION (caché par défaut) -->
-            <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
-                <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Nom complet</label>
-                    <input type="text" id="register-name" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
-                           placeholder="Jean Dupont"
-                           onfocus="this.style.borderColor='#667eea'" 
-                           onblur="this.style.borderColor='#e5e7eb'">
-                </div>
-                <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Email</label>
-                    <input type="email" id="register-email" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
-                           placeholder="votre@email.com"
-                           autocomplete="email"
-                           onfocus="this.style.borderColor='#667eea'" 
-                           onblur="this.style.borderColor='#e5e7eb'">
-                </div>
-                <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Mot de passe</label>
-                    <input type="password" id="register-password" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
-                           placeholder="Min. 6 caractères"
-                           autocomplete="new-password"
-                           onfocus="this.style.borderColor='#667eea'" 
-                           onblur="this.style.borderColor='#e5e7eb'">
-                    <small style="color:#6b7280;font-size:0.85rem;display:block;margin-top:5px;">Au moins 6 caractères</small>
-                </div>
-                <button type="submit" 
-                        style="width:100%;padding:14px;background:linear-gradient(135deg, #667eea, #764ba2);color:white;border:none;border-radius:8px;font-size:1.1rem;font-weight:600;cursor:pointer;transition:all 0.3s;"
-                        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(102,126,234,0.4)'"
-                        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
-                    ✨ Créer mon compte
-                </button>
-            </form>
-            
             <div style="margin-top:25px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center;">
-                <button id="toggleAuthBtn" onclick="toggleAuthMode()" type="button"
-                        style="width:100%;padding:12px;background:white;color:#667eea;border:2px solid #667eea;border-radius:8px;font-weight:600;cursor:pointer;transition:all 0.3s;margin-bottom:15px;"
-                        onmouseover="this.style.background='#f3f4f6'"
-                        onmouseout="this.style.background='white'">
-                    ➕ Créer un compte
-                </button>
                 <p style="color:#9ca3af;font-size:0.85rem;margin:0;">
                     🔒 Application privée - Accès réservé
                 </p>
@@ -777,46 +731,12 @@
     </div>
 
     <script>
-        // ========== CONFIGURATION SUPABASE ==========
-        const SUPABASE_URL = 'https://djnaayhhntopupixzitm.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbmFheWhobnRvcHVwaXh6aXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NzY0NTIsImV4cCI6MjA3NjU1MjQ1Mn0.AzrxJ7h7SNEgn-i8qgdGYPvoEpWdRohX1E8N_Ko_Gc0';
-        
-        console.log('🔵 Initialisation Supabase...');
-        console.log('🔵 URL:', SUPABASE_URL);
-        console.log('🔵 Key présente:', SUPABASE_KEY ? 'Oui (longueur: ' + SUPABASE_KEY.length + ')' : 'Non');
-        
-        if (typeof supabase === 'undefined') {
-            console.error('❌ ERREUR CRITIQUE: supabase n\'est pas défini !');
-            console.error('❌ Vérifiez que le script Supabase est bien chargé:');
-            console.error('❌ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>');
-            alert('❌ ERREUR: Supabase n\'est pas chargé. Vérifiez la console (F12).');
-        } else {
-            console.log('✅ Module Supabase chargé');
-        }
-        
-        const { createClient } = supabase;
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
-        
-        console.log('✅ Client Supabase créé:', supabaseClient);
-        
-        let currentUser = null;
-        let isSupabaseMode = true;
-
-        // Vérifier la session au chargement
-        supabaseClient.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                currentUser = session.user;
-                console.log('✅ Session active:', currentUser.email);
-            } else {
-                console.log('ℹ️ Aucune session active');
-            }
-        }).catch(error => {
-            console.error('❌ Erreur lors de la vérification de session:', error);
-        });
-
         // ========== COMPTES UTILISATEURS - MODIFIEZ ICI ==========
-        // ========== SYSTÈME D'AUTHENTIFICATION SUPABASE ==========
-        // Plus besoin de USERS codés en dur - tout est dans Supabase !
+        const USERS = [
+            { username: 'admin', password: 'admin123', fullName: 'Administrateur', role: 'admin' },
+            { username: 'agent1', password: 'pass123', fullName: 'Agent 1', role: 'agent' },
+            { username: 'agent2', password: 'pass456', fullName: 'Agent 2', role: 'agent' }
+        ];
         
         // ========== FONCTION DE CONVERSION URL GOOGLE DRIVE ==========
         function convertGoogleDriveUrl(url) {
@@ -890,136 +810,28 @@
             document.getElementById('mainApp').style.display = 'none';
         }
 
-        async function handleLogin(event) {
+        function handleLogin(event) {
             event.preventDefault();
-            const email = document.getElementById('login-username').value.trim();
+            const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
 
-            if (!email || !password) {
-                alert('❌ Veuillez remplir tous les champs');
-                return;
-            }
+            const user = USERS.find(u => u.username === username && u.password === password);
 
-            try {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-
-                if (error) throw error;
-
-                currentUser = data.user;
-                document.getElementById('user-name').textContent = data.user.user_metadata.full_name || 'Utilisateur';
-                document.getElementById('user-email').textContent = data.user.email;
+            if (user) {
+                const userSession = {
+                    username: user.username,
+                    fullName: user.fullName,
+                    role: user.role
+                };
+                localStorage.setItem('currentUser', JSON.stringify(userSession));
+                document.getElementById('user-name').textContent = user.fullName;
+                document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur' : 'Agent';
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'block';
-                
-                await load();
-                renderProds();
-                renderPdv();
-                renderMov();
-                renderHist();
                 renderDash();
-                
-                alert('✅ Connexion réussie !');
-            } catch (error) {
-                console.error('❌ Erreur connexion:', error);
-                alert('❌ Email ou mot de passe incorrect');
-            }
-        }
-
-        async function handleRegister(event) {
-            event.preventDefault();
-            console.log('🔵 Début inscription...');
-            
-            const name = document.getElementById('register-name').value.trim();
-            const email = document.getElementById('register-email').value.trim();
-            const password = document.getElementById('register-password').value;
-
-            console.log('📝 Données:', { name, email, passwordLength: password.length });
-
-            if (!name || !email || !password) {
-                alert('❌ Veuillez remplir tous les champs');
-                console.error('❌ Champs manquants');
-                return;
-            }
-
-            if (password.length < 6) {
-                alert('❌ Le mot de passe doit contenir au moins 6 caractères');
-                console.error('❌ Mot de passe trop court');
-                return;
-            }
-
-            console.log('🔵 Tentative de connexion à Supabase...');
-            console.log('🔵 URL Supabase:', SUPABASE_URL);
-            console.log('🔵 Key présente:', SUPABASE_KEY ? 'Oui' : 'Non');
-
-            try {
-                console.log('🔵 Appel signUp...');
-                const { data, error } = await supabaseClient.auth.signUp({
-                    email: email,
-                    password: password,
-                    options: {
-                        data: {
-                            full_name: name
-                        }
-                    }
-                });
-
-                console.log('📊 Réponse Supabase:', { data, error });
-
-                if (error) {
-                    console.error('❌ Erreur Supabase:', error);
-                    throw error;
-                }
-
-                console.log('✅ Inscription réussie !');
-                alert('✅ Compte créé avec succès ! Vous pouvez maintenant vous connecter.');
-                toggleAuthMode();
-                document.getElementById('login-username').value = email;
-            } catch (error) {
-                console.error('❌ ERREUR COMPLÈTE:', error);
-                console.error('❌ Message:', error.message);
-                console.error('❌ Code:', error.code);
-                console.error('❌ Status:', error.status);
-                
-                let message = 'Erreur lors de l\'inscription: ' + error.message;
-                if (error.message.includes('already registered')) {
-                    message = 'Cet email est déjà utilisé';
-                } else if (error.message.includes('Invalid email')) {
-                    message = 'Email invalide';
-                } else if (error.message.includes('not allowed')) {
-                    message = 'Inscription non autorisée. Vérifiez les paramètres Supabase.';
-                }
-                
-                alert('❌ ' + message + '\n\nOuvrez la console (F12) pour plus de détails.');
-            }
-        }
-
-        function toggleAuthMode() {
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-            const authTitle = document.getElementById('auth-title');
-            const toggleBtn = document.getElementById('toggleAuthBtn');
-            
-            if (loginForm.style.display === 'none') {
-                // Montrer login
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
-                authTitle.textContent = 'Connexion';
-                toggleBtn.textContent = '➕ Créer un compte';
             } else {
-                // Montrer register
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
-                authTitle.textContent = 'Inscription';
-                toggleBtn.textContent = '🔙 Retour à la connexion';
+                alert('❌ Nom d\'utilisateur ou mot de passe incorrect !');
             }
-        }
-
-        function checkAuth() {
-            // Avec Supabase, la session est gérée automatiquement
-            return true;
         }
 
         window.addEventListener('DOMContentLoaded', function() {
@@ -1029,82 +841,21 @@
             renderDash();
         });
 
-        async function save() {
-            // Sauvegarder aussi en localStorage pour compatibilité
-            localStorage.setItem('stockData', JSON.stringify({ products, movements, pdvs }));
-            
-            if (!currentUser) {
-                console.log('💾 Sauvegarde locale uniquement (pas connecté)');
-                return;
-            }
-
-            try {
-                console.log('💾 Sauvegarde dans Supabase...');
-
-                // Supprimer les anciennes données
-                await supabaseClient.from('products').delete().eq('user_id', currentUser.id);
-                await supabaseClient.from('movements').delete().eq('user_id', currentUser.id);
-                await supabaseClient.from('points_vente').delete().eq('user_id', currentUser.id);
-
-                // Sauvegarder les produits
-                if (products.length > 0) {
-                    const productsToInsert = products.map(p => ({
-                        user_id: currentUser.id,
-                        real_name: p.realName || p.name,
-                        conventional_name: p.conventionalName || '',
-                        reference: p.reference,
-                        barcode: p.barcode || '',
-                        quantity: p.quantity || p.repetition || 0,
-                        min_stock: 10,
-                        category: p.category || '',
-                        brand: p.brand || '',
-                        warehouse: 'Entrepôt A',
-                        image: p.imageUrl || ''
-                    }));
-
-                    const { error } = await supabaseClient.from('products').insert(productsToInsert);
-                    if (error) throw error;
-                }
-
-                // Sauvegarder les PDV
-                if (pdvs.length > 0) {
-                    const pdvsToInsert = pdvs.map(p => ({
-                        user_id: currentUser.id,
-                        name: p.name,
-                        address: p.location || '',
-                        phone: '',
-                        email: '',
-                        manager: ''
-                    }));
-
-                    const { error } = await supabaseClient.from('points_vente').insert(pdvsToInsert);
-                    if (error) throw error;
-                }
-
-                // Sauvegarder les mouvements
-                if (movements.length > 0) {
-                    const movementsToInsert = movements.map(m => ({
-                        user_id: currentUser.id,
-                        product_id: 1,
-                        type: m.type === 'in' ? 'entry' : m.type === 'transfer' ? 'transfer' : 'exit',
-                        quantity: m.quantity || 0,
-                        reason: m.reason || '',
-                        customer: m.pdv || '',
-                        from_location: m.from || '',
-                        to_location: m.to || '',
-                        date: m.date || new Date().toISOString().split('T')[0],
-                        user_name: currentUser.email
-                    }));
-
-                    const { error } = await supabaseClient.from('movements').insert(movementsToInsert);
-                    if (error) throw error;
-                }
-
-                console.log('✅ Sauvegarde Supabase réussie');
-            } catch (error) {
-                console.error('❌ Erreur sauvegarde:', error);
-            }
+        function save() {
+            localStorage.setItem('products', JSON.stringify(products));
+            localStorage.setItem('pdvs', JSON.stringify(pdvs));
+            localStorage.setItem('movements', JSON.stringify(movements));
         }
+
+        function showSection(sec) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(sec).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            if (sec === 'dashboard') renderDash();
+            if (sec === 'products') renderProds();
+            if (sec === 'movements') { renderMovForm(); populateMovProductList(); }
             if (sec === 'transfer') { renderTransForm(); populateTransProductList(); }
             if (sec === 'pdv') renderPdv();
             if (sec === 'history') renderHist();
@@ -1856,22 +1607,13 @@
             event.target.value = '';
         }
 
-        async function logout() {
+        function logout() {
             if (confirm('Se déconnecter ?')) {
-                try {
-                    await supabaseClient.auth.signOut();
-                    currentUser = null;
-                    products = [];
-                    movements = [];
-                    pdvs = [];
-                    showLoginPage();
-                    document.getElementById('login-username').value = '';
-                    document.getElementById('login-password').value = '';
-                } catch (error) {
-                    console.error('❌ Erreur déconnexion:', error);
-                }
+                localStorage.removeItem('currentUser');
+                showLoginPage();
+                document.getElementById('login-username').value = '';
+                document.getElementById('login-password').value = '';
             }
-        }
         }
     </script>
 </body>
