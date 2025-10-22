@@ -912,6 +912,10 @@
         async function saveToSupabase() {
             try {
                 console.log('💾 Sauvegarde Supabase...');
+                console.log('📊 Données à sauvegarder:', { 
+                    produits: products.length, 
+                    pdvs: pdvs.length 
+                });
                 
                 // Supprimer les anciennes données
                 await supabaseClient.from('products').delete().eq('user_id', currentSupabaseUser.id);
@@ -919,37 +923,65 @@
                 
                 // Sauvegarder les produits
                 if (products.length > 0) {
-                    const productsToInsert = products.map(p => ({
-                        user_id: currentSupabaseUser.id,
-                        real_name: p.realName || p.name,
-                        conventional_name: p.conventionalName || '',
-                        reference: p.reference,
-                        barcode: p.barcode || '',
-                        quantity: p.quantity || p.repetition || 0,
-                        min_stock: 10,
-                        category: p.category || '',
-                        brand: p.brand || '',
-                        warehouse: 'Entrepôt A',
-                        image: p.imageUrl || ''
-                    }));
+                    const productsToInsert = products
+                        .filter(p => p.reference && p.reference.trim() !== '') // Filtrer les produits sans référence
+                        .map(p => ({
+                            user_id: currentSupabaseUser.id,
+                            real_name: (p.realName || p.name || 'Produit sans nom').substring(0, 255),
+                            conventional_name: (p.conventionalName || '').substring(0, 255),
+                            reference: p.reference.trim(),
+                            barcode: (p.barcode || '').substring(0, 255),
+                            quantity: parseInt(p.quantity || p.repetition || 0),
+                            min_stock: 10,
+                            category: (p.category || '').substring(0, 255),
+                            brand: (p.brand || '').substring(0, 255),
+                            warehouse: 'Entrepôt A',
+                            image: (p.imageUrl || '').substring(0, 1000)
+                        }));
                     
-                    await supabaseClient.from('products').insert(productsToInsert);
+                    console.log('📦 Produits à insérer:', productsToInsert.length);
+                    
+                    if (productsToInsert.length > 0) {
+                        const { data, error } = await supabaseClient.from('products').insert(productsToInsert);
+                        
+                        if (error) {
+                            console.error('❌ Erreur insertion produits:', error);
+                            throw error;
+                        }
+                        
+                        console.log('✅ Produits sauvegardés:', productsToInsert.length);
+                    }
                 }
                 
                 // Sauvegarder les PDV
                 if (pdvs.length > 0) {
-                    const pdvsToInsert = pdvs.map(p => ({
-                        user_id: currentSupabaseUser.id,
-                        name: p.name,
-                        address: p.location || ''
-                    }));
+                    const pdvsToInsert = pdvs
+                        .filter(p => p.name && p.name.trim() !== '')
+                        .map(p => ({
+                            user_id: currentSupabaseUser.id,
+                            name: p.name.trim().substring(0, 255),
+                            address: (p.location || '').substring(0, 500)
+                        }));
                     
-                    await supabaseClient.from('points_vente').insert(pdvsToInsert);
+                    console.log('🏪 PDV à insérer:', pdvsToInsert.length);
+                    
+                    if (pdvsToInsert.length > 0) {
+                        const { data, error } = await supabaseClient.from('points_vente').insert(pdvsToInsert);
+                        
+                        if (error) {
+                            console.error('❌ Erreur insertion PDV:', error);
+                            throw error;
+                        }
+                        
+                        console.log('✅ PDV sauvegardés:', pdvsToInsert.length);
+                    }
                 }
                 
                 console.log('✅ Sauvegarde Supabase réussie');
             } catch (error) {
                 console.error('❌ Erreur sauvegarde Supabase:', error);
+                console.error('❌ Détails:', error.message);
+                console.error('❌ Code:', error.code);
             }
         }
         
