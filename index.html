@@ -925,21 +925,37 @@
                 if (products.length > 0) {
                     const productsToInsert = products
                         .filter(p => p.reference && p.reference.trim() !== '') // Filtrer les produits sans référence
-                        .map(p => ({
-                            user_id: currentSupabaseUser.id,
-                            real_name: (p.realName || p.name || 'Produit sans nom').substring(0, 255),
-                            conventional_name: (p.conventionalName || '').substring(0, 255),
-                            reference: p.reference.trim(),
-                            barcode: (p.barcode || '').substring(0, 255),
-                            quantity: parseInt(p.quantity || p.repetition || 0),
-                            min_stock: 10,
-                            category: (p.category || '').substring(0, 255),
-                            brand: (p.brand || '').substring(0, 255),
-                            warehouse: 'Entrepôt A',
-                            image: (p.imageUrl || '').substring(0, 1000)
-                        }));
+                        .map(p => {
+                            // S'assurer que quantity est un nombre valide
+                            let qty = p.quantity || p.repetition || 0;
+                            if (typeof qty === 'string') {
+                                qty = parseInt(qty) || 0;
+                            }
+                            if (isNaN(qty) || qty === null || qty === undefined) {
+                                qty = 0;
+                            }
+                            
+                            return {
+                                user_id: currentSupabaseUser.id,
+                                real_name: (p.realName || p.name || 'Produit sans nom').substring(0, 255),
+                                conventional_name: (p.conventionalName || '').substring(0, 255),
+                                reference: p.reference.trim(),
+                                barcode: (p.barcode || '').substring(0, 255),
+                                quantity: qty,
+                                min_stock: 10,
+                                category: (p.category || '').substring(0, 255),
+                                brand: (p.brand || '').substring(0, 255),
+                                warehouse: 'Entrepôt A',
+                                image: (p.imageUrl || '').substring(0, 1000)
+                            };
+                        });
                     
                     console.log('📦 Produits à insérer:', productsToInsert.length);
+                    
+                    // DEBUG : Afficher le premier produit pour vérifier
+                    if (productsToInsert.length > 0) {
+                        console.log('🔍 Exemple de produit:', productsToInsert[0]);
+                    }
                     
                     if (productsToInsert.length > 0) {
                         const { data, error } = await supabaseClient.from('products').insert(productsToInsert);
