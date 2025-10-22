@@ -791,3 +791,8 @@ window.logout = async function() {
 };
 
 console.log('✅ App Supabase chargée');
+
+import { saveProduit } from './supabase-adapter.js'
+
+// منين كيزيد منتوج جديد:
+saveProduit(nomProduit, stockProduit)
