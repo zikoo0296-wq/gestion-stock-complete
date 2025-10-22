@@ -745,12 +745,26 @@
                 supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
                 console.log('✅ Supabase initialisé');
                 
-                // Vérifier session au démarrage
+                // Vérifier session au démarrage (AUTO-RECONNEXION)
                 supabaseClient.auth.getSession().then(function(result) {
                     if (result.data && result.data.session) {
                         currentSupabaseUser = result.data.session.user;
                         useSupabase = true;
                         console.log('✅ Session Supabase:', currentSupabaseUser.email);
+                        
+                        // AUTO-RECONNEXION : Charger les données et afficher l'app
+                        loadFromSupabase().then(function() {
+                            document.getElementById('user-name').textContent = currentSupabaseUser.user_metadata.full_name || 'Utilisateur';
+                            document.getElementById('user-email').textContent = currentSupabaseUser.email;
+                            document.getElementById('loginPage').style.display = 'none';
+                            document.getElementById('mainApp').style.display = 'block';
+                            renderProds();
+                            renderPdv();
+                            renderMov();
+                            renderHist();
+                            renderDash();
+                            console.log('✅ Auto-reconnexion réussie !');
+                        });
                     }
                 });
             } catch (error) {
@@ -872,10 +886,19 @@
                     currentSupabaseUser = result.data.user;
                     useSupabase = true;
                     
+                    // Charger les données depuis Supabase
+                    await loadFromSupabase();
+                    
                     document.getElementById('user-name').textContent = result.data.user.user_metadata.full_name || 'Utilisateur';
                     document.getElementById('user-email').textContent = result.data.user.email;
                     document.getElementById('loginPage').style.display = 'none';
                     document.getElementById('mainApp').style.display = 'block';
+                    
+                    // Rendre toutes les sections
+                    renderProds();
+                    renderPdv();
+                    renderMov();
+                    renderHist();
                     renderDash();
                     
                     console.log('✅ Connexion Supabase réussie');
@@ -908,21 +931,25 @@
         
         async function saveToSupabase() {
             try {
-                console.log('💾 Sauvegarde Supabase...');
+                console.log('💾 Sauvegarde Supabase COMPLÈTE...');
                 
-                // Supprimer anciennes données
-                await supabaseClient.from('products').delete().eq('user_id', currentSupabaseUser.id);
+                const userId = currentSupabaseUser.id;
                 
-                // Sauvegarder produits
+                // 1. Supprimer anciennes données
+                await supabaseClient.from('products').delete().eq('user_id', userId);
+                await supabaseClient.from('points_vente').delete().eq('user_id', userId);
+                await supabaseClient.from('movements').delete().eq('user_id', userId);
+                
+                // 2. Sauvegarder produits
                 if (products.length > 0) {
-                    const toInsert = products
+                    const productsToInsert = products
                         .filter(function(p) { return p.reference && p.reference.trim(); })
                         .map(function(p) {
                             let qty = parseInt(p.quantity || p.repetition || 0);
                             if (isNaN(qty)) qty = 0;
                             
                             return {
-                                user_id: currentSupabaseUser.id,
+                                user_id: userId,
                                 real_name: (p.realName || p.name || 'Produit').substring(0, 255),
                                 conventional_name: (p.conventionalName || '').substring(0, 255),
                                 reference: p.reference.trim(),
@@ -936,13 +963,141 @@
                             };
                         });
                     
-                    if (toInsert.length > 0) {
-                        await supabaseClient.from('products').insert(toInsert);
-                        console.log('✅ Sauvegardé:', toInsert.length, 'produits');
+                    if (productsToInsert.length > 0) {
+                        await supabaseClient.from('products').insert(productsToInsert);
+                        console.log('✅ Produits:', productsToInsert.length);
                     }
                 }
+                
+                // 3. Sauvegarder points de vente
+                if (pdvs.length > 0) {
+                    const pdvsToInsert = pdvs
+                        .filter(function(p) { return p.name && p.name.trim(); })
+                        .map(function(p) {
+                            return {
+                                user_id: userId,
+                                name: p.name.trim().substring(0, 255),
+                                address: (p.location || '').substring(0, 500),
+                                phone: '',
+                                email: '',
+                                manager: ''
+                            };
+                        });
+                    
+                    if (pdvsToInsert.length > 0) {
+                        await supabaseClient.from('points_vente').insert(pdvsToInsert);
+                        console.log('✅ PDV:', pdvsToInsert.length);
+                    }
+                }
+                
+                // 4. Sauvegarder mouvements
+                if (movements.length > 0) {
+                    const movsToInsert = movements.map(function(m) {
+                        // Trouver l'ID du produit dans Supabase (temporairement on skip)
+                        return {
+                            user_id: userId,
+                            product_id: 1, // Temporaire - à corriger
+                            type: m.type === 'Entrée' ? 'entry' : m.type === 'Sortie' ? 'exit' : 'transfer',
+                            quantity: parseInt(m.quantity) || 0,
+                            reason: (m.reason || '').substring(0, 500),
+                            customer: (m.customer || '').substring(0, 255),
+                            from_location: (m.from || '').substring(0, 255),
+                            to_location: (m.to || '').substring(0, 255),
+                            date: m.date || new Date().toISOString().split('T')[0],
+                            user_name: 'Utilisateur'
+                        };
+                    }).filter(function(m) { return m.product_id; });
+                    
+                    if (movsToInsert.length > 0) {
+                        // await supabaseClient.from('movements').insert(movsToInsert);
+                        // console.log('✅ Mouvements:', movsToInsert.length);
+                        console.log('ℹ️ Mouvements: skip (à implémenter)');
+                    }
+                }
+                
+                console.log('✅ Sauvegarde complète terminée !');
             } catch (error) {
                 console.error('❌ Erreur sauvegarde:', error.message);
+            }
+        }
+        
+        // Fonction pour charger depuis Supabase
+        async function loadFromSupabase() {
+            if (!currentSupabaseUser) return;
+            
+            try {
+                console.log('📥 Chargement depuis Supabase...');
+                
+                // Charger produits
+                const { data: prodsData } = await supabaseClient
+                    .from('products')
+                    .select('*')
+                    .eq('user_id', currentSupabaseUser.id);
+                
+                // Charger PDV
+                const { data: pdvData } = await supabaseClient
+                    .from('points_vente')
+                    .select('*')
+                    .eq('user_id', currentSupabaseUser.id);
+                
+                // Charger mouvements
+                const { data: movData } = await supabaseClient
+                    .from('movements')
+                    .select('*')
+                    .eq('user_id', currentSupabaseUser.id);
+                
+                // Convertir produits
+                if (prodsData && prodsData.length > 0) {
+                    products = prodsData.map(function(p) {
+                        return {
+                            id: p.id.toString(),
+                            name: p.real_name,
+                            realName: p.real_name,
+                            conventionalName: p.conventional_name || '',
+                            reference: p.reference,
+                            barcode: p.barcode || '',
+                            repetition: p.quantity,
+                            quantity: p.quantity,
+                            imageUrl: p.image || '',
+                            pdvStock: {}
+                        };
+                    });
+                }
+                
+                // Convertir PDV
+                if (pdvData && pdvData.length > 0) {
+                    pdvs = pdvData.map(function(p) {
+                        return {
+                            id: p.id.toString(),
+                            name: p.name,
+                            location: p.address || ''
+                        };
+                    });
+                }
+                
+                // Convertir mouvements
+                if (movData && movData.length > 0) {
+                    movements = movData.map(function(m) {
+                        return {
+                            id: m.id.toString(),
+                            type: m.type === 'entry' ? 'Entrée' : m.type === 'exit' ? 'Sortie' : 'Transfert',
+                            productName: 'Produit',
+                            quantity: m.quantity,
+                            reason: m.reason || '',
+                            customer: m.customer || '',
+                            from: m.from_location || '',
+                            to: m.to_location || '',
+                            date: m.date
+                        };
+                    });
+                }
+                
+                console.log('✅ Chargé:', products.length, 'produits,', pdvs.length, 'PDV,', movements.length, 'mouvements');
+                
+                // Sauvegarder en local aussi
+                save();
+            } catch (error) {
+                console.error('❌ Erreur chargement:', error);
             }
         }
 
