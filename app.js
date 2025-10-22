@@ -796,3 +796,7 @@ import { saveProduit } from './supabase-adapter.js'
 
 // منين كيزيد منتوج جديد:
 saveProduit(nomProduit, stockProduit)
+
+import { updateStock } from './supabase-adapter.js'
+
+updateStock(idProduit, nouveauStock)
