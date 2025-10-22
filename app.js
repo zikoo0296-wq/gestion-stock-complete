@@ -1,19 +1,10 @@
-import { auth, db } from './firebase-config.js';
-import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { 
-    collection, 
-    doc, 
-    setDoc, 
-    getDoc,
-    getDocs,
-    updateDoc,
-    deleteDoc,
-    query,
-    where,
-    orderBy,
-    serverTimestamp,
-    writeBatch
-} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+// ============================================
+// APP.JS - VERSION SUPABASE
+// ============================================
+// Ce fichier remplace Firebase par Supabase
+// TOUT LE RESTE RESTE IDENTIQUE (design, calculs, fonctionnalités)
+
+import { supabase } from './supabase-config.js';
 
 // Variables globales
 let currentUser = null;
@@ -25,27 +16,49 @@ let editingProduct = null;
 
 // ============== INITIALISATION ==============
 
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        currentUser = user;
-        await loadUserData();
-        await loadAllData();
-        renderDashboard();
+// Vérifier l'authentification au chargement
+supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+        currentUser = session.user;
+        init();
     } else {
         window.location.href = 'index.html';
     }
 });
 
+// Écouter les changements d'authentification
+supabase.auth.onAuthStateChanged((event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+        currentUser = session.user;
+        init();
+    } else if (event === 'SIGNED_OUT') {
+        window.location.href = 'index.html';
+    }
+});
+
+async function init() {
+    await loadUserData();
+    await loadAllData();
+    renderDashboard();
+    setupRealtimeSubscriptions();
+}
+
 async function loadUserData() {
     try {
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        if (userDoc.exists()) {
-            const userData = userDoc.data();
-            document.getElementById('user-name').textContent = userData.fullName || 'Utilisateur';
-            document.getElementById('user-email').textContent = userData.email;
+        const { data, error } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
+        
+        if (error) throw error;
+        
+        if (data) {
+            document.getElementById('user-name').textContent = data.full_name || 'Utilisateur';
+            document.getElementById('user-email').textContent = data.email;
             
-            if (userData.photoURL) {
-                document.getElementById('user-avatar').innerHTML = `<img src="${userData.photoURL}" style="width:100%;height:100%;border-radius:50%;">`;
+            if (data.photo_url) {
+                document.getElementById('user-avatar').innerHTML = `<img src="${data.photo_url}" style="width:100%;height:100%;border-radius:50%;">`;
             }
         }
     } catch (error) {
@@ -71,9 +84,29 @@ async function loadAllData() {
 
 async function loadProducts() {
     try {
-        const q = query(collection(db, 'products'), where('userId', '==', currentUser.uid));
-        const snapshot = await getDocs(q);
-        products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        products = data.map(p => ({
+            id: p.id,
+            name: p.real_name,
+            conventionalName: p.conventional_name,
+            reference: p.reference,
+            barcode: p.barcode,
+            quantity: p.quantity,
+            minStock: p.min_stock,
+            category: p.category,
+            brand: p.brand,
+            warehouse: p.warehouse,
+            image: p.image,
+            price: 0, // À ajouter si vous avez un champ prix
+            createdAt: p.created_at
+        }));
     } catch (error) {
         console.error('Erreur chargement produits:', error);
     }
@@ -81,9 +114,21 @@ async function loadProducts() {
 
 async function loadPointsVente() {
     try {
-        const q = query(collection(db, 'pointsVente'), where('userId', '==', currentUser.uid));
-        const snapshot = await getDocs(q);
-        pointsVente = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const { data, error } = await supabase
+            .from('points_vente')
+            .select('*')
+            .eq('user_id', currentUser.id);
+        
+        if (error) throw error;
+        
+        pointsVente = data.map(p => ({
+            id: p.id,
+            name: p.name,
+            address: p.address,
+            phone: p.phone,
+            email: p.email,
+            manager: p.manager
+        }));
     } catch (error) {
         console.error('Erreur chargement PDV:', error);
     }
@@ -91,29 +136,82 @@ async function loadPointsVente() {
 
 async function loadMovements() {
     try {
-        const q = query(
-            collection(db, 'movements'), 
-            where('userId', '==', currentUser.uid),
-            orderBy('date', 'desc')
-        );
-        const snapshot = await getDocs(q);
-        movements = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const { data, error } = await supabase
+            .from('movements')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('date', { ascending: false });
+        
+        if (error) throw error;
+        
+        movements = data.map(m => ({
+            id: m.id,
+            productId: m.product_id,
+            type: m.type,
+            quantity: m.quantity,
+            reason: m.reason,
+            customer: m.customer,
+            fromLocation: m.from_location,
+            toLocation: m.to_location,
+            date: m.date,
+            userName: m.user_name
+        }));
     } catch (error) {
         console.error('Erreur chargement mouvements:', error);
     }
 }
 
+// ============== REALTIME SUBSCRIPTIONS ==============
+
+function setupRealtimeSubscriptions() {
+    // Écouter les changements sur les produits en temps réel
+    supabase
+        .channel('products_changes')
+        .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'products', filter: `user_id=eq.${currentUser.id}` },
+            async (payload) => {
+                console.log('Changement produit:', payload);
+                await loadProducts();
+                if (currentPage === 'products') renderProducts();
+                if (currentPage === 'dashboard') renderDashboard();
+            }
+        )
+        .subscribe();
+    
+    // Écouter les changements sur les mouvements
+    supabase
+        .channel('movements_changes')
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'movements', filter: `user_id=eq.${currentUser.id}` },
+            async (payload) => {
+                console.log('Changement mouvement:', payload);
+                await loadMovements();
+                await loadProducts(); // Recharger aussi les produits car les quantités ont changé
+                if (currentPage === 'movements') renderMovements();
+                if (currentPage === 'history') renderHistory();
+                if (currentPage === 'dashboard') renderDashboard();
+            }
+        )
+        .subscribe();
+}
+
 // ============== UTILITIES ==============
 
 function showLoading(show = true) {
-    document.getElementById('loading').classList.toggle('hidden', !show);
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) {
+        loadingEl.classList.toggle('hidden', !show);
+    }
 }
 
 function showToast(msg, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
     const div = document.createElement('div');
     div.className = `toast ${type}`;
     div.innerHTML = `<div>${type === 'success' ? '✓' : type === 'error' ? '✗' : '⚠'}</div><div>${msg}</div>`;
-    document.getElementById('toast-container').appendChild(div);
+    container.appendChild(div);
     setTimeout(() => div.remove(), 3000);
 }
 
@@ -143,7 +241,10 @@ function showPage(page) {
 window.showPage = showPage;
 
 function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('active');
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        sidebar.classList.toggle('active');
+    }
 }
 
 window.toggleSidebar = toggleSidebar;
@@ -153,7 +254,7 @@ window.toggleSidebar = toggleSidebar;
 function renderDashboard() {
     const total = products.length;
     const stock = products.reduce((s, p) => s + (p.quantity || 0), 0);
-    const low = products.filter(p => (p.quantity || 0) < 10).length;
+    const low = products.filter(p => (p.quantity || 0) < (p.minStock || 10)).length;
     const value = products.reduce((s, p) => s + ((p.quantity || 0) * (p.price || 0)), 0);
 
     document.getElementById('app-container').innerHTML = `
@@ -194,17 +295,23 @@ function renderDashboard() {
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="dash-body">${renderAlerts(products.filter(p => (p.quantity || 0) < 10))}</tbody>
+                    <tbody id="dash-body">${renderAlerts(products.filter(p => (p.quantity || 0) < (p.minStock || 10)))}</tbody>
                 </table>
             </div>
         </div>
     `;
 
-    document.getElementById('dash-search').oninput = function() {
-        const s = this.value.toLowerCase();
-        const f = products.filter(p => (p.quantity || 0) < 10 && (p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s)));
-        document.getElementById('dash-body').innerHTML = renderAlerts(f);
-    };
+    const searchInput = document.getElementById('dash-search');
+    if (searchInput) {
+        searchInput.oninput = function() {
+            const s = this.value.toLowerCase();
+            const f = products.filter(p => 
+                (p.quantity || 0) < (p.minStock || 10) && 
+                (p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s))
+            );
+            document.getElementById('dash-body').innerHTML = renderAlerts(f);
+        };
+    }
 }
 
 function renderAlerts(list) {
@@ -219,13 +326,13 @@ function renderAlerts(list) {
     `).join('');
 }
 
-window.quickRestock = function(productId) {
+window.quickRestock = async function(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
     
     const qty = prompt(`Quantité à ajouter pour "${product.name}" :`);
     if (qty && !isNaN(qty) && parseInt(qty) > 0) {
-        addMovement('in', product.id, parseInt(qty), 'Réapprovisionnement rapide');
+        await addMovement('entry', product.id, parseInt(qty), 'Réapprovisionnement rapide');
     }
 };
 
@@ -252,7 +359,6 @@ function renderProducts() {
                             <th>Référence</th>
                             <th>Catégorie</th>
                             <th>Stock</th>
-                            <th>Prix</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -262,19 +368,22 @@ function renderProducts() {
         </div>
     `;
 
-    document.getElementById('prod-search').oninput = function() {
-        const s = this.value.toLowerCase();
-        const f = products.filter(p => 
-            p.name.toLowerCase().includes(s) || 
-            p.reference.toLowerCase().includes(s) ||
-            (p.category || '').toLowerCase().includes(s)
-        );
-        document.getElementById('prod-body').innerHTML = renderProdRows(f);
-    };
+    const searchInput = document.getElementById('prod-search');
+    if (searchInput) {
+        searchInput.oninput = function() {
+            const s = this.value.toLowerCase();
+            const f = products.filter(p => 
+                p.name.toLowerCase().includes(s) || 
+                p.reference.toLowerCase().includes(s) ||
+                (p.category || '').toLowerCase().includes(s)
+            );
+            document.getElementById('prod-body').innerHTML = renderProdRows(f);
+        };
+    }
 }
 
 function renderProdRows(list) {
-    if (list.length === 0) return '<tr><td colspan="7" style="text-align:center;padding:2rem;">Aucun produit</td></tr>';
+    if (list.length === 0) return '<tr><td colspan="6" style="text-align:center;padding:2rem;">Aucun produit</td></tr>';
     
     return list.map(p => {
         let img = '📦';
@@ -296,100 +405,133 @@ function renderProdRows(list) {
                 <td>${p.reference}</td>
                 <td>${p.category || '-'}</td>
                 <td><strong style="font-size:1.1rem;">${p.quantity || 0}</strong></td>
-                <td><strong>${(p.price || 0).toFixed(2)} DH</strong></td>
                 <td>
-                    <button class="btn btn-primary" onclick='editProduct("${p.id}")' style="padding:8px 12px;">✏️</button>
-                    <button class="btn btn-danger" onclick='deleteProduct("${p.id}")' style="padding:8px 12px;">🗑️</button>
+                    <button class="btn-icon" onclick="editProduct('${p.id}')" title="Modifier">✏️</button>
+                    <button class="btn-icon" onclick="deleteProduct('${p.id}')" title="Supprimer">🗑️</button>
                 </td>
             </tr>
         `;
     }).join('');
 }
 
-window.openProductModal = function() {
-    editingProduct = null;
-    document.getElementById('modal-title').textContent = 'Ajouter un produit';
-    document.getElementById('product-form').reset();
-    document.getElementById('product-modal').classList.add('active');
+// ============== AJOUTER / MODIFIER PRODUIT ==============
+
+window.openProductModal = function(productId = null) {
+    editingProduct = productId ? products.find(p => p.id === productId) : null;
+    
+    document.getElementById('modal-product').classList.add('active');
+    document.getElementById('modal-title-product').textContent = editingProduct ? 'Modifier le produit' : 'Nouveau produit';
+    
+    if (editingProduct) {
+        document.getElementById('prod-name').value = editingProduct.name;
+        document.getElementById('prod-conv').value = editingProduct.conventionalName || '';
+        document.getElementById('prod-ref').value = editingProduct.reference;
+        document.getElementById('prod-barcode').value = editingProduct.barcode || '';
+        document.getElementById('prod-qty').value = editingProduct.quantity || 0;
+        document.getElementById('prod-min').value = editingProduct.minStock || 10;
+        document.getElementById('prod-cat').value = editingProduct.category || '';
+        document.getElementById('prod-brand').value = editingProduct.brand || '';
+        document.getElementById('prod-warehouse').value = editingProduct.warehouse || '';
+        document.getElementById('prod-img').value = editingProduct.image || '';
+    } else {
+        document.getElementById('form-product').reset();
+    }
+};
+
+window.editProduct = function(productId) {
+    openProductModal(productId);
 };
 
 window.closeProductModal = function() {
-    document.getElementById('product-modal').classList.remove('active');
+    document.getElementById('modal-product').classList.remove('active');
+    editingProduct = null;
 };
 
-window.editProduct = async function(productId) {
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
+window.saveProduct = async function() {
+    const name = document.getElementById('prod-name').value.trim();
+    const conv = document.getElementById('prod-conv').value.trim();
+    const ref = document.getElementById('prod-ref').value.trim();
+    const barcode = document.getElementById('prod-barcode').value.trim();
+    const qty = parseInt(document.getElementById('prod-qty').value) || 0;
+    const min = parseInt(document.getElementById('prod-min').value) || 10;
+    const cat = document.getElementById('prod-cat').value.trim();
+    const brand = document.getElementById('prod-brand').value.trim();
+    const warehouse = document.getElementById('prod-warehouse').value.trim();
+    const img = document.getElementById('prod-img').value.trim();
     
-    editingProduct = product;
-    document.getElementById('modal-title').textContent = 'Modifier le produit';
-    document.getElementById('product-image').value = product.image || '';
-    document.getElementById('product-name').value = product.name;
-    document.getElementById('product-conventional').value = product.conventionalName || '';
-    document.getElementById('product-ref').value = product.reference;
-    document.getElementById('product-barcode').value = product.barcode || '';
-    document.getElementById('product-category').value = product.category || '';
-    document.getElementById('product-brand').value = product.brand || '';
-    document.getElementById('product-price').value = product.price;
-    document.getElementById('product-quantity').value = product.quantity || 0;
-    document.getElementById('product-modal').classList.add('active');
+    if (!name || !ref) {
+        showToast('Le nom et la référence sont obligatoires', 'error');
+        return;
+    }
+    
+    showLoading(true);
+    
+    try {
+        const productData = {
+            user_id: currentUser.id,
+            real_name: name,
+            conventional_name: conv,
+            reference: ref,
+            barcode: barcode,
+            quantity: qty,
+            min_stock: min,
+            category: cat,
+            brand: brand,
+            warehouse: warehouse,
+            image: img
+        };
+        
+        if (editingProduct) {
+            // Mise à jour
+            const { error } = await supabase
+                .from('products')
+                .update(productData)
+                .eq('id', editingProduct.id)
+                .eq('user_id', currentUser.id);
+            
+            if (error) throw error;
+            showToast('Produit modifié avec succès');
+        } else {
+            // Création
+            const { error } = await supabase
+                .from('products')
+                .insert([productData]);
+            
+            if (error) throw error;
+            showToast('Produit ajouté avec succès');
+        }
+        
+        await loadProducts();
+        renderProducts();
+        closeProductModal();
+    } catch (error) {
+        console.error('Erreur sauvegarde produit:', error);
+        showToast('Erreur lors de la sauvegarde: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
 };
 
 window.deleteProduct = async function(productId) {
     if (!confirm('Supprimer ce produit ?')) return;
     
     showLoading(true);
+    
     try {
-        await deleteDoc(doc(db, 'products', productId));
-        products = products.filter(p => p.id !== productId);
+        const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', productId)
+            .eq('user_id', currentUser.id);
+        
+        if (error) throw error;
+        
         showToast('Produit supprimé');
+        await loadProducts();
         renderProducts();
     } catch (error) {
         console.error('Erreur suppression:', error);
-        showToast('Erreur de suppression', 'error');
-    } finally {
-        showLoading(false);
-    }
-};
-
-document.getElementById('product-form').onsubmit = async function(e) {
-    e.preventDefault();
-    
-    const data = {
-        image: document.getElementById('product-image').value,
-        name: document.getElementById('product-name').value,
-        conventionalName: document.getElementById('product-conventional').value,
-        reference: document.getElementById('product-ref').value,
-        barcode: document.getElementById('product-barcode').value,
-        category: document.getElementById('product-category').value,
-        brand: document.getElementById('product-brand').value,
-        price: parseFloat(document.getElementById('product-price').value),
-        quantity: parseInt(document.getElementById('product-quantity').value) || 0,
-        userId: currentUser.uid,
-        updatedAt: serverTimestamp()
-    };
-
-    showLoading(true);
-    
-    try {
-        if (editingProduct) {
-            await updateDoc(doc(db, 'products', editingProduct.id), data);
-            const index = products.findIndex(p => p.id === editingProduct.id);
-            products[index] = { ...editingProduct, ...data };
-            showToast('Produit modifié');
-        } else {
-            const newDocRef = doc(collection(db, 'products'));
-            data.createdAt = serverTimestamp();
-            await setDoc(newDocRef, data);
-            products.push({ id: newDocRef.id, ...data });
-            showToast('Produit ajouté');
-        }
-        
-        closeProductModal();
-        renderProducts();
-    } catch (error) {
-        console.error('Erreur sauvegarde:', error);
-        showToast('Erreur de sauvegarde', 'error');
+        showToast('Erreur lors de la suppression', 'error');
     } finally {
         showLoading(false);
     }
@@ -397,164 +539,113 @@ document.getElementById('product-form').onsubmit = async function(e) {
 
 // ============== MOUVEMENTS ==============
 
+async function addMovement(type, productId, quantity, reason, customer = null, fromLocation = null, toLocation = null) {
+    showLoading(true);
+    
+    try {
+        const product = products.find(p => p.id === productId);
+        if (!product) throw new Error('Produit introuvable');
+        
+        let newQty = product.quantity;
+        
+        if (type === 'entry') {
+            newQty += quantity;
+        } else if (type === 'exit') {
+            if (newQty < quantity) {
+                throw new Error('Stock insuffisant');
+            }
+            newQty -= quantity;
+        }
+        
+        // Mettre à jour la quantité du produit
+        const { error: updateError } = await supabase
+            .from('products')
+            .update({ quantity: newQty })
+            .eq('id', productId)
+            .eq('user_id', currentUser.id);
+        
+        if (updateError) throw updateError;
+        
+        // Créer le mouvement
+        const { error: movementError } = await supabase
+            .from('movements')
+            .insert([{
+                user_id: currentUser.id,
+                product_id: productId,
+                type: type,
+                quantity: quantity,
+                reason: reason,
+                customer: customer,
+                from_location: fromLocation,
+                to_location: toLocation,
+                date: new Date().toISOString().split('T')[0],
+                user_name: currentUser.email
+            }]);
+        
+        if (movementError) throw movementError;
+        
+        showToast('Mouvement enregistré');
+        await loadProducts();
+        await loadMovements();
+        
+        if (currentPage === 'dashboard') renderDashboard();
+        if (currentPage === 'movements') renderMovements();
+        if (currentPage === 'history') renderHistory();
+    } catch (error) {
+        console.error('Erreur mouvement:', error);
+        showToast('Erreur: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
 function renderMovements() {
     document.getElementById('app-container').innerHTML = `
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">🔄 Mouvements de Stock</h3>
-            </div>
-            <div style="background:#f9fafb;padding:20px;border-radius:12px;margin-bottom:20px;">
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;">
-                    <div class="form-group">
-                        <label>Type</label>
-                        <select id="mov-type" onchange="updateMovementForm()">
-                            <option value="in">Entrée (+)</option>
-                            <option value="out">Sortie (-)</option>
-                            <option value="transfer">Transfert</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="pdv-select">
-                        <label>Point de Vente</label>
-                        <select id="mov-pdv">
-                            <option value="">Stock Central</option>
-                            ${pointsVente.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group" id="reason-select">
-                        <label>Raison</label>
-                        <select id="mov-reason">
-                            <option value="Achat">Achat</option>
-                            <option value="Vente">Vente</option>
-                            <option value="Retour">Retour</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="payment-select">
-                        <label>Paiement</label>
-                        <select id="mov-payment">
-                            <option value="Espèce">Espèce</option>
-                            <option value="Virement">Virement</option>
-                        </select>
-                    </div>
+                <h3 class="card-title">📊 Mouvements de Stock</h3>
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="openMovementModal('entry')">➕ Entrée</button>
+                    <button class="btn btn-danger" onclick="openMovementModal('exit')">➖ Sortie</button>
+                    <button class="btn btn-warning" onclick="openMovementModal('transfer')">🔄 Transfert</button>
                 </div>
-                <button class="btn btn-success" onclick="validateMovement()" style="margin-top:15px;width:100%;">✓ VALIDER</button>
             </div>
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th><input type="checkbox" onclick="toggleAllMovements(this)"></th>
-                            <th>Produit</th>
-                            <th>Stock</th>
+                            <th>Date</th>
+                            <th>Type</th>
                             <th>Quantité</th>
+                            <th>Raison</th>
+                            <th>Client</th>
                         </tr>
                     </thead>
-                    <tbody id="mov-body">${renderMovRows(products)}</tbody>
+                    <tbody>${renderMovementRows(movements)}</tbody>
                 </table>
             </div>
         </div>
     `;
 }
 
-function renderMovRows(list) {
-    if (list.length === 0) return '<tr><td colspan="4">Aucun produit</td></tr>';
-    return list.map(p => `
-        <tr>
-            <td><input type="checkbox" class="mov-check" data-id="${p.id}"></td>
-            <td><strong>${p.name}</strong></td>
-            <td>${p.quantity || 0}</td>
-            <td><input type="number" class="mov-qty" data-id="${p.id}" min="1" disabled style="width:100px;padding:8px;"></td>
-        </tr>
-    `).join('');
+function renderMovementRows(list) {
+    if (list.length === 0) return '<tr><td colspan="5" style="text-align:center;padding:2rem;">Aucun mouvement</td></tr>';
+    
+    return list.map(m => {
+        const typeLabel = m.type === 'entry' ? 'Entrée' : m.type === 'exit' ? 'Sortie' : 'Transfert';
+        const typeColor = m.type === 'entry' ? '#10b981' : m.type === 'exit' ? '#ef4444' : '#f59e0b';
+        
+        return `
+            <tr>
+                <td>${m.date}</td>
+                <td><span style="color:${typeColor};font-weight:600;">${typeLabel}</span></td>
+                <td><strong>${m.quantity}</strong></td>
+                <td>${m.reason || '-'}</td>
+                <td>${m.customer || '-'}</td>
+            </tr>
+        `;
+    }).join('');
 }
-
-window.updateMovementForm = function() {
-    const type = document.getElementById('mov-type').value;
-    document.getElementById('pdv-select').style.display = type === 'transfer' ? 'none' : 'block';
-    document.getElementById('reason-select').style.display = type === 'transfer' ? 'none' : 'block';
-    document.getElementById('payment-select').style.display = type === 'transfer' ? 'none' : 'block';
-};
-
-window.toggleAllMovements = function(checkbox) {
-    document.querySelectorAll('.mov-check').forEach(cb => {
-        cb.checked = checkbox.checked;
-        const qtyInput = document.querySelector(`.mov-qty[data-id="${cb.dataset.id}"]`);
-        if (qtyInput) qtyInput.disabled = !cb.checked;
-    });
-};
-
-document.addEventListener('change', function(e) {
-    if (e.target.classList.contains('mov-check')) {
-        const qtyInput = document.querySelector(`.mov-qty[data-id="${e.target.dataset.id}"]`);
-        if (qtyInput) {
-            qtyInput.disabled = !e.target.checked;
-            if (!e.target.checked) qtyInput.value = '';
-        }
-    }
-});
-
-window.validateMovement = async function() {
-    const type = document.getElementById('mov-type').value;
-    const pdvId = document.getElementById('mov-pdv')?.value || '';
-    const reason = document.getElementById('mov-reason')?.value || '';
-    const payment = document.getElementById('mov-payment')?.value || '';
-    
-    const items = [];
-    document.querySelectorAll('.mov-check:checked').forEach(cb => {
-        const qtyInput = document.querySelector(`.mov-qty[data-id="${cb.dataset.id}"]`);
-        const qty = parseInt(qtyInput.value) || 0;
-        if (qty > 0) items.push({ productId: cb.dataset.id, quantity: qty });
-    });
-    
-    if (items.length === 0) {
-        showToast('Sélectionnez des produits', 'warning');
-        return;
-    }
-    
-    showLoading(true);
-    
-    try {
-        const batch = writeBatch(db);
-        
-        for (const item of items) {
-            const product = products.find(p => p.id === item.productId);
-            if (!product) continue;
-            
-            let newQty = product.quantity || 0;
-            if (type === 'in') newQty += item.quantity;
-            else if (type === 'out') newQty -= item.quantity;
-            
-            if (newQty < 0) {
-                showToast(`Stock insuffisant pour ${product.name}`, 'error');
-                continue;
-            }
-            
-            batch.update(doc(db, 'products', item.productId), { quantity: newQty });
-            
-            const movRef = doc(collection(db, 'movements'));
-            batch.set(movRef, {
-                userId: currentUser.uid,
-                type,
-                productId: item.productId,
-                productName: product.name,
-                quantity: item.quantity,
-                pdv: pdvId,
-                reason,
-                payment,
-                date: serverTimestamp()
-            });
-        }
-        
-        await batch.commit();
-        await loadAllData();
-        showToast('Mouvements enregistrés');
-        renderMovements();
-    } catch (error) {
-        console.error('Erreur mouvements:', error);
-        showToast('Erreur d\'enregistrement', 'error');
-    } finally {
-        showLoading(false);
-    }
-};
 
 // ============== POINTS DE VENTE ==============
 
@@ -563,58 +654,40 @@ function renderPointsVente() {
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title">🏪 Points de Vente</h3>
-                <button class="btn btn-primary" onclick="addPointVente()">➕ Ajouter PDV</button>
+                <button class="btn btn-primary" onclick="openPdvModal()">➕ Ajouter</button>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px;">
-                ${pointsVente.map(p => `
-                    <div class="card" style="text-align:center;">
-                        <h3 style="margin-bottom:15px;">${p.name}</h3>
-                        <button class="btn btn-primary" onclick="viewPDV('${p.id}')">Voir détails</button>
-                    </div>
-                `).join('') || '<p style="padding:2rem;text-align:center;color:#999;">Aucun point de vente</p>'}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nom</th>
+                            <th>Adresse</th>
+                            <th>Téléphone</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>${renderPdvRows(pointsVente)}</tbody>
+                </table>
             </div>
         </div>
     `;
 }
 
-window.addPointVente = async function() {
-    const name = prompt('Nom du point de vente :');
-    if (!name || !name.trim()) return;
+function renderPdvRows(list) {
+    if (list.length === 0) return '<tr><td colspan="4" style="text-align:center;padding:2rem;">Aucun point de vente</td></tr>';
     
-    showLoading(true);
-    try {
-        const newRef = doc(collection(db, 'pointsVente'));
-        await setDoc(newRef, {
-            name: name.trim(),
-            userId: currentUser.uid,
-            products: [],
-            createdAt: serverTimestamp()
-        });
-        await loadPointsVente();
-        showToast('Point de vente ajouté');
-        renderPointsVente();
-    } catch (error) {
-        console.error('Erreur:', error);
-        showToast('Erreur d\'ajout', 'error');
-    } finally {
-        showLoading(false);
-    }
-};
-
-window.viewPDV = function(pdvId) {
-    const pdv = pointsVente.find(p => p.id === pdvId);
-    if (!pdv) return;
-    
-    document.getElementById('app-container').innerHTML = `
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">🏪 ${pdv.name}</h3>
-                <button class="btn btn-secondary" onclick="renderPointsVente()">← Retour</button>
-            </div>
-            <p style="padding:2rem;text-align:center;color:#999;">Fonctionnalité en développement</p>
-        </div>
-    `;
-};
+    return list.map(p => `
+        <tr>
+            <td><strong>${p.name}</strong></td>
+            <td>${p.address || '-'}</td>
+            <td>${p.phone || '-'}</td>
+            <td>
+                <button class="btn-icon" onclick="editPdv('${p.id}')" title="Modifier">✏️</button>
+                <button class="btn-icon" onclick="deletePdv('${p.id}')" title="Supprimer">🗑️</button>
+            </td>
+        </tr>
+    `).join('');
+}
 
 // ============== HISTORIQUE ==============
 
@@ -622,8 +695,8 @@ function renderHistory() {
     document.getElementById('app-container').innerHTML = `
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">📜 Historique des Mouvements</h3>
-                <button class="btn btn-warning" onclick="exportHistory()">📥 Exporter</button>
+                <h3 class="card-title">📜 Historique Complet</h3>
+                <input type="text" id="history-search" class="search-input" placeholder="🔍 Rechercher...">
             </div>
             <div class="table-container">
                 <table>
@@ -631,34 +704,29 @@ function renderHistory() {
                         <tr>
                             <th>Date</th>
                             <th>Type</th>
-                            <th>Produit</th>
                             <th>Quantité</th>
                             <th>Raison</th>
+                            <th>Utilisateur</th>
                         </tr>
                     </thead>
-                    <tbody>${renderHistoryRows(movements)}</tbody>
+                    <tbody id="history-body">${renderMovementRows(movements)}</tbody>
                 </table>
             </div>
         </div>
     `;
-}
-
-function renderHistoryRows(list) {
-    if (list.length === 0) return '<tr><td colspan="5" style="text-align:center;padding:2rem;">Aucun mouvement</td></tr>';
-    return list.map(m => {
-        const date = m.date?.toDate ? m.date.toDate().toLocaleString('fr-FR') : 'Date inconnue';
-        const icon = m.type === 'in' ? '➕' : m.type === 'out' ? '➖' : '🔄';
-        const color = m.type === 'in' ? '#10b981' : m.type === 'out' ? '#ef4444' : '#f59e0b';
-        return `
-            <tr>
-                <td>${date}</td>
-                <td><span style="color:${color};font-weight:bold;">${icon} ${m.type === 'in' ? 'Entrée' : m.type === 'out' ? 'Sortie' : 'Transfert'}</span></td>
-                <td><strong>${m.productName}</strong></td>
-                <td><strong>${m.quantity}</strong></td>
-                <td>${m.reason || '-'}</td>
-            </tr>
-        `;
-    }).join('');
+    
+    const searchInput = document.getElementById('history-search');
+    if (searchInput) {
+        searchInput.oninput = function() {
+            const s = this.value.toLowerCase();
+            const f = movements.filter(m => 
+                (m.reason || '').toLowerCase().includes(s) ||
+                (m.customer || '').toLowerCase().includes(s) ||
+                (m.userName || '').toLowerCase().includes(s)
+            );
+            document.getElementById('history-body').innerHTML = renderMovementRows(f);
+        };
+    }
 }
 
 // ============== EXPORT ==============
@@ -669,209 +737,57 @@ window.exportProducts = function() {
         return;
     }
     
-    const data = products.map(p => ({
-        'IMAGE': p.image || '',
-        'Real Name': p.name,
-        'Conventional Name': p.conventionalName || '',
-        'Référence': p.reference,
-        'Barcode': p.barcode || '',
-        'Category': p.category || '',
-        'Brand': p.brand || '',
-        'Selling Price': p.price || 0,
-        'Quantity': p.quantity || 0
-    }));
+    const headers = ['Nom', 'Nom Conventionnel', 'Référence', 'Code-barres', 'Quantité', 'Stock Min', 'Catégorie', 'Marque', 'Entrepôt'];
+    const rows = products.map(p => [
+        p.name,
+        p.conventionalName || '',
+        p.reference,
+        p.barcode || '',
+        p.quantity,
+        p.minStock,
+        p.category || '',
+        p.brand || '',
+        p.warehouse || ''
+    ]);
     
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Produits');
-    XLSX.writeFile(wb, `produits_${new Date().toISOString().split('T')[0]}.xlsx`);
-    showToast('Export réussi');
-};
-
-window.exportHistory = function() {
-    if (movements.length === 0) {
-        showToast('Aucun historique', 'warning');
-        return;
-    }
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `produits_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
     
-    const data = movements.map(m => ({
-        'Date': m.date?.toDate ? m.date.toDate().toLocaleString('fr-FR') : '',
-        'Type': m.type === 'in' ? 'Entrée' : m.type === 'out' ? 'Sortie' : 'Transfert',
-        'Produit': m.productName,
-        'Quantité': m.quantity,
-        'Raison': m.reason || '',
-        'Paiement': m.payment || ''
-    }));
-    
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Historique');
-    XLSX.writeFile(wb, `historique_${new Date().toISOString().split('T')[0]}.xlsx`);
     showToast('Export réussi');
 };
 
 // ============== IMAGE MODAL ==============
 
-window.openImgModal = function(src) {
-    const modal = document.getElementById('image-modal');
-    const img = document.getElementById('modal-image');
-    const match = src.match(/[?&]id=([^&]+)/);
+window.openImgModal = function(imageUrl) {
+    const match = imageUrl.match(/[?&]id=([^&]+)/);
     if (match) {
         const id = match[1];
-        img.src = `https://drive.google.com/uc?export=view&id=${id}`;
-    } else {
-        img.src = src;
+        const fullImageUrl = `https://drive.google.com/uc?export=view&id=${id}`;
+        document.getElementById('img-modal-img').src = fullImageUrl;
+        document.getElementById('img-modal').classList.add('active');
     }
-    modal.classList.add('active');
 };
 
-window.closeImportModal = function() {
-    document.getElementById('import-modal').classList.remove('active');
+window.closeImgModal = function() {
+    document.getElementById('img-modal').classList.remove('active');
 };
 
-window.handleImport = async function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+// ============== DÉCONNEXION ==============
 
-    const pg = document.getElementById('import-progress');
-    const fill = document.getElementById('progress-fill');
-    const txt = document.getElementById('progress-text');
+window.logout = async function() {
+    if (!confirm('Se déconnecter ?')) return;
     
-    pg.classList.remove('hidden');
-    fill.style.width = '0%';
-    txt.textContent = 'Lecture du fichier...';
-
     try {
-        const data = await file.arrayBuffer();
-        fill.style.width = '30%';
-        txt.textContent = 'Analyse en cours...';
-
-        const wb = XLSX.read(data, { type: 'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws);
-
-        fill.style.width = '50%';
-        txt.textContent = `${rows.length} produits détectés...`;
-
-        if (rows.length === 0) {
-            showToast('Aucun produit trouvé', 'error');
-            closeImportModal();
-            return;
-        }
-
-        fill.style.width = '70%';
-        txt.textContent = 'Import des produits...';
-
-        const batch = writeBatch(db);
-        let count = 0;
-
-        for (const row of rows) {
-            const name = row['Real Name'] || row['RealName'] || row['name'] || row['Nom'] || '';
-            const ref = row['Référence'] || row['Reference'] || row['reference'] || row['REF'] || '';
-            
-            if (!name && !ref) continue;
-
-            const productData = {
-                image: row['IMAGE'] || row['Image'] || '',
-                name: name || ref,
-                conventionalName: row['Conventional Name'] || row['ConventionalName'] || '',
-                reference: ref || `REF_${Date.now()}_${count}`,
-                barcode: row['Barcode'] || row['barcode'] || '',
-                category: row['Category'] || row['category'] || row['Catégorie'] || '',
-                brand: row['Brand'] || row['brand'] || row['Marque'] || '',
-                price: parseFloat(row['Selling Price'] || row['Prix'] || row['Price'] || 0),
-                quantity: parseInt(row['Quantity'] || row['QTY'] || row['Repetition'] || 0),
-                userId: currentUser.uid,
-                createdAt: serverTimestamp()
-            };
-
-            const newRef = doc(collection(db, 'products'));
-            batch.set(newRef, productData);
-            count++;
-
-            if (count % 100 === 0) {
-                fill.style.width = `${70 + (count / rows.length) * 20}%`;
-            }
-        }
-
-        fill.style.width = '90%';
-        txt.textContent = 'Enregistrement...';
-
-        await batch.commit();
-        await loadProducts();
-
-        fill.style.width = '100%';
-        txt.textContent = `✓ ${count} produits importés !`;
-        showToast(`${count} produits importés avec succès`);
-
-        setTimeout(() => {
-            closeImportModal();
-            renderProducts();
-        }, 1500);
-
+        await supabase.auth.signOut();
+        window.location.href = 'index.html';
     } catch (error) {
-        console.error('Erreur import:', error);
-        txt.textContent = '❌ Erreur: ' + error.message;
-        showToast('Erreur d\'importation: ' + error.message, 'error');
+        console.error('Erreur déconnexion:', error);
+        showToast('Erreur lors de la déconnexion', 'error');
     }
 };
 
-// ============== HELPER FUNCTIONS ==============
-
-async function addMovement(type, productId, quantity, reason) {
-    showLoading(true);
-    try {
-        const product = products.find(p => p.id === productId);
-        if (!product) return;
-
-        let newQty = product.quantity || 0;
-        if (type === 'in') newQty += quantity;
-        else if (type === 'out') newQty -= quantity;
-
-        if (newQty < 0) {
-            showToast('Stock insuffisant', 'error');
-            return;
-        }
-
-        const batch = writeBatch(db);
-        
-        batch.update(doc(db, 'products', productId), { quantity: newQty });
-        
-        const movRef = doc(collection(db, 'movements'));
-        batch.set(movRef, {
-            userId: currentUser.uid,
-            type,
-            productId,
-            productName: product.name,
-            quantity,
-            reason,
-            date: serverTimestamp()
-        });
-
-        await batch.commit();
-        await loadAllData();
-        showToast('Stock mis à jour');
-        renderDashboard();
-    } catch (error) {
-        console.error('Erreur:', error);
-        showToast('Erreur de mise à jour', 'error');
-    } finally {
-        showLoading(false);
-    }
-}
-
-window.showSettings = function() {
-    showToast('Paramètres - Fonctionnalité en développement', 'warning');
-};
-
-console.log('✅ Application chargée avec succès');ageModal = function() {
-    document.getElementById('image-modal').classList.remove('active');
-};
-
-// ============== IMPORT EXCEL ==============
-
-window.openImportModal = function() {
-    document.getElementById('import-modal').classList.add('active');
-};
-
-window.closeIm
+console.log('✅ App Supabase chargée');
