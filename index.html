@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Pro - Gestion Interne</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-adapter.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -338,6 +340,7 @@
         .badge-danger { background: #fee2e2; color: #991b1b; }
         .badge-warning { background: #fef3c7; color: #92400e; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <!-- PAGE DE CONNEXION - USERNAME ET PASSWORD UNIQUEMENT -->
@@ -729,6 +732,32 @@
     </div>
 
     <script>
+        // ========== CONFIGURATION SUPABASE ==========
+        const SUPABASE_URL = 'https://djnaayhhntopupixzitm.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbmFheWhobnRvcHVwaXh6aXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NzY0NTIsImV4cCI6MjA3NjU1MjQ1Mn0.AzrxJ7h7SNEgn-i8qgdGYPvoEpWdRohX1E8N_Ko_Gc0';
+        
+        let supabaseClient = null;
+        let currentSupabaseUser = null;
+        let useSupabase = false;
+        
+        // Initialiser Supabase
+        if (typeof supabase !== 'undefined') {
+            const { createClient } = supabase;
+            supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log('✅ Supabase initialisé');
+            
+            // Vérifier session Supabase au chargement
+            supabaseClient.auth.getSession().then(({ data: { session } }) => {
+                if (session) {
+                    currentSupabaseUser = session.user;
+                    useSupabase = true;
+                    console.log('✅ Session Supabase active:', currentSupabaseUser.email);
+                    // Charger l'app avec les données Supabase
+                    loadSupabaseAndShowApp();
+                }
+            });
+        }
+        
         // ========== COMPTES UTILISATEURS - MODIFIEZ ICI ==========
         const USERS = [
             { username: 'admin', password: 'admin123', fullName: 'Administrateur', role: 'admin' },
@@ -808,14 +837,17 @@
             document.getElementById('mainApp').style.display = 'none';
         }
 
-        function handleLogin(event) {
+        async function handleLogin(event) {
             event.preventDefault();
             const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
 
+            // Vérifier d'abord si c'est un compte local (admin/admin123)
             const user = USERS.find(u => u.username === username && u.password === password);
 
             if (user) {
+                // Connexion locale (admin/admin123)
+                useSupabase = false;
                 const userSession = {
                     username: user.username,
                     fullName: user.fullName,
@@ -827,8 +859,35 @@
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'block';
                 renderDash();
+            } else if (username.includes('@')) {
+                // Si ça ressemble à un email, essayer Supabase
+                await loginWithSupabase(username, password);
             } else {
                 alert('❌ Nom d\'utilisateur ou mot de passe incorrect !');
+            }
+        }
+        
+        async function loginWithSupabase(email, password) {
+            try {
+                console.log('🔵 Connexion Supabase...');
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
+
+                currentSupabaseUser = data.user;
+                useSupabase = true;
+                
+                console.log('✅ Connexion Supabase réussie');
+                
+                // Charger les données et afficher l'app
+                await loadSupabaseAndShowApp();
+                
+            } catch (error) {
+                console.error('❌ Erreur connexion Supabase:', error);
+                alert('❌ Email ou mot de passe incorrect !');
             }
         }
 
@@ -839,10 +898,120 @@
             renderDash();
         });
 
-        function save() {
+        async function save() {
+            // Toujours sauvegarder en localStorage
             localStorage.setItem('products', JSON.stringify(products));
             localStorage.setItem('pdvs', JSON.stringify(pdvs));
             localStorage.setItem('movements', JSON.stringify(movements));
+            
+            // Si connecté avec Supabase, sauvegarder aussi dans le cloud
+            if (useSupabase && currentSupabaseUser) {
+                await saveToSupabase();
+            }
+        }
+        
+        async function saveToSupabase() {
+            try {
+                console.log('💾 Sauvegarde Supabase...');
+                
+                // Supprimer les anciennes données
+                await supabaseClient.from('products').delete().eq('user_id', currentSupabaseUser.id);
+                await supabaseClient.from('points_vente').delete().eq('user_id', currentSupabaseUser.id);
+                
+                // Sauvegarder les produits
+                if (products.length > 0) {
+                    const productsToInsert = products.map(p => ({
+                        user_id: currentSupabaseUser.id,
+                        real_name: p.realName || p.name,
+                        conventional_name: p.conventionalName || '',
+                        reference: p.reference,
+                        barcode: p.barcode || '',
+                        quantity: p.quantity || p.repetition || 0,
+                        min_stock: 10,
+                        category: p.category || '',
+                        brand: p.brand || '',
+                        warehouse: 'Entrepôt A',
+                        image: p.imageUrl || ''
+                    }));
+                    
+                    await supabaseClient.from('products').insert(productsToInsert);
+                }
+                
+                // Sauvegarder les PDV
+                if (pdvs.length > 0) {
+                    const pdvsToInsert = pdvs.map(p => ({
+                        user_id: currentSupabaseUser.id,
+                        name: p.name,
+                        address: p.location || ''
+                    }));
+                    
+                    await supabaseClient.from('points_vente').insert(pdvsToInsert);
+                }
+                
+                console.log('✅ Sauvegarde Supabase réussie');
+            } catch (error) {
+                console.error('❌ Erreur sauvegarde Supabase:', error);
+            }
+        }
+        
+        async function loadFromSupabase() {
+            try {
+                console.log('📥 Chargement depuis Supabase...');
+                
+                // Charger les produits
+                const { data: productsData } = await supabaseClient
+                    .from('products')
+                    .select('*')
+                    .eq('user_id', currentSupabaseUser.id);
+                
+                // Charger les PDV
+                const { data: pdvData } = await supabaseClient
+                    .from('points_vente')
+                    .select('*')
+                    .eq('user_id', currentSupabaseUser.id);
+                
+                // Convertir au format de l'app
+                if (productsData && productsData.length > 0) {
+                    products = productsData.map(p => ({
+                        id: p.id.toString(),
+                        name: p.real_name,
+                        realName: p.real_name,
+                        conventionalName: p.conventional_name || '',
+                        reference: p.reference,
+                        barcode: p.barcode || '',
+                        repetition: p.quantity,
+                        quantity: p.quantity,
+                        category: p.category || '',
+                        brand: p.brand || '',
+                        imageUrl: p.image || '',
+                        pdvStock: {}
+                    }));
+                }
+                
+                if (pdvData && pdvData.length > 0) {
+                    pdvs = pdvData.map(p => ({
+                        id: p.id.toString(),
+                        name: p.name,
+                        location: p.address || ''
+                    }));
+                }
+                
+                console.log(`✅ Chargé: ${products.length} produits, ${pdvs.length} PDV`);
+                
+                // Sauvegarder aussi en localStorage pour utilisation hors ligne
+                save();
+            } catch (error) {
+                console.error('❌ Erreur chargement Supabase:', error);
+            }
+        }
+        
+        async function loadSupabaseAndShowApp() {
+            await loadFromSupabase();
+            document.getElementById('user-name').textContent = currentSupabaseUser.user_metadata.full_name || 'Utilisateur';
+            document.getElementById('user-email').textContent = currentSupabaseUser.email;
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            renderDash();
         }
 
         function showSection(sec) {
@@ -1605,9 +1774,18 @@
             event.target.value = '';
         }
 
-        function logout() {
+        async function logout() {
             if (confirm('Se déconnecter ?')) {
+                // Déconnexion locale
                 localStorage.removeItem('currentUser');
+                
+                // Si connecté avec Supabase, déconnecter aussi
+                if (useSupabase && supabaseClient) {
+                    await supabaseClient.auth.signOut();
+                    currentSupabaseUser = null;
+                    useSupabase = false;
+                }
+                
                 showLoginPage();
                 document.getElementById('login-username').value = '';
                 document.getElementById('login-password').value = '';
