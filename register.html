@@ -1,1 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Pro - Inscription</title>
+    <link rel="stylesheet" href="Login.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="logo-section">
+                <div class="logo-icon">📦</div>
+                <h1>Stock Pro</h1>
+                <p class="tagline">Créez votre compte</p>
+            </div>
 
+            <form id="register-form" class="auth-form">
+                <h2>Inscription</h2>
+
+                <div class="form-group">
+                    <label for="full-name">Nom complet</label>
+                    <input type="text" id="full-name" required placeholder="Jean Dupont">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required placeholder="votre@email.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" required placeholder="••••••••">
+                    <small class="input-hint">Au moins 6 caractères</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm-password">Confirmer le mot de passe</label>
+                    <input type="password" id="confirm-password" required placeholder="••••••••">
+                </div>
+
+                <button type="submit" class="btn-primary">Créer mon compte</button>
+
+                <div class="signup-link">
+                    Déjà un compte ? <a href="index.html">Se connecter</a>
+                </div>
+
+                <div id="error-message" class="error-message hidden"></div>
+                <div id="success-message" class="success-message hidden"></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="loading" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p>Création du compte...</p>
+    </div>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script type="module">
+        // Configuration Supabase
+        const SUPABASE_URL = 'https://djnaayhhntopupixzitm.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbmFheWhobnRvcHVwaXh6aXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NzY0NTIsImV4cCI6MjA3NjU1MjQ1Mn0.AzrxJ7h7SNEgn-i8qgdGYPvoEpWdRohX1E8N_Ko_Gc0';
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Fonctions utilitaires
+        function showLoading(show = true) {
+            document.getElementById('loading').classList.toggle('hidden', !show);
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('error-message');
+            errorEl.textContent = message;
+            errorEl.classList.remove('hidden');
+            setTimeout(() => errorEl.classList.add('hidden'), 5000);
+        }
+
+        function showSuccess(message) {
+            const successEl = document.getElementById('success-message');
+            successEl.textContent = message;
+            successEl.classList.remove('hidden');
+            setTimeout(() => successEl.classList.add('hidden'), 3000);
+        }
+
+        // Inscription
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const fullName = document.getElementById('full-name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            // Validation
+            if (!fullName || !email || !password || !confirmPassword) {
+                showError('Veuillez remplir tous les champs');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showError('Les mots de passe ne correspondent pas');
+                return;
+            }
+
+            if (password.length < 6) {
+                showError('Le mot de passe doit contenir au moins 6 caractères');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                // Créer l'utilisateur
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: fullName
+                        }
+                    }
+                });
+
+                if (error) throw error;
+
+                // Le profil sera créé automatiquement par le trigger Supabase
+                
+                showSuccess('Compte créé avec succès ! Redirection...');
+                
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1500);
+
+            } catch (error) {
+                showLoading(false);
+                console.error('Erreur inscription:', error);
+
+                let errorMessage = 'Erreur lors de l\'inscription';
+                
+                if (error.message.includes('already registered')) {
+                    errorMessage = 'Cet email est déjà utilisé';
+                } else if (error.message.includes('Invalid email')) {
+                    errorMessage = 'Email invalide';
+                } else if (error.message.includes('Password')) {
+                    errorMessage = 'Mot de passe trop faible';
+                } else {
+                    errorMessage = error.message;
+                }
+
+                showError(errorMessage);
+            }
+        });
+
+        console.log('✅ Page d\'inscription Supabase chargée');
+    </script>
+</body>
+</html>
