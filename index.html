@@ -3,959 +3,245 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Pro - Gestion Interne</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title>Stock Pro - Test Inscription</title>
+    <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Supabase intégré directement -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root {
-            --primary: #667eea;
-            --secondary: #764ba2;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --dark: #1f2937;
-            --gray: #6b7280;
-            --light: #f3f4f6;
-        }
-        body { font-family: 'Segoe UI', sans-serif; background: #f9fafb; }
-        .sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 260px;
-            height: 100vh;
-            background: linear-gradient(180deg, var(--primary), var(--secondary));
-            color: white;
-            overflow-y: auto;
-            z-index: 1000;
-        }
-        .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .logo { display: flex; align-items: center; gap: 10px; }
-        .logo-icon { font-size: 2rem; }
-        .logo-text { font-size: 1.5rem; font-weight: bold; }
-        .user-profile {
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .user-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.2);
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            padding: 20px;
         }
-        .user-name { font-weight: 600; }
-        .user-email { font-size: 0.85rem; opacity: 0.8; }
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 20px;
-            color: white;
-            text-decoration: none;
-            transition: 0.3s;
-            cursor: pointer;
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 450px;
         }
-        .nav-item:hover, .nav-item.active {
-            background: rgba(255,255,255,0.1);
-            border-left: 4px solid white;
-        }
-        .nav-icon { font-size: 1.2rem; }
-        .main-content {
-            margin-left: 260px;
-            padding: 30px;
-            min-height: 100vh;
-        }
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .logo {
+            text-align: center;
             margin-bottom: 30px;
         }
-        .page-title { font-size: 2rem; font-weight: bold; color: var(--dark); }
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: 0.3s;
+        .logo-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
         }
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
+        h1 {
+            font-size: 2rem;
+            color: #1f2937;
+            margin: 0;
+            text-align: center;
         }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
-        .btn-success { background: var(--success); color: white; }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-edit { background: #3b82f6; color: white; padding: 6px 12px; border-radius: 6px; margin-right: 5px; border: none; cursor: pointer; }
-        .btn-delete { background: #ef4444; color: white; padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+        .subtitle {
+            color: #6b7280;
+            margin-top: 10px;
+            text-align: center;
         }
-        .stat-card {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            transition: 0.3s;
-        }
-        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
-        .stat-label { font-size: 0.9rem; color: var(--gray); margin-bottom: 8px; }
-        .stat-value { font-size: 2rem; font-weight: bold; }
-        .stat-card.blue .stat-value { color: #3b82f6; }
-        .stat-card.green .stat-value { color: var(--success); }
-        .stat-card.red .stat-value { color: var(--danger); }
-        .stat-card.orange .stat-value { color: var(--warning); }
-        .card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        .form-group {
             margin-bottom: 20px;
         }
-        .card-header {
-            padding: 20px;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .card-title { font-size: 1.2rem; font-weight: 600; color: var(--dark); }
-        .card-body { padding: 20px; }
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .form-group { display: flex; flex-direction: column; }
-        .form-label { font-weight: 600; margin-bottom: 6px; color: var(--dark); }
-        .form-input, .form-select {
-            padding: 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-        .form-input:focus, .form-select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-        .table-container { overflow-x: auto; }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        thead {
-            background: var(--light);
-        }
-        th {
-            padding: 12px;
-            text-align: left;
+        label {
+            display: block;
             font-weight: 600;
-            color: var(--dark);
+            margin-bottom: 8px;
+            color: #1f2937;
         }
-        td {
+        input {
+            width: 100%;
             padding: 12px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        tr:hover { background: #f9fafb; }
-        .custom-select-container {
-            position: relative;
-            width: 100%;
-        }
-        .custom-select-button {
-            width: 100%;
-            padding: 10px 35px 10px 10px;
-            border: 1px solid #d1d5db;
+            border: 2px solid #e5e7eb;
             border-radius: 8px;
-            background: white;
-            text-align: left;
-            cursor: pointer;
             font-size: 1rem;
-            position: relative;
-            user-select: none;
-            -webkit-user-select: none;
-            pointer-events: auto !important;
+            transition: border-color 0.3s;
         }
-        .custom-select-button:hover {
+        input:focus {
+            outline: none;
             border-color: #667eea;
-            background: #f9fafb;
         }
-        .custom-select-button:active {
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102,126,234,0.4);
+        }
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        .btn-secondary:hover {
             background: #f3f4f6;
         }
-        .custom-select-button::after {
-            content: '▼';
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.8rem;
-            color: #6b7280;
-            pointer-events: none;
-        }
-        .custom-select-button.open::after {
-            content: '▲';
-        }
-        .custom-select-dropdown {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            margin-top: 4px;
-            background: white;
-            border: 2px solid #667eea;
+        .console-output {
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 9999;
-            max-height: 400px;
-        }
-        .custom-select-dropdown.show {
-            display: block;
-        }
-        .custom-select-search {
-            padding: 12px;
-            border-bottom: 1px solid #e5e7eb;
-            position: sticky;
-            top: 0;
-            background: white;
-            z-index: 1;
-        }
-        .custom-select-search input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 0.95rem;
-        }
-        .custom-select-search input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .custom-select-list {
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
             max-height: 300px;
             overflow-y: auto;
-        }
-        .custom-select-item {
-            padding: 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #f3f4f6;
-        }
-        .custom-select-item:hover {
-            background: #f9fafb;
-        }
-        .custom-select-item.selected {
-            background: #ede9fe;
-            font-weight: 600;
-        }
-        .modal {
             display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
         }
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
+        .console-output.show {
+            display: block;
         }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+        .hidden { display: none !important; }
+        .divider {
+            margin: 20px 0;
+            text-align: center;
+            color: #6b7280;
         }
-        .modal-title { font-size: 1.5rem; font-weight: bold; }
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: var(--gray);
-        }
-        .img-zoom {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            cursor: zoom-out;
-            animation: fadeIn 0.2s;
-        }
-        .img-zoom img {
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
-            border-radius: 8px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        .section { display: none; }
-        .section.active { display: block; }
-        .search-input {
-            padding: 10px 15px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            width: 100%;
-            margin-bottom: 15px;
-        }
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
+        small {
+            color: #6b7280;
             font-size: 0.85rem;
-            font-weight: 600;
+            display: block;
+            margin-top: 5px;
         }
-        .badge-success { background: #d1fae5; color: #065f46; }
-        .badge-danger { background: #fee2e2; color: #991b1b; }
-        .badge-warning { background: #fef3c7; color: #92400e; }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
     </style>
 </head>
 <body>
-    <!-- PAGE DE CONNEXION -->
-    <div id="loginPage" style="display:flex;justify-content:center;align-items:center;min-height:100vh;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div style="background:white;padding:40px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);width:400px;max-width:90%;">
-            <div style="text-align:center;margin-bottom:30px;">
-                <div style="font-size:3rem;margin-bottom:10px;">📦</div>
-                <h1 style="font-size:2rem;color:#1f2937;margin:0;">Stock Pro</h1>
-                <p id="auth-title" style="color:#6b7280;margin-top:10px;">Connexion</p>
+    <div class="container">
+        <div class="logo">
+            <div class="logo-icon">📦</div>
+            <h1>Stock Pro</h1>
+            <p class="subtitle" id="subtitle">Test d'inscription Supabase</p>
+        </div>
+
+        <!-- FORMULAIRE D'INSCRIPTION -->
+        <form id="registerForm" onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label for="name">Nom complet</label>
+                <input type="text" id="name" placeholder="Jean Dupont" required>
             </div>
             
-            <!-- FORMULAIRE DE CONNEXION -->
-            <form id="loginForm" onsubmit="handleLogin(event)">
-                <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Email</label>
-                    <input type="email" id="login-username" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
-                           placeholder="votre@email.com"
-                           autocomplete="username"
-                           onfocus="this.style.borderColor='#667eea'" 
-                           onblur="this.style.borderColor='#e5e7eb'">
-                </div>
-                <div style="margin-bottom:25px;">
-                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Mot de passe</label>
-                    <input type="password" id="login-password" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
-                           placeholder="Entrez votre mot de passe"
-                           autocomplete="current-password"
-                           onfocus="this.style.borderColor='#667eea'" 
-                           onblur="this.style.borderColor='#e5e7eb'">
-                </div>
-                <button type="submit" 
-                        style="width:100%;padding:14px;background:linear-gradient(135deg, #667eea, #764ba2);color:white;border:none;border-radius:8px;font-size:1.1rem;font-weight:600;cursor:pointer;transition:all 0.3s;"
-                        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(102,126,234,0.4)'"
-                        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
-                    🔓 Se connecter
-                </button>
-            </form>
-            
-            <!-- FORMULAIRE D'INSCRIPTION (caché par défaut) -->
-            <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
-                <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Nom complet</label>
-                    <input type="text" id="register-name" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
-                           placeholder="Jean Dupont"
-                           onfocus="this.style.borderColor='#667eea'" 
-                           onblur="this.style.borderColor='#e5e7eb'">
-                </div>
-                <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Email</label>
-                    <input type="email" id="register-email" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
-                           placeholder="votre@email.com"
-                           autocomplete="email"
-                           onfocus="this.style.borderColor='#667eea'" 
-                           onblur="this.style.borderColor='#e5e7eb'">
-                </div>
-                <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Mot de passe</label>
-                    <input type="password" id="register-password" required 
-                           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;transition:border-color 0.3s;"
-                           placeholder="Min. 6 caractères"
-                           autocomplete="new-password"
-                           onfocus="this.style.borderColor='#667eea'" 
-                           onblur="this.style.borderColor='#e5e7eb'">
-                    <small style="color:#6b7280;font-size:0.85rem;display:block;margin-top:5px;">Au moins 6 caractères</small>
-                </div>
-                <button type="submit" 
-                        style="width:100%;padding:14px;background:linear-gradient(135deg, #667eea, #764ba2);color:white;border:none;border-radius:8px;font-size:1.1rem;font-weight:600;cursor:pointer;transition:all 0.3s;"
-                        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(102,126,234,0.4)'"
-                        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
-                    ✨ Créer mon compte
-                </button>
-            </form>
-            
-            <div style="margin-top:25px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center;">
-                <button id="toggleAuthBtn" onclick="toggleAuthMode()" type="button"
-                        style="width:100%;padding:12px;background:white;color:#667eea;border:2px solid #667eea;border-radius:8px;font-weight:600;cursor:pointer;transition:all 0.3s;margin-bottom:15px;"
-                        onmouseover="this.style.background='#f3f4f6'"
-                        onmouseout="this.style.background='white'">
-                    ➕ Créer un compte
-                </button>
-                <p style="color:#9ca3af;font-size:0.85rem;margin:0;">
-                    🔒 Application privée - Accès réservé
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- APPLICATION PRINCIPALE -->
-    <div id="mainApp" style="display:none;">
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo">
-                <div class="logo-icon">📦</div>
-                <div class="logo-text">Stock Pro</div>
-            </div>
-        </div>
-        <div class="user-profile">
-            <div class="user-avatar">👤</div>
-            <div>
-                <div class="user-name" id="user-name">Utilisateur</div>
-                <div class="user-email" id="user-email">user@example.com</div>
-            </div>
-        </div>
-        <nav>
-            <div class="nav-item active" onclick="showSection('dashboard')">
-                <span class="nav-icon">📊</span>
-                <span>Dashboard</span>
-            </div>
-            <div class="nav-item" onclick="showSection('products')">
-                <span class="nav-icon">📦</span>
-                <span>Produits</span>
-            </div>
-            <div class="nav-item" onclick="showSection('movements')">
-                <span class="nav-icon">🔄</span>
-                <span>Mouvements</span>
-            </div>
-            <div class="nav-item" onclick="showSection('transfer')">
-                <span class="nav-icon">🚚</span>
-                <span>Transferts</span>
-            </div>
-            <div class="nav-item" onclick="showSection('pdv')">
-                <span class="nav-icon">🏪</span>
-                <span>Points de Vente</span>
-            </div>
-            <div class="nav-item" onclick="showSection('history')">
-                <span class="nav-icon">📜</span>
-                <span>Historique</span>
-            </div>
-            <div class="nav-item" onclick="logout()">
-                <span class="nav-icon">🚪</span>
-                <span>Déconnexion</span>
-            </div>
-        </nav>
-    </div>
-
-    <div class="main-content">
-        <!-- DASHBOARD -->
-        <div id="dashboard" class="section active">
-            <div class="top-bar">
-                <h1 class="page-title">📊 Dashboard</h1>
-            </div>
-            <div id="dash-content"></div>
-        </div>
-
-        <!-- PRODUITS -->
-        <div id="products" class="section">
-            <div class="top-bar">
-                <h1 class="page-title">📦 Gestion des Produits</h1>
-                <div>
-                    <button class="btn btn-success" onclick="openModal('productModal')">➕ Nouveau Produit</button>
-                    <button class="btn btn-primary" onclick="document.getElementById('importFile').click()">📥 Importer Excel</button>
-                    <button class="btn btn-primary" onclick="exportToExcel()">📤 Exporter Excel</button>
-                </div>
-            </div>
-            <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none;" onchange="handleImport(event)">
-            <div class="card">
-                <div class="card-body">
-                    <input type="text" id="prod-search" class="search-input" placeholder="🔍 Rechercher par nom, référence, barcode...">
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Image</th>
-                                    <th>Nom</th>
-                                    <th>Référence</th>
-                                    <th>Barcode</th>
-                                    <th>Stock Total</th>
-                                    <th>Répétition</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="prod-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- MOUVEMENTS -->
-        <div id="movements" class="section">
-            <div class="top-bar">
-                <h1 class="page-title">🔄 Gestion des Mouvements</h1>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Nouveau Mouvement</h3>
-                </div>
-                <div class="card-body">
-                    <form onsubmit="addMovement(event)">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label">Type *</label>
-                                <select id="mov-type" class="form-select" required onchange="togglePdvSelect()">
-                                    <option value="">Sélectionner...</option>
-                                    <option value="in">Entrée (+)</option>
-                                    <option value="out">Sortie (-)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Produit *</label>
-                                <div class="custom-select-container">
-                                    <div class="custom-select-button" id="mov-select-btn" onclick="toggleMovDropdown(event)">
-                                        Sélectionner un produit...
-                                    </div>
-                                    <div class="custom-select-dropdown" id="mov-dropdown">
-                                        <div class="custom-select-search">
-                                            <input type="text" id="mov-search-input" placeholder="🔍 Rechercher..." oninput="filterMovList()" onclick="event.stopPropagation()">
-                                        </div>
-                                        <div class="custom-select-list" id="mov-product-list"></div>
-                                    </div>
-                                    <input type="hidden" id="mov-product" required>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Point de Vente *</label>
-                                <select id="mov-pdv" class="form-select" required>
-                                    <option value="">Sélectionner...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Quantité *</label>
-                                <input type="number" id="mov-quantity" class="form-input" min="1" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Mode de Paiement *</label>
-                                <select id="mov-payment" class="form-select" required>
-                                    <option value="">Sélectionner...</option>
-                                    <option value="Espèce">Espèce</option>
-                                    <option value="Virement">Virement</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Raison</label>
-                                <input type="text" id="mov-reason" class="form-input" placeholder="Facultatif">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Note</label>
-                            <input type="text" id="mov-note" class="form-input" placeholder="Facultatif">
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="margin-top:15px;">✅ Enregistrer</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- TRANSFERTS -->
-        <div id="transfer" class="section">
-            <div class="top-bar">
-                <h1 class="page-title">🚚 Transferts entre PDV</h1>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Nouveau Transfert</h3>
-                </div>
-                <div class="card-body">
-                    <form onsubmit="addTransfer(event)">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label">Produit *</label>
-                                <div class="custom-select-container">
-                                    <div class="custom-select-button" id="trans-select-btn" onclick="toggleTransDropdown(event)">
-                                        Sélectionner un produit...
-                                    </div>
-                                    <div class="custom-select-dropdown" id="trans-dropdown">
-                                        <div class="custom-select-search">
-                                            <input type="text" id="trans-search-input" placeholder="🔍 Rechercher..." oninput="filterTransList()" onclick="event.stopPropagation()">
-                                        </div>
-                                        <div class="custom-select-list" id="trans-product-list"></div>
-                                    </div>
-                                    <input type="hidden" id="trans-product" required>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">De (Source) *</label>
-                                <select id="trans-from" class="form-select" required>
-                                    <option value="">Sélectionner...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Vers (Destination) *</label>
-                                <select id="trans-to" class="form-select" required>
-                                    <option value="">Sélectionner...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Quantité *</label>
-                                <input type="number" id="trans-quantity" class="form-input" min="1" required>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Note</label>
-                            <input type="text" id="trans-note" class="form-input" placeholder="Facultatif">
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="margin-top:15px;">🚚 Transférer</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- POINTS DE VENTE -->
-        <div id="pdv" class="section">
-            <div class="top-bar">
-                <h1 class="page-title">🏪 Points de Vente</h1>
-                <button class="btn btn-success" onclick="openModal('pdvModal')">➕ Nouveau PDV</button>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="test@test.com" required>
+                <small>Utilisez n'importe quel email</small>
             </div>
             
-            <div class="card">
-                <div class="card-body">
-                    <input type="text" id="pdv-search" class="search-input" placeholder="🔍 Rechercher un produit par nom ou référence..." oninput="renderPdv()">
-                    
-                    <div class="table-container">
-                        <table>
-                            <thead id="pdv-table-header">
-                                <tr>
-                                    <th>Produit</th>
-                                    <th>Référence</th>
-                                    <th>QTY Total</th>
-                                </tr>
-                            </thead>
-                            <tbody id="pdv-products-table"></tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <input type="password" id="password" placeholder="Min. 6 caractères" required>
+                <small>Minimum 6 caractères</small>
             </div>
-        </div>
+            
+            <button type="submit" class="btn">✨ Créer mon compte</button>
+        </form>
 
-        <!-- HISTORIQUE -->
-        <div id="history" class="section">
-            <div class="top-bar">
-                <h1 class="page-title">📜 Historique des Mouvements</h1>
-            </div>
-            <div class="card">
-                <div class="card-body">
-                    <div class="form-grid">
-                        <input type="text" id="hs" class="form-input" placeholder="🔍 Rechercher...">
-                        <input type="date" id="hd" class="form-input" placeholder="Date">
-                        <select id="hm" class="form-select">
-                            <option value="">Tous les mois</option>
-                            <option value="0">Janvier</option>
-                            <option value="1">Février</option>
-                            <option value="2">Mars</option>
-                            <option value="3">Avril</option>
-                            <option value="4">Mai</option>
-                            <option value="5">Juin</option>
-                            <option value="6">Juillet</option>
-                            <option value="7">Août</option>
-                            <option value="8">Septembre</option>
-                            <option value="9">Octobre</option>
-                            <option value="10">Novembre</option>
-                            <option value="11">Décembre</option>
-                        </select>
-                        <select id="hy" class="form-select">
-                            <option value="">Toutes les années</option>
-                        </select>
-                        <button class="btn btn-primary" onclick="rstHist()">🔄 Réinitialiser</button>
-                    </div>
-                    <div class="table-container" style="margin-top:20px;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Type</th>
-                                    <th>Raison</th>
-                                    <th>Produit</th>
-                                    <th>Quantité</th>
-                                    <th>PDV/Paiement</th>
-                                    <th>Note</th>
-                                </tr>
-                            </thead>
-                            <tbody id="hist-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
-    <!-- FIN APPLICATION PRINCIPALE -->
+        <div class="divider">───────────────</div>
 
-    <!-- MODALS -->
-    <!-- MODAL PRODUIT -->
-    <div id="productModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Ajouter un Produit</h2>
-                <button class="close-btn" onclick="closeModal('productModal')">✖</button>
+        <!-- FORMULAIRE DE CONNEXION -->
+        <form id="loginForm" onsubmit="handleLogin(event)" class="hidden">
+            <div class="form-group">
+                <label for="login-email">Email</label>
+                <input type="email" id="login-email" placeholder="test@test.com" required>
             </div>
-            <form onsubmit="saveProduct(event)">
-                <input type="hidden" id="edit-id">
-                <div class="form-group">
-                    <label class="form-label">Nom du Produit *</label>
-                    <input type="text" id="p-name" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Référence *</label>
-                    <input type="text" id="p-ref" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Répétition</label>
-                    <input type="text" id="p-rep" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">URL Image Google Drive</label>
-                    <input type="url" id="p-img" class="form-input" placeholder="https://drive.google.com/uc?export=view&id=...">
-                </div>
-                <button type="submit" class="btn btn-primary" style="margin-top:15px;">💾 Enregistrer</button>
-            </form>
-        </div>
-    </div>
+            
+            <div class="form-group">
+                <label for="login-password">Mot de passe</label>
+                <input type="password" id="login-password" placeholder="Votre mot de passe" required>
+            </div>
+            
+            <button type="submit" class="btn">🔓 Se connecter</button>
+        </form>
 
-    <!-- MODAL PDV -->
-    <div id="pdvModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Ajouter un Point de Vente</h2>
-                <button class="close-btn" onclick="closeModal('pdvModal')">✖</button>
-            </div>
-            <form onsubmit="savePdv(event)">
-                <input type="hidden" id="pdv-edit-id">
-                <div class="form-group">
-                    <label class="form-label">Nom du PDV *</label>
-                    <input type="text" id="pdv-name" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Emplacement</label>
-                    <input type="text" id="pdv-location" class="form-input">
-                </div>
-                <button type="submit" class="btn btn-primary" style="margin-top:15px;">💾 Enregistrer</button>
-            </form>
-        </div>
+        <button id="toggleBtn" class="btn btn-secondary" onclick="toggleMode()">
+            🔄 Passer à la connexion
+        </button>
+
+        <!-- CONSOLE DE DÉBOGAGE -->
+        <div id="console" class="console-output"></div>
     </div>
 
     <script>
         // ========== CONFIGURATION SUPABASE ==========
         const SUPABASE_URL = 'https://djnaayhhntopupixzitm.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbmFheWhobnRvcHVwaXh6aXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NzY0NTIsImV4cCI6MjA3NjU1MjQ1Mn0.AzrxJ7h7SNEgn-i8qgdGYPvoEpWdRohX1E8N_Ko_Gc0';
-        
-        console.log('🔵 Initialisation Supabase...');
-        console.log('🔵 URL:', SUPABASE_URL);
-        console.log('🔵 Key présente:', SUPABASE_KEY ? 'Oui (longueur: ' + SUPABASE_KEY.length + ')' : 'Non');
-        
-        if (typeof supabase === 'undefined') {
-            console.error('❌ ERREUR CRITIQUE: supabase n\'est pas défini !');
-            console.error('❌ Vérifiez que le script Supabase est bien chargé:');
-            console.error('❌ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>');
-            alert('❌ ERREUR: Supabase n\'est pas chargé. Vérifiez la console (F12).');
-        } else {
-            console.log('✅ Module Supabase chargé');
+
+        let consoleEl = document.getElementById('console');
+        let mode = 'register'; // 'register' ou 'login'
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#60a5fa';
+            consoleEl.innerHTML += `<div style="color:${color}">[${timestamp}] ${message}</div>`;
+            consoleEl.classList.add('show');
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+            console.log(message);
         }
-        
+
+        // Initialisation
+        log('🔵 Initialisation...');
+
+        if (typeof supabase === 'undefined') {
+            log('❌ ERREUR: Supabase n\'est pas chargé !', 'error');
+            alert('❌ Erreur: Le script Supabase n\'est pas chargé. Vérifiez votre connexion internet.');
+        } else {
+            log('✅ Module Supabase chargé');
+        }
+
         const { createClient } = supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        console.log('✅ Client Supabase créé:', supabaseClient);
-        
-        let currentUser = null;
-        let isSupabaseMode = true;
+        log('✅ Client Supabase créé');
+        log('🔵 URL: ' + SUPABASE_URL);
 
-        // Vérifier la session au chargement
+        // Vérifier la session
         supabaseClient.auth.getSession().then(({ data: { session } }) => {
             if (session) {
-                currentUser = session.user;
-                console.log('✅ Session active:', currentUser.email);
+                log('✅ Session active: ' + session.user.email, 'success');
             } else {
-                console.log('ℹ️ Aucune session active');
+                log('ℹ️ Aucune session active');
             }
-        }).catch(error => {
-            console.error('❌ Erreur lors de la vérification de session:', error);
+        }).catch(err => {
+            log('❌ Erreur session: ' + err.message, 'error');
         });
 
-        // ========== COMPTES UTILISATEURS - MODIFIEZ ICI ==========
-        // ========== SYSTÈME D'AUTHENTIFICATION SUPABASE ==========
-        // Plus besoin de USERS codés en dur - tout est dans Supabase !
-        
-        // ========== FONCTION DE CONVERSION URL GOOGLE DRIVE ==========
-        function convertGoogleDriveUrl(url) {
-            if (!url) return '';
-            
-            url = url.toString().trim();
-            
-            // Si c'est déjà au bon format thumbnail, retourner tel quel
-            if (url.includes('drive.google.com/thumbnail')) {
-                return url;
-            }
-            
-            // Extraire l'ID du lien Google Drive
-            let fileId = '';
-            
-            // Format: https://drive.google.com/file/d/ID/view
-            if (url.includes('/file/d/')) {
-                const match = url.match(/\/file\/d\/([^\/]+)/);
-                if (match) fileId = match[1];
-            }
-            
-            // Format: https://drive.google.com/open?id=ID
-            else if (url.includes('open?id=')) {
-                const match = url.match(/open\?id=([^&]+)/);
-                if (match) fileId = match[1];
-            }
-            
-            // Format: https://drive.google.com/uc?export=view&id=ID ou id=ID&export=view
-            else if (url.includes('drive.google.com') && url.includes('id=')) {
-                const match = url.match(/[?&]id=([^&]+)/);
-                if (match) fileId = match[1];
-            }
-            
-            // Si on a trouvé un ID, retourner l'URL directe
-            if (fileId) {
-                return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
-            }
-            
-            // Sinon retourner l'URL originale
-            return url;
-        }
-        
-        let products = JSON.parse(localStorage.getItem('products')) || [];
-        let pdvs = JSON.parse(localStorage.getItem('pdvs')) || [
-            {id: 'al-baraka', name: 'Al Baraka', location: 'Centre-ville'},
-            {id: 'alghafla', name: 'Alghafla', location: 'Zone industrielle'}
-        ];
-        let movements = JSON.parse(localStorage.getItem('movements')) || [];
-
-        function checkAuth() {
-            const user = JSON.parse(localStorage.getItem('currentUser'));
-            if (!user) {
-                showLoginPage();
-                return false;
-            }
-            const userExists = USERS.find(u => u.username === user.username);
-            if (!userExists) {
-                localStorage.removeItem('currentUser');
-                showLoginPage();
-                return false;
-            }
-            document.getElementById('user-name').textContent = user.fullName;
-            document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur' : 'Agent';
-            document.getElementById('loginPage').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'block';
-            return true;
-        }
-
-        function showLoginPage() {
-            document.getElementById('loginPage').style.display = 'flex';
-            document.getElementById('mainApp').style.display = 'none';
-        }
-
-        async function handleLogin(event) {
-            event.preventDefault();
-            const email = document.getElementById('login-username').value.trim();
-            const password = document.getElementById('login-password').value;
-
-            if (!email || !password) {
-                alert('❌ Veuillez remplir tous les champs');
-                return;
-            }
-
-            try {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-
-                if (error) throw error;
-
-                currentUser = data.user;
-                document.getElementById('user-name').textContent = data.user.user_metadata.full_name || 'Utilisateur';
-                document.getElementById('user-email').textContent = data.user.email;
-                document.getElementById('loginPage').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'block';
-                
-                await load();
-                renderProds();
-                renderPdv();
-                renderMov();
-                renderHist();
-                renderDash();
-                
-                alert('✅ Connexion réussie !');
-            } catch (error) {
-                console.error('❌ Erreur connexion:', error);
-                alert('❌ Email ou mot de passe incorrect');
-            }
-        }
-
+        // INSCRIPTION
         async function handleRegister(event) {
             event.preventDefault();
-            console.log('🔵 Début inscription...');
             
-            const name = document.getElementById('register-name').value.trim();
-            const email = document.getElementById('register-email').value.trim();
-            const password = document.getElementById('register-password').value;
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
 
-            console.log('📝 Données:', { name, email, passwordLength: password.length });
-
-            if (!name || !email || !password) {
-                alert('❌ Veuillez remplir tous les champs');
-                console.error('❌ Champs manquants');
-                return;
-            }
+            log('🔵 Tentative d\'inscription...');
+            log('📝 Email: ' + email);
+            log('📝 Nom: ' + name);
+            log('📝 Mot de passe: ' + password.length + ' caractères');
 
             if (password.length < 6) {
+                log('❌ Mot de passe trop court', 'error');
                 alert('❌ Le mot de passe doit contenir au moins 6 caractères');
-                console.error('❌ Mot de passe trop court');
                 return;
             }
 
-            console.log('🔵 Tentative de connexion à Supabase...');
-            console.log('🔵 URL Supabase:', SUPABASE_URL);
-            console.log('🔵 Key présente:', SUPABASE_KEY ? 'Oui' : 'Non');
-
             try {
-                console.log('🔵 Appel signUp...');
+                log('🔵 Appel à Supabase signUp...');
+                
                 const { data, error } = await supabaseClient.auth.signUp({
                     email: email,
                     password: password,
@@ -966,913 +252,97 @@
                     }
                 });
 
-                console.log('📊 Réponse Supabase:', { data, error });
-
+                log('📊 Réponse reçue');
+                
                 if (error) {
-                    console.error('❌ Erreur Supabase:', error);
-                    throw error;
-                }
-
-                console.log('✅ Inscription réussie !');
-                alert('✅ Compte créé avec succès ! Vous pouvez maintenant vous connecter.');
-                toggleAuthMode();
-                document.getElementById('login-username').value = email;
-            } catch (error) {
-                console.error('❌ ERREUR COMPLÈTE:', error);
-                console.error('❌ Message:', error.message);
-                console.error('❌ Code:', error.code);
-                console.error('❌ Status:', error.status);
-                
-                let message = 'Erreur lors de l\'inscription: ' + error.message;
-                if (error.message.includes('already registered')) {
-                    message = 'Cet email est déjà utilisé';
-                } else if (error.message.includes('Invalid email')) {
-                    message = 'Email invalide';
-                } else if (error.message.includes('not allowed')) {
-                    message = 'Inscription non autorisée. Vérifiez les paramètres Supabase.';
-                }
-                
-                alert('❌ ' + message + '\n\nOuvrez la console (F12) pour plus de détails.');
-            }
-        }
-
-        function toggleAuthMode() {
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-            const authTitle = document.getElementById('auth-title');
-            const toggleBtn = document.getElementById('toggleAuthBtn');
-            
-            if (loginForm.style.display === 'none') {
-                // Montrer login
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
-                authTitle.textContent = 'Connexion';
-                toggleBtn.textContent = '➕ Créer un compte';
-            } else {
-                // Montrer register
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
-                authTitle.textContent = 'Inscription';
-                toggleBtn.textContent = '🔙 Retour à la connexion';
-            }
-        }
-
-        function checkAuth() {
-            // Avec Supabase, la session est gérée automatiquement
-            return true;
-        }
-
-        window.addEventListener('DOMContentLoaded', function() {
-            if (!checkAuth()) {
-                return;
-            }
-            renderDash();
-        });
-
-        async function save() {
-            // Sauvegarder aussi en localStorage pour compatibilité
-            localStorage.setItem('stockData', JSON.stringify({ products, movements, pdvs }));
-            
-            if (!currentUser) {
-                console.log('💾 Sauvegarde locale uniquement (pas connecté)');
-                return;
-            }
-
-            try {
-                console.log('💾 Sauvegarde dans Supabase...');
-
-                // Supprimer les anciennes données
-                await supabaseClient.from('products').delete().eq('user_id', currentUser.id);
-                await supabaseClient.from('movements').delete().eq('user_id', currentUser.id);
-                await supabaseClient.from('points_vente').delete().eq('user_id', currentUser.id);
-
-                // Sauvegarder les produits
-                if (products.length > 0) {
-                    const productsToInsert = products.map(p => ({
-                        user_id: currentUser.id,
-                        real_name: p.realName || p.name,
-                        conventional_name: p.conventionalName || '',
-                        reference: p.reference,
-                        barcode: p.barcode || '',
-                        quantity: p.quantity || p.repetition || 0,
-                        min_stock: 10,
-                        category: p.category || '',
-                        brand: p.brand || '',
-                        warehouse: 'Entrepôt A',
-                        image: p.imageUrl || ''
-                    }));
-
-                    const { error } = await supabaseClient.from('products').insert(productsToInsert);
-                    if (error) throw error;
-                }
-
-                // Sauvegarder les PDV
-                if (pdvs.length > 0) {
-                    const pdvsToInsert = pdvs.map(p => ({
-                        user_id: currentUser.id,
-                        name: p.name,
-                        address: p.location || '',
-                        phone: '',
-                        email: '',
-                        manager: ''
-                    }));
-
-                    const { error } = await supabaseClient.from('points_vente').insert(pdvsToInsert);
-                    if (error) throw error;
-                }
-
-                // Sauvegarder les mouvements
-                if (movements.length > 0) {
-                    const movementsToInsert = movements.map(m => ({
-                        user_id: currentUser.id,
-                        product_id: 1,
-                        type: m.type === 'in' ? 'entry' : m.type === 'transfer' ? 'transfer' : 'exit',
-                        quantity: m.quantity || 0,
-                        reason: m.reason || '',
-                        customer: m.pdv || '',
-                        from_location: m.from || '',
-                        to_location: m.to || '',
-                        date: m.date || new Date().toISOString().split('T')[0],
-                        user_name: currentUser.email
-                    }));
-
-                    const { error } = await supabaseClient.from('movements').insert(movementsToInsert);
-                    if (error) throw error;
-                }
-
-                console.log('✅ Sauvegarde Supabase réussie');
-            } catch (error) {
-                console.error('❌ Erreur sauvegarde:', error);
-            }
-        }
-            if (sec === 'transfer') { renderTransForm(); populateTransProductList(); }
-            if (sec === 'pdv') renderPdv();
-            if (sec === 'history') renderHist();
-        }
-
-        function renderDash() {
-            const total = products.length;
-            const stock = products.reduce((sum, p) => sum + (p.quantity || 0), 0);
-            const low = products.filter(p => (p.quantity || 0) < 10).length;
-
-            document.getElementById('dash-content').innerHTML = `
-                <input type="text" id="dash-search" class="search-input" placeholder="🔍 Rechercher..." style="width:100%;">
-                <div class="stats-grid">
-                    <div class="stat-card blue"><div class="stat-label">Total Produits</div><div class="stat-value">${total}</div></div>
-                    <div class="stat-card green"><div class="stat-label">Stock Total</div><div class="stat-value">${stock}</div></div>
-                    <div class="stat-card red"><div class="stat-label">Alertes Stock</div><div class="stat-value">${low}</div></div>
-                    <div class="stat-card orange"><div class="stat-label">Points de Vente</div><div class="stat-value">${pdvs.length}</div></div>
-                </div>
-                <div class="card">
-                    <div class="card-header"><h3 class="card-title">🚨 Alertes Stock (< 10 unités)</h3></div>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Produit</th><th>Référence</th><th>Stock</th></tr></thead>
-                            <tbody id="dash-body">${renderAlerts(products.filter(p => (p.quantity || 0) < 10))}</tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-            document.getElementById('dash-search').oninput = function() {
-                const s = this.value.toLowerCase();
-                const f = products.filter(p => (p.quantity || 0) < 10 && (p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s)));
-                document.getElementById('dash-body').innerHTML = renderAlerts(f);
-            };
-        }
-
-        function renderAlerts(list) {
-            if (list.length === 0) return '<tr><td colspan="3" style="text-align:center;">Aucune alerte</td></tr>';
-            return list.map(p => `<tr><td><strong>${p.name}</strong></td><td>${p.reference}</td><td><span class="badge badge-danger">${p.quantity || 0}</span></td></tr>`).join('');
-        }
-
-        function renderProds() {
-            const tbody = document.getElementById('prod-body');
-            if (!tbody) return;
-            
-            tbody.innerHTML = products.map(p => {
-                let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
-                
-                if (p.imageUrl) {
-                    const convertedUrl = convertGoogleDriveUrl(p.imageUrl);
+                    log('❌ Erreur: ' + error.message, 'error');
+                    log('❌ Code: ' + error.code, 'error');
+                    log('❌ Status: ' + error.status, 'error');
                     
-                    if (convertedUrl) {
-                        imgHtml = `<img src="${convertedUrl}" 
-                                        style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;" 
-                                        onclick="zoomImg('${convertedUrl.replace(/'/g, "\\'")}')"
-                                        onerror="this.onerror=null;this.outerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;\\'>📦</div>';"
-                                        alt="${p.name}">`;
-                    }
-                }
-                
-                return `<tr>
-                    <td style="text-align:center;">${imgHtml}</td>
-                    <td><strong>${p.name}</strong></td>
-                    <td>${p.reference}</td>
-                    <td>${p.barcode || '-'}</td>
-                    <td><span class="badge badge-success">${p.quantity || 0}</span></td>
-                    <td>${p.repetition || '-'}</td>
-                    <td>
-                        <button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button>
-                        <button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button>
-                    </td>
-                </tr>`;
-            }).join('');
-
-            document.getElementById('prod-search').oninput = function() {
-                const s = this.value.toLowerCase();
-                const filtered = products.filter(p => 
-                    p.name.toLowerCase().includes(s) || 
-                    p.reference.toLowerCase().includes(s) || 
-                    (p.barcode && p.barcode.toString().toLowerCase().includes(s))
-                );
-                
-                tbody.innerHTML = filtered.map(p => {
-                    let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
-                    
-                    if (p.imageUrl) {
-                        const convertedUrl = convertGoogleDriveUrl(p.imageUrl);
-                        if (convertedUrl) {
-                            imgHtml = `<img src="${convertedUrl}" 
-                                            style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;" 
-                                            onclick="zoomImg('${convertedUrl.replace(/'/g, "\\'")}')"
-                                            onerror="this.onerror=null;this.outerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;\\'>📦</div>';"
-                                            alt="${p.name}">`;
-                        }
+                    let message = error.message;
+                    if (message.includes('already registered')) {
+                        message = 'Cet email est déjà utilisé. Essayez de vous connecter.';
+                    } else if (message.includes('rate limit')) {
+                        message = 'Trop de tentatives. Attendez 1 heure ou utilisez un autre email.';
+                    } else if (message.includes('not allowed')) {
+                        message = 'Les inscriptions sont désactivées. Activez-les dans Supabase Authentication > Providers > Email.';
                     }
                     
-                    return `<tr><td style="text-align:center;">${imgHtml}</td><td><strong>${p.name}</strong></td><td>${p.reference}</td><td>${p.barcode || '-'}</td><td><span class="badge badge-success">${p.quantity || 0}</span></td><td>${p.repetition || '-'}</td><td><button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button><button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button></td></tr>`;
-                }).join('');
-            };
-        }
-
-        function zoomImg(url) {
-            if (!url || url.trim().length === 0) {
-                alert('❌ Aucune image disponible');
-                return;
-            }
-            
-            const cleanUrl = url.trim();
-            const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:10000;cursor:pointer;';
-            
-            const img = document.createElement('img');
-            img.src = cleanUrl;
-            img.style.cssText = 'max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
-            img.onerror = function() {
-                overlay.remove();
-                alert('❌ Impossible de charger l\'image.\n\nVérifiez que l\'image est publique sur Google Drive');
-            };
-            
-            overlay.appendChild(img);
-            overlay.onclick = () => overlay.remove();
-            document.body.appendChild(overlay);
-        }
-
-        function openModal(id) {
-            document.getElementById(id).style.display = 'flex';
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).style.display = 'none';
-            if (id === 'productModal') {
-                document.getElementById('edit-id').value = '';
-                document.getElementById('p-name').value = '';
-                document.getElementById('p-ref').value = '';
-                document.getElementById('p-rep').value = '';
-                document.getElementById('p-img').value = '';
-            }
-            if (id === 'pdvModal') {
-                document.getElementById('pdv-edit-id').value = '';
-                document.getElementById('pdv-name').value = '';
-                document.getElementById('pdv-location').value = '';
-            }
-        }
-
-        function saveProduct(e) {
-            e.preventDefault();
-            const id = document.getElementById('edit-id').value || Date.now().toString();
-            const name = document.getElementById('p-name').value.trim();
-            const reference = document.getElementById('p-ref').value.trim();
-            const repetition = document.getElementById('p-rep').value.trim();
-            let imageUrl = document.getElementById('p-img').value.trim();
-            
-            // Convertir l'URL Google Drive
-            if (imageUrl) {
-                imageUrl = convertGoogleDriveUrl(imageUrl);
-            }
-
-            const existing = products.find(p => p.id === id);
-            if (existing) {
-                existing.name = name;
-                existing.reference = reference;
-                existing.repetition = repetition;
-                existing.imageUrl = imageUrl;
-            } else {
-                products.push({
-                    id,
-                    name,
-                    reference,
-                    repetition,
-                    imageUrl,
-                    quantity: 0,
-                    pdvStock: {}
-                });
-            }
-
-            save();
-            closeModal('productModal');
-            renderProds();
-            alert('✅ Produit enregistré avec succès !');
-        }
-
-        function editProduct(id) {
-            const p = products.find(x => x.id === id);
-            if (!p) return;
-            document.getElementById('edit-id').value = p.id;
-            document.getElementById('p-name').value = p.name;
-            document.getElementById('p-ref').value = p.reference;
-            document.getElementById('p-rep').value = p.repetition || '';
-            document.getElementById('p-img').value = p.imageUrl || '';
-            openModal('productModal');
-        }
-
-        function deleteProduct(id) {
-            if (!confirm('Supprimer ce produit ?')) return;
-            products = products.filter(p => p.id !== id);
-            save();
-            renderProds();
-        }
-
-        // Custom Select Dropdown pour Mouvements
-        function toggleMovDropdown(e) {
-            e.stopPropagation();
-            const dropdown = document.getElementById('mov-dropdown');
-            const btn = document.getElementById('mov-select-btn');
-            
-            if (dropdown.classList.contains('show')) {
-                dropdown.classList.remove('show');
-                btn.classList.remove('open');
-            } else {
-                dropdown.classList.add('show');
-                btn.classList.add('open');
-                populateMovProductList();
-                document.getElementById('mov-search-input').focus();
-            }
-        }
-
-        function populateMovProductList() {
-            const list = document.getElementById('mov-product-list');
-            list.innerHTML = products.map(p => `
-                <div class="custom-select-item" onclick="selectMovProduct('${p.id}', '${p.name.replace(/'/g, "\\'")} (${p.reference})')">
-                    ${p.name} (${p.reference})
-                </div>
-            `).join('');
-        }
-
-        function filterMovList() {
-            const search = document.getElementById('mov-search-input').value.toLowerCase();
-            const filtered = products.filter(p => 
-                p.name.toLowerCase().includes(search) || 
-                p.reference.toLowerCase().includes(search) ||
-                (p.barcode && p.barcode.toLowerCase().includes(search))
-            );
-            
-            const list = document.getElementById('mov-product-list');
-            list.innerHTML = filtered.map(p => `
-                <div class="custom-select-item" onclick="selectMovProduct('${p.id}', '${p.name.replace(/'/g, "\\'")} (${p.reference})')">
-                    ${p.name} (${p.reference})
-                </div>
-            `).join('');
-        }
-
-        function selectMovProduct(id, label) {
-            document.getElementById('mov-product').value = id;
-            document.getElementById('mov-select-btn').textContent = label;
-            document.getElementById('mov-dropdown').classList.remove('show');
-            document.getElementById('mov-select-btn').classList.remove('open');
-        }
-
-        // Custom Select Dropdown pour Transferts
-        function toggleTransDropdown(e) {
-            e.stopPropagation();
-            const dropdown = document.getElementById('trans-dropdown');
-            const btn = document.getElementById('trans-select-btn');
-            
-            if (dropdown.classList.contains('show')) {
-                dropdown.classList.remove('show');
-                btn.classList.remove('open');
-            } else {
-                dropdown.classList.add('show');
-                btn.classList.add('open');
-                populateTransProductList();
-                document.getElementById('trans-search-input').focus();
-            }
-        }
-
-        function populateTransProductList() {
-            const list = document.getElementById('trans-product-list');
-            list.innerHTML = products.map(p => `
-                <div class="custom-select-item" onclick="selectTransProduct('${p.id}', '${p.name.replace(/'/g, "\\'")} (${p.reference})')">
-                    ${p.name} (${p.reference})
-                </div>
-            `).join('');
-        }
-
-        function filterTransList() {
-            const search = document.getElementById('trans-search-input').value.toLowerCase();
-            const filtered = products.filter(p => 
-                p.name.toLowerCase().includes(search) || 
-                p.reference.toLowerCase().includes(search) ||
-                (p.barcode && p.barcode.toLowerCase().includes(search))
-            );
-            
-            const list = document.getElementById('trans-product-list');
-            list.innerHTML = filtered.map(p => `
-                <div class="custom-select-item" onclick="selectTransProduct('${p.id}', '${p.name.replace(/'/g, "\\'")} (${p.reference})')">
-                    ${p.name} (${p.reference})
-                </div>
-            `).join('');
-        }
-
-        function selectTransProduct(id, label) {
-            document.getElementById('trans-product').value = id;
-            document.getElementById('trans-select-btn').textContent = label;
-            document.getElementById('trans-dropdown').classList.remove('show');
-            document.getElementById('trans-select-btn').classList.remove('open');
-        }
-
-        // Fermer les dropdowns en cliquant ailleurs
-        document.addEventListener('click', function() {
-            document.querySelectorAll('.custom-select-dropdown').forEach(d => d.classList.remove('show'));
-            document.querySelectorAll('.custom-select-button').forEach(b => b.classList.remove('open'));
-        });
-
-        function renderMovForm() {
-            const pdvSelect = document.getElementById('mov-pdv');
-            pdvSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
-                pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-        }
-
-        function togglePdvSelect() {
-            const type = document.getElementById('mov-type').value;
-            const pdvGroup = document.getElementById('mov-pdv').closest('.form-group');
-            pdvGroup.style.display = type ? 'flex' : 'none';
-        }
-
-        function addMovement(e) {
-            e.preventDefault();
-            const type = document.getElementById('mov-type').value;
-            const productId = document.getElementById('mov-product').value;
-            const pdvId = document.getElementById('mov-pdv').value;
-            const quantity = parseInt(document.getElementById('mov-quantity').value);
-            const payment = document.getElementById('mov-payment').value;
-            const reason = document.getElementById('mov-reason').value.trim();
-            const note = document.getElementById('mov-note').value.trim();
-
-            const product = products.find(p => p.id === productId);
-            const pdv = pdvs.find(v => v.id === pdvId);
-            
-            if (!product || !pdv) {
-                alert('❌ Produit ou PDV invalide');
-                return;
-            }
-
-            if (!product.pdvStock) product.pdvStock = {};
-            if (!product.pdvStock[pdvId]) product.pdvStock[pdvId] = 0;
-
-            if (type === 'in') {
-                product.pdvStock[pdvId] += quantity;
-                product.quantity = (product.quantity || 0) + quantity;
-            } else if (type === 'out') {
-                if (product.pdvStock[pdvId] < quantity) {
-                    alert('❌ Stock insuffisant dans ce PDV');
+                    alert('❌ ' + message);
                     return;
                 }
-                product.pdvStock[pdvId] -= quantity;
-                product.quantity = (product.quantity || 0) - quantity;
-            }
 
-            movements.push({
-                id: Date.now().toString(),
-                type,
-                product: product.name,
-                productId,
-                pdv: pdv.name,
-                pdvId,
-                quantity,
-                payment,
-                reason,
-                note,
-                date: new Date().toISOString()
-            });
-
-            save();
-            e.target.reset();
-            document.getElementById('mov-select-btn').textContent = 'Sélectionner un produit...';
-            document.getElementById('mov-product').value = '';
-            alert(`✅ Mouvement enregistré ! Stock ${pdv.name}: ${product.pdvStock[pdvId]}`);
-        }
-
-        function renderTransForm() {
-            const fromSelect = document.getElementById('trans-from');
-            const toSelect = document.getElementById('trans-to');
-            
-            fromSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
-                pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-            toSelect.innerHTML = '<option value="">Sélectionner...</option>' + 
-                pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-        }
-
-        function addTransfer(e) {
-            e.preventDefault();
-            const productId = document.getElementById('trans-product').value;
-            const fromId = document.getElementById('trans-from').value;
-            const toId = document.getElementById('trans-to').value;
-            const quantity = parseInt(document.getElementById('trans-quantity').value);
-            const note = document.getElementById('trans-note').value.trim();
-
-            if (fromId === toId) {
-                alert('❌ Source et destination doivent être différentes');
-                return;
-            }
-
-            const product = products.find(p => p.id === productId);
-            const fromPdv = pdvs.find(v => v.id === fromId);
-            const toPdv = pdvs.find(v => v.id === toId);
-
-            if (!product || !fromPdv || !toPdv) {
-                alert('❌ Sélection invalide');
-                return;
-            }
-
-            if (!product.pdvStock) product.pdvStock = {};
-            if (!product.pdvStock[fromId]) product.pdvStock[fromId] = 0;
-            if (!product.pdvStock[toId]) product.pdvStock[toId] = 0;
-
-            if (product.pdvStock[fromId] < quantity) {
-                alert('❌ Stock insuffisant dans le PDV source');
-                return;
-            }
-
-            product.pdvStock[fromId] -= quantity;
-            product.pdvStock[toId] += quantity;
-
-            movements.push({
-                id: Date.now().toString(),
-                type: 'transfer',
-                product: product.name,
-                productId,
-                from: fromPdv.name,
-                to: toPdv.name,
-                fromId,
-                toId,
-                quantity,
-                note,
-                date: new Date().toISOString()
-            });
-
-            save();
-            e.target.reset();
-            document.getElementById('trans-select-btn').textContent = 'Sélectionner un produit...';
-            document.getElementById('trans-product').value = '';
-            alert(`✅ Transfert réussi ! ${fromPdv.name} → ${toPdv.name}`);
-        }
-
-        function renderPdv() {
-            const searchTerm = document.getElementById('pdv-search')?.value.toLowerCase() || '';
-            const thead = document.getElementById('pdv-table-header');
-            const tbody = document.getElementById('pdv-products-table');
-            
-            if (!thead || !tbody) return;
-            
-            // Créer l'en-tête avec une colonne par PDV
-            thead.innerHTML = `
-                <tr>
-                    <th>Produit</th>
-                    <th>Référence</th>
-                    <th>QTY Total</th>
-                    ${pdvs.map(pdv => `<th style="color:#667eea;">🏪 ${pdv.name}</th>`).join('')}
-                </tr>
-            `;
-            
-            // Filtrer les produits
-            const filtered = products.filter(p => {
-                if (!searchTerm) return true;
-                return p.name.toLowerCase().includes(searchTerm) || 
-                       p.reference.toLowerCase().includes(searchTerm);
-            });
-            
-            // Afficher les résultats
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="${3 + pdvs.length}" style="text-align:center;padding:30px;color:#6b7280;">Aucun produit trouvé</td></tr>`;
-                return;
-            }
-            
-            tbody.innerHTML = filtered.map(product => {
-                const pdvColumns = pdvs.map(pdv => {
-                    const qty = product.pdvStock?.[pdv.id] || 0;
-                    return `<td style="text-align:center;">
-                        ${qty > 0 ? 
-                            `<span style="background:#3b82f6;color:white;padding:6px 14px;border-radius:8px;font-weight:bold;">${qty}</span>` : 
-                            '<span style="color:#9ca3af;">-</span>'}
-                    </td>`;
-                }).join('');
+                log('✅ Inscription réussie !', 'success');
+                log('✅ User ID: ' + data.user.id, 'success');
+                alert('✅ Compte créé avec succès ! Vous pouvez maintenant vous connecter.');
                 
-                return `
-                    <tr>
-                        <td><strong>${product.name}</strong></td>
-                        <td>${product.reference}</td>
-                        <td><span class="badge badge-success">${product.quantity || 0}</span></td>
-                        ${pdvColumns}
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function savePdv(e) {
-            e.preventDefault();
-            const id = document.getElementById('pdv-edit-id').value || Date.now().toString();
-            const name = document.getElementById('pdv-name').value.trim();
-            const location = document.getElementById('pdv-location').value.trim();
-
-            const existing = pdvs.find(p => p.id === id);
-            if (existing) {
-                existing.name = name;
-                existing.location = location;
-            } else {
-                pdvs.push({ id, name, location });
+                // Passer au mode connexion
+                document.getElementById('login-email').value = email;
+                toggleMode();
+                
+            } catch (error) {
+                log('❌ Exception: ' + error.toString(), 'error');
+                alert('❌ Erreur inattendue: ' + error.message);
             }
-
-            save();
-            closeModal('pdvModal');
-            renderPdv();
-            alert('✅ PDV enregistré !');
         }
 
-        function editPdv(id) {
-            const p = pdvs.find(x => x.id === id);
-            if (!p) return;
-            document.getElementById('pdv-edit-id').value = p.id;
-            document.getElementById('pdv-name').value = p.name;
-            document.getElementById('pdv-location').value = p.location || '';
-            openModal('pdvModal');
-        }
-
-        function delPdv(id) {
-            if (!confirm('Supprimer ce PDV ?')) return;
-            pdvs = pdvs.filter(p => p.id !== id);
-            save();
-            renderPdv();
-        }
-
-        function renderHist() {
-            const years = getYrs();
-            document.getElementById('hy').innerHTML = '<option value="">Toutes les années</option>' + 
-                years.map(y => `<option value="${y}">${y}</option>`).join('');
-            filtHist();
+        // CONNEXION
+        async function handleLogin(event) {
+            event.preventDefault();
             
-            ['hs', 'hd', 'hm', 'hy'].forEach(id => {
-                document.getElementById(id).addEventListener('input', filtHist);
-            });
-        }
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
 
-        function filtHist() {
-            const s = document.getElementById('hs').value.toLowerCase();
-            const d = document.getElementById('hd').value;
-            const m = document.getElementById('hm').value;
-            const y = document.getElementById('hy').value;
-            
-            const sorted = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
-            
-            const filtered = sorted.filter(mov => {
-                const date = new Date(mov.date);
-                const matchSearch = !s || mov.product.toLowerCase().includes(s) || 
-                    (mov.reason && mov.reason.toLowerCase().includes(s)) ||
-                    (mov.note && mov.note.toLowerCase().includes(s));
-                const matchDate = !d || date.toISOString().split('T')[0] === d;
-                const matchMonth = !m || date.getMonth() === parseInt(m);
-                const matchYear = !y || date.getFullYear() === parseInt(y);
-                return matchSearch && matchDate && matchMonth && matchYear;
-            });
+            log('🔵 Tentative de connexion...');
+            log('📝 Email: ' + email);
 
-            document.getElementById('hist-body').innerHTML = renderHistTable(filtered);
-        }
-
-        function renderHistTable(list) {
-            if (!list || list.length === 0) return '<tr><td colspan="7" style="text-align:center;">Aucun mouvement</td></tr>';
-            return list.map(m => {
-                const ic = m.type === 'in' ? '➕' : m.type === 'transfer' ? '🔄' : '➖';
-                const cl = m.type === 'in' ? '#10b981' : m.type === 'transfer' ? '#f59e0b' : '#ef4444';
-                const tp = m.type === 'in' ? 'Entrée' : m.type === 'transfer' ? 'Transfert' : 'Sortie';
-                const detail = m.type === 'transfer' ? `${m.from} → ${m.to}` : (m.pdv || '-') + ' / ' + (m.payment || '-');
-                return `<tr>
-                    <td>${new Date(m.date).toLocaleString('fr-FR')}</td>
-                    <td><span style="color:${cl};font-weight:bold;">${ic} ${tp}</span></td>
-                    <td>${m.reason || '-'}</td>
-                    <td><strong>${m.product}</strong></td>
-                    <td><strong style="color:${cl};">${m.quantity}</strong></td>
-                    <td>${detail}</td>
-                    <td>${m.note || '-'}</td>
-                </tr>`;
-            }).join('');
-        }
-
-        function getYrs() {
-            const y = new Set();
-            movements.forEach(m => y.add(new Date(m.date).getFullYear()));
-            return Array.from(y).sort((a, b) => b - a);
-        }
-
-        function rstHist() {
-            document.getElementById('hs').value = '';
-            document.getElementById('hd').value = '';
-            document.getElementById('hm').value = '';
-            document.getElementById('hy').value = '';
-            filtHist();
-        }
-
-        function exportToExcel() {
-            const data = products.map(p => {
-                const row = {
-                    'IMAGE': p.imageUrl || '',
-                    'Real Name': p.realName || p.name,
-                    'Conventional Name': p.conventionalName || '',
-                    'Référence': p.reference,
-                    'Barcode': p.barcode || '',
-                    'Repetition': p.repetition || '',
-                    'Category': p.category || '',
-                    'Brand': p.brand || ''
-                };
-
-                pdvs.forEach(pdv => {
-                    row[`QTY ${pdv.name}`] = p.pdvStock?.[pdv.id] || 0;
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
                 });
 
-                return row;
-            });
-
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Produits');
-            XLSX.writeFile(wb, `stock_${new Date().toISOString().split('T')[0]}.xlsx`);
-        }
-
-        function handleImport(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(firstSheet);
-
-                    console.log('📊 Import Excel - Nombre de lignes:', rows.length);
-                    if (rows.length > 0) {
-                        console.log('📋 Colonnes détectées:', Object.keys(rows[0]));
-                    }
-
-                    let imported = 0;
-                    let updated = 0;
-
-                    rows.forEach((r, index) => {
-                        let imageUrl = (r['IMAGE'] || r['Image'] || '').toString().trim();
-                        const realName = (r['Real Name'] || r['RealName'] || '').toString().trim();
-                        const conventionalName = (r['Conventional Name'] || r['ConventionalName'] || '').toString().trim();
-                        const reference = (r['Référence'] || r['Reference'] || '').toString().trim();
-                        const barcode = (r['Barcode'] || '').toString().trim();
-                        const repetition = (r['Repetition'] || r['Répétition'] || '').toString().trim();
-                        const category = (r['Category'] || r['Catégorie'] || '').toString().trim();
-                        const brand = (r['Brand'] || r['Marque'] || '').toString().trim();
-
-                        const name = realName || conventionalName;
-                        
-                        if (!name || !reference) {
-                            console.log(`⚠️ Ligne ${index + 2} ignorée: nom ou référence manquant`);
-                            return;
-                        }
-
-                        // Convertir l'URL Google Drive
-                        if (imageUrl) {
-                            imageUrl = convertGoogleDriveUrl(imageUrl);
-                            console.log(`🖼️ Ligne ${index + 2} - Image convertie pour ${name}`);
-                        }
-
-                        const pdvStock = {};
-                        let totalQty = 0;
-
-                        // Rechercher toutes les colonnes qui contiennent "QTY" ou "qty"
-                        Object.keys(r).forEach(key => {
-                            const keyLower = key.toLowerCase();
-                            
-                            // Détecter les colonnes QTY (plusieurs formats possibles)
-                            if (keyLower.includes('qty') || keyLower.startsWith('q ')) {
-                                const qty = parseInt(r[key]) || 0;
-                                
-                                if (qty > 0) {
-                                    // Extraire le nom du PDV de la colonne
-                                    let pdvName = key.replace(/^QTY\s*/i, '').replace(/^qty\s*/i, '').trim();
-                                    
-                                    if (pdvName) {
-                                        // Chercher le PDV existant
-                                        let pdv = pdvs.find(p => 
-                                            p.name.toLowerCase() === pdvName.toLowerCase() ||
-                                            p.name.toLowerCase().includes(pdvName.toLowerCase()) ||
-                                            pdvName.toLowerCase().includes(p.name.toLowerCase())
-                                        );
-
-                                        // Si le PDV n'existe pas, le créer
-                                        if (!pdv) {
-                                            const newPdvId = pdvName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-                                            pdv = { id: newPdvId, name: pdvName, location: '' };
-                                            pdvs.push(pdv);
-                                            console.log(`✅ Nouveau PDV créé: ${pdvName} (ID: ${newPdvId})`);
-                                        }
-
-                                        if (pdv) {
-                                            pdvStock[pdv.id] = qty;
-                                            totalQty += qty;
-                                            console.log(`📦 ${name} - ${pdv.name}: ${qty} unités`);
-                                        }
-                                    }
-                                }
-                            }
-                        });
-
-                        const existing = products.find(p => p.reference === reference);
-                        
-                        if (existing) {
-                            existing.name = name;
-                            existing.realName = realName;
-                            existing.conventionalName = conventionalName;
-                            existing.imageUrl = imageUrl;
-                            existing.barcode = barcode;
-                            existing.repetition = repetition;
-                            existing.category = category;
-                            existing.brand = brand;
-                            existing.pdvStock = pdvStock;
-                            existing.quantity = totalQty;
-                            updated++;
-                            console.log(`🔄 Produit mis à jour: ${name} (${reference})`);
-                        } else {
-                            products.push({
-                                id: Date.now().toString() + Math.random(),
-                                name,
-                                realName,
-                                conventionalName,
-                                reference,
-                                barcode,
-                                repetition,
-                                category,
-                                brand,
-                                imageUrl,
-                                quantity: totalQty,
-                                pdvStock
-                            });
-                            imported++;
-                            console.log(`➕ Nouveau produit: ${name} (${reference})`);
-                        }
-                    });
-
-                    save();
-                    renderProds();
-                    renderPdv();
-                    
-                    let message = '✅ Import terminé !\n\n';
-                    if (imported > 0) message += `➕ ${imported} nouveau(x) produit(s)\n`;
-                    if (updated > 0) message += `🔄 ${updated} produit(s) mis à jour\n`;
-                    message += `\n📍 ${pdvs.length} point(s) de vente détecté(s)`;
-                    
-                    console.log('📊 Résumé:', { imported, updated, totalPdvs: pdvs.length });
-                    alert(message);
-                } catch (err) {
-                    console.error('❌ Erreur import:', err);
-                    alert('❌ Erreur lors de l\'import : ' + err.message);
+                if (error) {
+                    log('❌ Erreur: ' + error.message, 'error');
+                    alert('❌ Email ou mot de passe incorrect');
+                    return;
                 }
-            };
-            reader.readAsArrayBuffer(file);
-            event.target.value = '';
-        }
 
-        async function logout() {
-            if (confirm('Se déconnecter ?')) {
-                try {
-                    await supabaseClient.auth.signOut();
-                    currentUser = null;
-                    products = [];
-                    movements = [];
-                    pdvs = [];
-                    showLoginPage();
-                    document.getElementById('login-username').value = '';
-                    document.getElementById('login-password').value = '';
-                } catch (error) {
-                    console.error('❌ Erreur déconnexion:', error);
-                }
+                log('✅ Connexion réussie !', 'success');
+                log('✅ Email: ' + data.user.email, 'success');
+                alert('✅ Connexion réussie !\n\nVous pouvez maintenant utiliser l\'application complète.');
+                
+            } catch (error) {
+                log('❌ Exception: ' + error.toString(), 'error');
+                alert('❌ Erreur: ' + error.message);
             }
         }
+
+        // BASCULER ENTRE INSCRIPTION ET CONNEXION
+        function toggleMode() {
+            const registerForm = document.getElementById('registerForm');
+            const loginForm = document.getElementById('loginForm');
+            const subtitle = document.getElementById('subtitle');
+            const toggleBtn = document.getElementById('toggleBtn');
+
+            if (mode === 'register') {
+                registerForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+                subtitle.textContent = 'Connexion';
+                toggleBtn.textContent = '🔄 Passer à l\'inscription';
+                mode = 'login';
+                log('🔄 Mode: Connexion');
+            } else {
+                registerForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+                subtitle.textContent = 'Test d\'inscription Supabase';
+                toggleBtn.textContent = '🔄 Passer à la connexion';
+                mode = 'register';
+                log('🔄 Mode: Inscription');
+            }
         }
+
+        log('✅ Page prête !');
     </script>
 </body>
 </html>
