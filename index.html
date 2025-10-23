@@ -842,6 +842,7 @@
             {id: 'alghafla', name: 'Alghafla', location: 'Zone industrielle'}
         ];
         let movements = JSON.parse(localStorage.getItem('movements')) || [];
+        let history = JSON.parse(localStorage.getItem('history')) || [];
 
         function checkAuth() {
             const user = JSON.parse(localStorage.getItem('currentUser'));
@@ -938,6 +939,7 @@
             localStorage.setItem('products', JSON.stringify(products));
             localStorage.setItem('pdvs', JSON.stringify(pdvs));
             localStorage.setItem('movements', JSON.stringify(movements));
+            localStorage.setItem('history', JSON.stringify(history));
             
             // Sauvegarder dans Supabase si connecté
             if (useSupabase && currentSupabaseUser && supabaseClient) {
@@ -956,13 +958,15 @@
                 await supabaseClient.from('points_vente').delete().eq('user_id', userId);
                 await supabaseClient.from('movements').delete().eq('user_id', userId);
                 
-                // 2. Sauvegarder produits
+                // 2. Sauvegarder produits avec pdvStock dans warehouse
                 if (products.length > 0) {
                     const productsToInsert = products
                         .filter(function(p) { return p.reference && p.reference.trim(); })
                         .map(function(p) {
-                            let qty = parseInt(p.quantity || p.repetition || 0);
-                            if (isNaN(qty)) qty = 0;
+                            let qty = parseInt(p.quantity) || 0;
+                            
+                            // Sauvegarder pdvStock en JSON dans le champ warehouse
+                            const pdvStockJson = JSON.stringify(p.pdvStock || {});
                             
                             return {
                                 user_id: userId,
@@ -974,7 +978,7 @@
                                 min_stock: 10,
                                 category: (p.category || '').substring(0, 255),
                                 brand: (p.brand || '').substring(0, 255),
-                                warehouse: 'Entrepôt A',
+                                warehouse: pdvStockJson.substring(0, 1000),
                                 image: (p.imageUrl || '').substring(0, 1000)
                             };
                         });
@@ -994,7 +998,7 @@
                                 user_id: userId,
                                 name: p.name.trim().substring(0, 255),
                                 address: (p.location || '').substring(0, 500),
-                                phone: '',
+                                phone: p.id || '',
                                 email: '',
                                 manager: ''
                             };
@@ -1006,28 +1010,28 @@
                     }
                 }
                 
-                // 4. Sauvegarder mouvements
-                if (movements.length > 0) {
-                    const movsToInsert = movements.map(function(m) {
-                        // Trouver l'ID du produit dans Supabase (temporairement on skip)
+                // 4. Sauvegarder mouvements et historique
+                const allMovements = movements.concat(history || []);
+                if (allMovements.length > 0) {
+                    const movsToInsert = allMovements.map(function(m) {
                         return {
                             user_id: userId,
-                            product_id: 1, // Temporaire - à corriger
-                            type: m.type === 'Entrée' ? 'entry' : m.type === 'Sortie' ? 'exit' : 'transfer',
+                            product_id: 1,
+                            type: m.type === 'Entrée' || m.type === 'entry' ? 'entry' : 
+                                  m.type === 'Sortie' || m.type === 'exit' ? 'exit' : 'transfer',
                             quantity: parseInt(m.quantity) || 0,
                             reason: (m.reason || '').substring(0, 500),
-                            customer: (m.customer || '').substring(0, 255),
+                            customer: (m.customer || m.productName || '').substring(0, 255),
                             from_location: (m.from || '').substring(0, 255),
                             to_location: (m.to || '').substring(0, 255),
                             date: m.date || new Date().toISOString().split('T')[0],
-                            user_name: 'Utilisateur'
+                            user_name: m.user || 'Utilisateur'
                         };
-                    }).filter(function(m) { return m.product_id; });
+                    }).filter(function(m) { return m.quantity > 0; });
                     
                     if (movsToInsert.length > 0) {
-                        // await supabaseClient.from('movements').insert(movsToInsert);
-                        // console.log('✅ Mouvements:', movsToInsert.length);
-                        console.log('ℹ️ Mouvements: skip (à implémenter)');
+                        await supabaseClient.from('movements').insert(movsToInsert);
+                        console.log('✅ Mouvements:', movsToInsert.length);
                     }
                 }
                 
@@ -1062,9 +1066,19 @@
                     .select('*')
                     .eq('user_id', currentSupabaseUser.id);
                 
-                // Convertir produits
+                // Convertir produits avec pdvStock
                 if (prodsData && prodsData.length > 0) {
                     products = prodsData.map(function(p) {
+                        // Récupérer pdvStock depuis warehouse (stocké en JSON)
+                        let pdvStock = {};
+                        try {
+                            if (p.warehouse && p.warehouse !== 'Entrepôt A') {
+                                pdvStock = JSON.parse(p.warehouse);
+                            }
+                        } catch(e) {
+                            pdvStock = {};
+                        }
+                        
                         return {
                             id: p.id.toString(),
                             name: p.real_name,
@@ -1074,44 +1088,60 @@
                             barcode: p.barcode || '',
                             repetition: p.quantity,
                             quantity: p.quantity,
+                            category: p.category || '',
+                            brand: p.brand || '',
                             imageUrl: p.image || '',
-                            pdvStock: {}
+                            pdvStock: pdvStock
                         };
                     });
                 }
                 
-                // Convertir PDV
+                // Convertir PDV (récupérer l'ID original depuis phone)
                 if (pdvData && pdvData.length > 0) {
                     pdvs = pdvData.map(function(p) {
                         return {
-                            id: p.id.toString(),
+                            id: p.phone || p.id.toString(),
                             name: p.name,
                             location: p.address || ''
                         };
                     });
                 }
                 
-                // Convertir mouvements
+                // Convertir mouvements en movements ET history
+                movements = [];
+                history = [];
+                
                 if (movData && movData.length > 0) {
-                    movements = movData.map(function(m) {
-                        return {
+                    movData.forEach(function(m) {
+                        const movObj = {
                             id: m.id.toString(),
                             type: m.type === 'entry' ? 'Entrée' : m.type === 'exit' ? 'Sortie' : 'Transfert',
-                            productName: 'Produit',
+                            productName: m.customer || 'Produit',
                             quantity: m.quantity,
                             reason: m.reason || '',
                             customer: m.customer || '',
                             from: m.from_location || '',
                             to: m.to_location || '',
-                            date: m.date
+                            date: m.date,
+                            user: m.user_name || 'Utilisateur'
                         };
+                        
+                        // Si c'est un transfert, l'ajouter à l'historique
+                        if (m.type === 'transfer') {
+                            history.push(movObj);
+                        } else {
+                            movements.push(movObj);
+                        }
                     });
                 }
                 
-                console.log('✅ Chargé:', products.length, 'produits,', pdvs.length, 'PDV,', movements.length, 'mouvements');
+                console.log('✅ Chargé:', products.length, 'produits,', pdvs.length, 'PDV,', movements.length, 'mouvements,', history.length, 'historique');
                 
                 // Sauvegarder en local aussi
-                save();
+                localStorage.setItem('products', JSON.stringify(products));
+                localStorage.setItem('pdvs', JSON.stringify(pdvs));
+                localStorage.setItem('movements', JSON.stringify(movements));
+                localStorage.setItem('history', JSON.stringify(history));
             } catch (error) {
                 console.error('❌ Erreur chargement:', error);
             }
