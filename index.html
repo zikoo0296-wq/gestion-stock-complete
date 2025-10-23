@@ -935,7 +935,8 @@
             renderDash();
         });
 
-        function save() {
+        async function save() {
+            // Sauvegarder en local
             localStorage.setItem('products', JSON.stringify(products));
             localStorage.setItem('pdvs', JSON.stringify(pdvs));
             localStorage.setItem('movements', JSON.stringify(movements));
@@ -943,23 +944,41 @@
             
             // Sauvegarder dans Supabase si connecté
             if (useSupabase && currentSupabaseUser && supabaseClient) {
-                saveToSupabase();
+                console.log('💾 Déclenchement sauvegarde Supabase...');
+                try {
+                    await saveToSupabase();
+                    console.log('✅ Sauvegarde Supabase terminée');
+                } catch (error) {
+                    console.error('❌ Erreur save():', error);
+                }
+            } else {
+                console.log('ℹ️ Sauvegarde locale uniquement (Supabase non connecté)');
             }
         }
         
         async function saveToSupabase() {
             try {
-                console.log('💾 Sauvegarde Supabase COMPLÈTE...');
+                console.log('💾 === DÉBUT SAUVEGARDE SUPABASE ===');
+                console.log('📊 Données à sauvegarder:', {
+                    products: products.length,
+                    pdvs: pdvs.length,
+                    movements: movements.length,
+                    history: history.length
+                });
                 
                 const userId = currentSupabaseUser.id;
+                console.log('👤 User ID:', userId);
                 
                 // 1. Supprimer anciennes données
+                console.log('🗑️ Suppression anciennes données...');
                 await supabaseClient.from('products').delete().eq('user_id', userId);
                 await supabaseClient.from('points_vente').delete().eq('user_id', userId);
                 await supabaseClient.from('movements').delete().eq('user_id', userId);
+                console.log('✅ Anciennes données supprimées');
                 
                 // 2. Sauvegarder produits avec pdvStock dans warehouse
                 if (products.length > 0) {
+                    console.log('📦 Préparation produits...');
                     const productsToInsert = products
                         .filter(function(p) { return p.reference && p.reference.trim(); })
                         .map(function(p) {
@@ -984,13 +1003,19 @@
                         });
                     
                     if (productsToInsert.length > 0) {
-                        await supabaseClient.from('products').insert(productsToInsert);
-                        console.log('✅ Produits:', productsToInsert.length);
+                        console.log('📤 Insertion de', productsToInsert.length, 'produits...');
+                        const { data, error } = await supabaseClient.from('products').insert(productsToInsert);
+                        if (error) {
+                            console.error('❌ Erreur insertion produits:', error);
+                        } else {
+                            console.log('✅ Produits sauvegardés:', productsToInsert.length);
+                        }
                     }
                 }
                 
                 // 3. Sauvegarder points de vente
                 if (pdvs.length > 0) {
+                    console.log('🏪 Préparation PDV...');
                     const pdvsToInsert = pdvs
                         .filter(function(p) { return p.name && p.name.trim(); })
                         .map(function(p) {
@@ -1005,14 +1030,22 @@
                         });
                     
                     if (pdvsToInsert.length > 0) {
-                        await supabaseClient.from('points_vente').insert(pdvsToInsert);
-                        console.log('✅ PDV:', pdvsToInsert.length);
+                        console.log('📤 Insertion de', pdvsToInsert.length, 'PDV...');
+                        const { data, error } = await supabaseClient.from('points_vente').insert(pdvsToInsert);
+                        if (error) {
+                            console.error('❌ Erreur insertion PDV:', error);
+                        } else {
+                            console.log('✅ PDV sauvegardés:', pdvsToInsert.length);
+                        }
                     }
                 }
                 
                 // 4. Sauvegarder mouvements et historique
                 const allMovements = movements.concat(history || []);
+                console.log('📝 Total mouvements + historique:', allMovements.length);
+                
                 if (allMovements.length > 0) {
+                    console.log('🔄 Préparation mouvements...');
                     const movsToInsert = allMovements.map(function(m) {
                         return {
                             user_id: userId,
@@ -1030,14 +1063,21 @@
                     }).filter(function(m) { return m.quantity > 0; });
                     
                     if (movsToInsert.length > 0) {
-                        await supabaseClient.from('movements').insert(movsToInsert);
-                        console.log('✅ Mouvements:', movsToInsert.length);
+                        console.log('📤 Insertion de', movsToInsert.length, 'mouvements...');
+                        const { data, error } = await supabaseClient.from('movements').insert(movsToInsert);
+                        if (error) {
+                            console.error('❌ Erreur insertion mouvements:', error);
+                        } else {
+                            console.log('✅ Mouvements sauvegardés:', movsToInsert.length);
+                        }
                     }
                 }
                 
-                console.log('✅ Sauvegarde complète terminée !');
+                console.log('✅ === SAUVEGARDE COMPLÈTE TERMINÉE ===');
             } catch (error) {
-                console.error('❌ Erreur sauvegarde:', error.message);
+                console.error('❌ === ERREUR SAUVEGARDE ===');
+                console.error('Message:', error.message);
+                console.error('Stack:', error.stack);
             }
         }
         
