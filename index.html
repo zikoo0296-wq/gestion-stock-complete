@@ -1006,7 +1006,8 @@
                     const productsToInsert = products
                         .filter(function(p) { return p.reference && p.reference.trim(); })
                         .map(function(p) {
-                            let qty = parseInt(p.quantity) || 0;
+                            // Calculer le stock total = somme de tous les PDV
+                            const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
                             
                             // Sauvegarder pdvStock en JSON dans le champ warehouse
                             const pdvStockJson = JSON.stringify(p.pdvStock || {});
@@ -1017,8 +1018,8 @@
                                 conventional_name: (p.conventionalName || '').substring(0, 255),
                                 reference: p.reference.trim(),
                                 barcode: (p.barcode || '').substring(0, 255),
-                                quantity: qty,
-                                min_stock: 10,
+                                quantity: totalStock,
+                                min_stock: parseInt(p.repetition) || 10,
                                 category: (p.category || '').substring(0, 255),
                                 brand: (p.brand || '').substring(0, 255),
                                 warehouse: pdvStockJson.substring(0, 1000),
@@ -1028,6 +1029,7 @@
                     
                     if (productsToInsert.length > 0) {
                         console.log('📤 Insertion de', productsToInsert.length, 'produits...');
+                        console.log('🔍 Premier produit:', JSON.stringify(productsToInsert[0]));
                         const { data, error } = await supabaseClient.from('products').insert(productsToInsert);
                         if (error) {
                             console.error('❌ Erreur insertion produits:', error);
@@ -1150,7 +1152,7 @@
                             conventionalName: p.conventional_name || '',
                             reference: p.reference,
                             barcode: p.barcode || '',
-                            repetition: p.quantity,
+                            repetition: p.min_stock || '',
                             quantity: p.quantity,
                             category: p.category || '',
                             brand: p.brand || '',
@@ -1227,8 +1229,17 @@
 
         function renderDash() {
             const total = products.length;
-            const stock = products.reduce((sum, p) => sum + (p.quantity || 0), 0);
-            const low = products.filter(p => (p.quantity || 0) < 10).length;
+            // Calculer le stock total comme SOMME de tous les PDV pour chaque produit
+            const stock = products.reduce((sum, p) => {
+                const prodStock = Object.values(p.pdvStock || {}).reduce((s, qty) => s + qty, 0);
+                return sum + prodStock;
+            }, 0);
+            // Alertes pour produits dont le stock total (somme PDV) < repetition
+            const low = products.filter(p => {
+                const prodStock = Object.values(p.pdvStock || {}).reduce((s, qty) => s + qty, 0);
+                const minStock = parseInt(p.repetition) || 10;
+                return prodStock < minStock;
+            }).length;
 
             document.getElementById('dash-content').innerHTML = `
                 <input type="text" id="dash-search" class="search-input" placeholder="🔍 Rechercher..." style="width:100%;">
@@ -1239,11 +1250,15 @@
                     <div class="stat-card orange"><div class="stat-label">Points de Vente</div><div class="stat-value">${pdvs.length}</div></div>
                 </div>
                 <div class="card">
-                    <div class="card-header"><h3 class="card-title">🚨 Alertes Stock (< 10 unités)</h3></div>
+                    <div class="card-header"><h3 class="card-title">🚨 Alertes Stock (sous le seuil)</h3></div>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>Produit</th><th>Référence</th><th>Stock</th></tr></thead>
-                            <tbody id="dash-body">${renderAlerts(products.filter(p => (p.quantity || 0) < 10))}</tbody>
+                            <thead><tr><th>Produit</th><th>Référence</th><th>Stock</th><th>Seuil</th></tr></thead>
+                            <tbody id="dash-body">${renderAlerts(products.filter(p => {
+                                const prodStock = Object.values(p.pdvStock || {}).reduce((s, qty) => s + qty, 0);
+                                const minStock = parseInt(p.repetition) || 10;
+                                return prodStock < minStock;
+                            }))}</tbody>
                         </table>
                     </div>
                 </div>
@@ -1256,8 +1271,12 @@
         }
 
         function renderAlerts(list) {
-            if (list.length === 0) return '<tr><td colspan="3" style="text-align:center;">Aucune alerte</td></tr>';
-            return list.map(p => `<tr><td><strong>${p.name}</strong></td><td>${p.reference}</td><td><span class="badge badge-danger">${p.quantity || 0}</span></td></tr>`).join('');
+            if (list.length === 0) return '<tr><td colspan="4" style="text-align:center;">Aucune alerte</td></tr>';
+            return list.map(p => {
+                const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                const minStock = parseInt(p.repetition) || 10;
+                return `<tr><td><strong>${p.name}</strong></td><td>${p.reference}</td><td><span class="badge badge-danger">${totalStock}</span></td><td>${minStock}</td></tr>`;
+            }).join('');
         }
 
         function renderProds() {
