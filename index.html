@@ -692,6 +692,12 @@
                 <div class="card-body">
                     <div class="form-grid">
                         <input type="text" id="hs" class="form-input" placeholder="🔍 Rechercher...">
+                        <select id="ht" class="form-select">
+                            <option value="">Tous les types</option>
+                            <option value="Entrée">📥 Entrée</option>
+                            <option value="Sortie">📤 Sortie</option>
+                            <option value="Transfert">🚚 Transfert</option>
+                        </select>
                         <input type="date" id="hd" class="form-input" placeholder="Date">
                         <select id="hm" class="form-select">
                             <option value="">Tous les mois</option>
@@ -2338,7 +2344,7 @@
                 years.map(y => `<option value="${y}">${y}</option>`).join('');
             filtHist();
             
-            ['hs', 'hd', 'hm', 'hy'].forEach(id => {
+            ['hs', 'ht', 'hd', 'hm', 'hy'].forEach(id => {
                 document.getElementById(id).addEventListener('input', function() {
                     currentPage.history = 1; // Reset à la page 1 lors du filtrage
                     filtHist();
@@ -2352,11 +2358,12 @@
             console.log('📊 history.length:', history.length);
             
             const s = document.getElementById('hs').value.toLowerCase();
+            const t = document.getElementById('ht').value; // Filtre type
             const d = document.getElementById('hd').value;
             const m = document.getElementById('hm').value;
             const y = document.getElementById('hy').value;
             
-            const isFiltering = s || d || m || y; // Détecte si un filtre est actif
+            const isFiltering = s || t || d || m || y; // Détecte si un filtre est actif
             
             // COMBINER movements + history pour voir TOUS les mouvements !
             const allMovements = [...movements, ...history];
@@ -2367,15 +2374,27 @@
             
             const filtered = sorted.filter(mov => {
                 const date = new Date(mov.date);
+                
+                // Normaliser le type pour la comparaison
+                let movType = '';
+                if (mov.type === 'transfer' || mov.type === 'Transfert') {
+                    movType = 'Transfert';
+                } else if (mov.type === 'Entrée' || mov.type === 'entry' || mov.type === 'in') {
+                    movType = 'Entrée';
+                } else if (mov.type === 'Sortie' || mov.type === 'exit' || mov.type === 'out') {
+                    movType = 'Sortie';
+                }
+                
                 const matchSearch = !s || 
                     (mov.productName && mov.productName.toLowerCase().includes(s)) || 
                     (mov.customer && mov.customer.toLowerCase().includes(s)) ||
                     (mov.from && mov.from.toLowerCase().includes(s)) ||
                     (mov.to && mov.to.toLowerCase().includes(s));
+                const matchType = !t || movType === t; // Nouveau filtre
                 const matchDate = !d || date.toISOString().split('T')[0] === d;
                 const matchMonth = !m || date.getMonth() === parseInt(m);
                 const matchYear = !y || date.getFullYear() === parseInt(y);
-                return matchSearch && matchDate && matchMonth && matchYear;
+                return matchSearch && matchType && matchDate && matchMonth && matchYear;
             });
             
             console.log('✅ filtered.length:', filtered.length);
@@ -2448,6 +2467,7 @@
 
         function rstHist() {
             document.getElementById('hs').value = '';
+            document.getElementById('ht').value = ''; // Reset filtre type
             document.getElementById('hd').value = '';
             document.getElementById('hm').value = '';
             document.getElementById('hy').value = '';
