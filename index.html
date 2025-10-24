@@ -322,6 +322,14 @@
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-20px); }
         }
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
         .section { display: none; }
         .section.active { display: block; }
         .search-input {
@@ -960,23 +968,44 @@
         });
 
         async function save() {
+            console.log('💾 === SAVE() APPELÉ ===');
+            console.log('📊 Données à sauvegarder:', {
+                products: products.length,
+                pdvs: pdvs.length,
+                movements: movements.length,
+                history: history.length
+            });
+            
             // Sauvegarder en local
             localStorage.setItem('products', JSON.stringify(products));
             localStorage.setItem('pdvs', JSON.stringify(pdvs));
             localStorage.setItem('movements', JSON.stringify(movements));
             localStorage.setItem('history', JSON.stringify(history));
+            console.log('✅ Sauvegarde localStorage OK');
             
             // Sauvegarder dans Supabase si connecté
+            console.log('🔍 Vérification Supabase:', {
+                useSupabase: useSupabase,
+                currentSupabaseUser: !!currentSupabaseUser,
+                supabaseClient: !!supabaseClient
+            });
+            
             if (useSupabase && currentSupabaseUser && supabaseClient) {
-                console.log('💾 Déclenchement sauvegarde Supabase...');
+                console.log('💾 Déclenchement saveToSupabase()...');
                 try {
                     await saveToSupabase();
-                    console.log('✅ Sauvegarde Supabase terminée');
+                    console.log('✅ saveToSupabase() terminée');
                 } catch (error) {
                     console.error('❌ Erreur save():', error);
+                    alert('❌ Erreur de sauvegarde: ' + error.message);
                 }
             } else {
-                console.log('ℹ️ Sauvegarde locale uniquement (Supabase non connecté)');
+                console.warn('⚠️ Sauvegarde Supabase IGNORÉE !');
+                console.warn('Raisons:', {
+                    useSupabase: useSupabase,
+                    currentSupabaseUser: currentSupabaseUser ? 'Oui' : 'NON',
+                    supabaseClient: supabaseClient ? 'Oui' : 'NON'
+                });
             }
         }
         
@@ -1124,11 +1153,41 @@
                 }
                 
                 console.log('✅ === SAUVEGARDE COMPLÈTE TERMINÉE ===');
+                
+                // Notification visuelle de succès
+                showNotification('✅ Données sauvegardées dans le cloud !', 'success');
+                
             } catch (error) {
                 console.error('❌ === ERREUR SAUVEGARDE ===');
                 console.error('Message:', error.message);
                 console.error('Stack:', error.stack);
+                showNotification('❌ Erreur de sauvegarde: ' + error.message, 'error');
             }
+        }
+        
+        // Fonction pour afficher des notifications
+        function showNotification(message, type) {
+            const notif = document.createElement('div');
+            notif.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 25px;
+                background: ${type === 'success' ? '#10b981' : '#ef4444'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 10000;
+                font-weight: 600;
+                animation: slideIn 0.3s ease;
+            `;
+            notif.textContent = message;
+            document.body.appendChild(notif);
+            
+            setTimeout(() => {
+                notif.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notif.remove(), 300);
+            }, 3000);
         }
         
         // Fonction pour charger depuis Supabase
