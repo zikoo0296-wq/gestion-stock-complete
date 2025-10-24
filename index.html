@@ -998,6 +998,7 @@
                 await supabaseClient.from('products').delete().eq('user_id', userId);
                 await supabaseClient.from('points_vente').delete().eq('user_id', userId);
                 await supabaseClient.from('movements').delete().eq('user_id', userId);
+                await supabaseClient.from('transfers').delete().eq('user_id', userId);
                 console.log('✅ Anciennes données supprimées');
                 
                 // 2. Sauvegarder produits avec pdvStock dans warehouse
@@ -1066,21 +1067,18 @@
                     }
                 }
                 
-                // 4. Sauvegarder mouvements et historique
-                const allMovements = movements.concat(history || []);
-                console.log('📝 Total mouvements + historique:', allMovements.length);
-                
-                if (allMovements.length > 0) {
+                // 4. Sauvegarder mouvements (Entrées/Sorties)
+                if (movements.length > 0) {
                     console.log('🔄 Préparation mouvements...');
-                    const movsToInsert = allMovements.map(function(m) {
+                    const movsToInsert = movements.map(function(m) {
                         return {
                             user_id: userId,
-                            product_id: 1,
+                            product_name: m.productName || m.customer || 'Produit',
                             type: m.type === 'Entrée' || m.type === 'entry' ? 'entry' : 
                                   m.type === 'Sortie' || m.type === 'exit' ? 'exit' : 'transfer',
                             quantity: parseInt(m.quantity) || 0,
                             reason: (m.reason || '').substring(0, 500),
-                            customer: (m.customer || m.productName || '').substring(0, 255),
+                            customer: (m.customer || '').substring(0, 255),
                             from_location: (m.from || '').substring(0, 255),
                             to_location: (m.to || '').substring(0, 255),
                             date: m.date || new Date().toISOString().split('T')[0],
@@ -1095,6 +1093,32 @@
                             console.error('❌ Erreur insertion mouvements:', error);
                         } else {
                             console.log('✅ Mouvements sauvegardés:', movsToInsert.length);
+                        }
+                    }
+                }
+                
+                // 5. Sauvegarder historique des transferts
+                if (history && history.length > 0) {
+                    console.log('📜 Préparation historique transferts...');
+                    const transfersToInsert = history.map(function(h) {
+                        return {
+                            user_id: userId,
+                            product_name: h.productName || 'Produit',
+                            quantity: parseInt(h.quantity) || 0,
+                            from_location: (h.from || 'Stock Central').substring(0, 255),
+                            to_location: (h.to || '').substring(0, 255),
+                            date: h.date || new Date().toISOString(),
+                            user_name: h.user || 'Utilisateur'
+                        };
+                    }).filter(function(h) { return h.quantity > 0; });
+                    
+                    if (transfersToInsert.length > 0) {
+                        console.log('📤 Insertion de', transfersToInsert.length, 'transferts...');
+                        const { data, error } = await supabaseClient.from('transfers').insert(transfersToInsert);
+                        if (error) {
+                            console.error('❌ Erreur insertion transferts:', error);
+                        } else {
+                            console.log('✅ Transferts sauvegardés:', transfersToInsert.length);
                         }
                     }
                 }
@@ -1129,6 +1153,12 @@
                 // Charger mouvements
                 const { data: movData } = await supabaseClient
                     .from('movements')
+                    .select('*')
+                    .eq('user_id', currentSupabaseUser.id);
+                
+                // Charger historique des transferts
+                const { data: transferData } = await supabaseClient
+                    .from('transfers')
                     .select('*')
                     .eq('user_id', currentSupabaseUser.id);
                 
@@ -1173,16 +1203,14 @@
                     });
                 }
                 
-                // Convertir mouvements en movements ET history
+                // Convertir mouvements
                 movements = [];
-                history = [];
-                
                 if (movData && movData.length > 0) {
-                    movData.forEach(function(m) {
-                        const movObj = {
+                    movements = movData.map(function(m) {
+                        return {
                             id: m.id.toString(),
                             type: m.type === 'entry' ? 'Entrée' : m.type === 'exit' ? 'Sortie' : 'Transfert',
-                            productName: m.customer || 'Produit',
+                            productName: m.product_name || m.customer || 'Produit',
                             quantity: m.quantity,
                             reason: m.reason || '',
                             customer: m.customer || '',
@@ -1191,13 +1219,23 @@
                             date: m.date,
                             user: m.user_name || 'Utilisateur'
                         };
-                        
-                        // Si c'est un transfert, l'ajouter à l'historique
-                        if (m.type === 'transfer') {
-                            history.push(movObj);
-                        } else {
-                            movements.push(movObj);
-                        }
+                    });
+                }
+                
+                // Convertir historique des transferts
+                history = [];
+                if (transferData && transferData.length > 0) {
+                    history = transferData.map(function(t) {
+                        return {
+                            id: t.id.toString(),
+                            productName: t.product_name || 'Produit',
+                            quantity: t.quantity,
+                            from: t.from_location || 'Stock Central',
+                            to: t.to_location || '',
+                            date: t.date,
+                            user: t.user_name || 'Utilisateur',
+                            type: 'transfer'
+                        };
                     });
                 }
                 
