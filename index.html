@@ -665,7 +665,7 @@
             
             <div class="card">
                 <div class="card-body">
-                    <input type="text" id="pdv-search" class="search-input" placeholder="🔍 Rechercher un produit par nom ou référence..." oninput="renderPdv()">
+                    <input type="text" id="pdv-search" class="search-input" placeholder="🔍 Rechercher un produit par nom ou référence..." oninput="currentPage.pdv = 1; renderPdv()">
                     
                     <div class="table-container">
                         <table>
@@ -679,6 +679,7 @@
                             <tbody id="pdv-products-table"></tbody>
                         </table>
                     </div>
+                    <div id="pdv-pagination"></div>
                 </div>
             </div>
         </div>
@@ -983,6 +984,7 @@
             const totalPages = getTotalPages(
                 section === 'products' ? products.length :
                 section === 'history' ? [...movements, ...history].length :
+                section === 'pdv' ? products.length :
                 section === 'dashboard' ? products.filter(p => {
                     const prodStock = Object.values(p.pdvStock || {}).reduce((s, qty) => s + qty, 0);
                     const minStock = parseInt(p.repetition) || 10;
@@ -996,8 +998,9 @@
             
             // Rafraîchir la vue appropriée
             if (section === 'products') renderProds();
-            else if (section === 'history') renderHist();
-            else if (section === 'dashboard') renderDash();
+            else if (section === 'history') filtHist();
+            else if (section === 'pdv') renderPdv();
+            else if (section === 'dashboard') renderDashboardAlerts();
         }
 
         function checkAuth() {
@@ -1383,12 +1386,14 @@
                 const prodStock = Object.values(p.pdvStock || {}).reduce((s, qty) => s + qty, 0);
                 return sum + prodStock;
             }, 0);
+            
             // Alertes pour produits dont le stock total (somme PDV) < repetition
-            const low = products.filter(p => {
+            const alertProducts = products.filter(p => {
                 const prodStock = Object.values(p.pdvStock || {}).reduce((s, qty) => s + qty, 0);
                 const minStock = parseInt(p.repetition) || 10;
                 return prodStock < minStock;
-            }).length;
+            });
+            const low = alertProducts.length;
 
             document.getElementById('dash-content').innerHTML = `
                 <input type="text" id="dash-search" class="search-input" placeholder="🔍 Rechercher..." style="width:100%;">
@@ -1403,20 +1408,52 @@
                     <div class="table-container">
                         <table>
                             <thead><tr><th>Produit</th><th>Référence</th><th>Stock</th><th>Seuil</th></tr></thead>
-                            <tbody id="dash-body">${renderAlerts(products.filter(p => {
-                                const prodStock = Object.values(p.pdvStock || {}).reduce((s, qty) => s + qty, 0);
-                                const minStock = parseInt(p.repetition) || 10;
-                                return prodStock < minStock;
-                            }))}</tbody>
+                            <tbody id="dash-body"></tbody>
                         </table>
                     </div>
+                    <div id="dashboard-pagination"></div>
                 </div>
             `;
+            
+            // Render initial des alertes avec pagination
+            renderDashboardAlerts();
+            
+            // Setup recherche
             document.getElementById('dash-search').oninput = function() {
-                const s = this.value.toLowerCase();
-                const f = products.filter(p => (p.quantity || 0) < 10 && (p.name.toLowerCase().includes(s) || p.reference.toLowerCase().includes(s)));
-                document.getElementById('dash-body').innerHTML = renderAlerts(f);
+                currentPage.dashboard = 1; // Reset à la page 1 lors de la recherche
+                renderDashboardAlerts();
             };
+        }
+        
+        function renderDashboardAlerts() {
+            const searchValue = document.getElementById('dash-search')?.value.toLowerCase() || '';
+            const isSearching = searchValue.length > 0;
+            
+            // Filtrer les alertes
+            const alertProducts = products.filter(p => {
+                const prodStock = Object.values(p.pdvStock || {}).reduce((s, qty) => s + qty, 0);
+                const minStock = parseInt(p.repetition) || 10;
+                return prodStock < minStock;
+            });
+            
+            // Si recherche → Filtrer par recherche
+            let displayAlerts;
+            if (isSearching) {
+                // RECHERCHE: Afficher tous les résultats filtrés
+                displayAlerts = alertProducts.filter(p => 
+                    p.name.toLowerCase().includes(searchValue) || 
+                    p.reference.toLowerCase().includes(searchValue)
+                );
+                // Cacher la pagination
+                document.getElementById('dashboard-pagination').innerHTML = '';
+            } else {
+                // PAS DE RECHERCHE: Paginer
+                displayAlerts = paginateData(alertProducts, currentPage.dashboard);
+                // Afficher la pagination
+                renderPagination('dashboard-pagination', 'dashboard', alertProducts.length);
+            }
+            
+            document.getElementById('dash-body').innerHTML = renderAlerts(displayAlerts);
         }
 
         function renderAlerts(list) {
@@ -2220,6 +2257,7 @@
 
         function renderPdv() {
             const searchTerm = document.getElementById('pdv-search')?.value.toLowerCase() || '';
+            const isSearching = searchTerm.length > 0;
             const thead = document.getElementById('pdv-table-header');
             const tbody = document.getElementById('pdv-products-table');
             
@@ -2249,13 +2287,28 @@
                        p.reference.toLowerCase().includes(searchTerm);
             });
             
-            // Afficher les résultats
+            // Si pas de résultats
             if (filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="${3 + pdvs.length}" style="text-align:center;padding:30px;color:#6b7280;">Aucun produit trouvé</td></tr>`;
+                document.getElementById('pdv-pagination').innerHTML = '';
                 return;
             }
             
-            tbody.innerHTML = filtered.map(product => {
+            // Si recherche → Afficher TOUS les résultats, sinon → Paginer
+            let displayProducts;
+            if (isSearching) {
+                // RECHERCHE: Afficher tous les résultats filtrés
+                displayProducts = filtered;
+                // Cacher la pagination
+                document.getElementById('pdv-pagination').innerHTML = '';
+            } else {
+                // PAS DE RECHERCHE: Paginer
+                displayProducts = paginateData(filtered, currentPage.pdv);
+                // Afficher la pagination
+                renderPagination('pdv-pagination', 'pdv', filtered.length);
+            }
+            
+            tbody.innerHTML = displayProducts.map(product => {
                 const pdvColumns = pdvs.map(pdv => {
                     const qty = product.pdvStock?.[pdv.id] || 0;
                     return `<td style="text-align:center;">
