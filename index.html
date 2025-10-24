@@ -1055,17 +1055,24 @@
                 
                 // Ajouter les mouvements
                 movements.forEach(function(m) {
+                    // Normaliser le type : in/Entrée/entry → entry, out/Sortie/exit → exit
+                    let normalizedType = 'transfer';
+                    if (m.type === 'Entrée' || m.type === 'entry' || m.type === 'in') {
+                        normalizedType = 'entry';
+                    } else if (m.type === 'Sortie' || m.type === 'exit' || m.type === 'out') {
+                        normalizedType = 'exit';
+                    }
+                    
                     allData.push({
                         user_id: userId,
                         product_name: m.productName || m.customer || 'Produit',
-                        type: m.type === 'Entrée' || m.type === 'entry' ? 'entry' : 
-                              m.type === 'Sortie' || m.type === 'exit' ? 'exit' : 'transfer',
+                        type: normalizedType,
                         quantity: parseInt(m.quantity) || 0,
                         reason: (m.reason || '').substring(0, 500),
                         customer: (m.customer || '').substring(0, 255),
                         from_location: (m.from || '').substring(0, 255),
                         to_location: (m.to || '').substring(0, 255),
-                        date: m.date || new Date().toISOString().split('T')[0],
+                        date: m.date ? m.date.split('T')[0] : new Date().toISOString().split('T')[0],
                         user_name: m.user || 'Utilisateur'
                     });
                 });
@@ -1730,7 +1737,7 @@
 
             movements.push({
                 id: Date.now().toString(),
-                type: type,
+                type: type === 'in' ? 'Entrée' : 'Sortie',  // Convertir in/out → Entrée/Sortie
                 productName: product.name,
                 productId: productId,
                 customer: pdv.name,
@@ -1962,28 +1969,30 @@
         function renderHistTable(list) {
             if (!list || list.length === 0) return '<tr><td colspan="7" style="text-align:center;">Aucun mouvement</td></tr>';
             return list.map(m => {
-                // Déterminer le type de mouvement
+                // Déterminer le type de mouvement - supporter TOUS les formats
                 let ic, cl, tp, detail;
                 
-                if (m.type === 'transfer') {
+                const type = m.type ? m.type.toLowerCase() : '';
+                
+                if (type === 'transfer') {
                     ic = '🚚';
                     cl = '#f59e0b';
                     tp = 'Transfert';
                     detail = `${m.from || 'Stock Central'} → ${m.to || '-'}`;
-                } else if (m.type === 'Entrée' || m.type === 'entry') {
+                } else if (type === 'entrée' || type === 'entry' || type === 'in') {
                     ic = '📥';
                     cl = '#10b981';
                     tp = 'Entrée';
-                    detail = m.customer || '-';
-                } else if (m.type === 'Sortie' || m.type === 'exit') {
+                    detail = m.customer || m.from || '-';
+                } else if (type === 'sortie' || type === 'exit' || type === 'out') {
                     ic = '📤';
                     cl = '#ef4444';
                     tp = 'Sortie';
-                    detail = m.customer || '-';
+                    detail = m.customer || m.to || '-';
                 } else {
                     ic = '❓';
                     cl = '#6b7280';
-                    tp = m.type || '-';
+                    tp = type || 'Inconnu';
                     detail = '-';
                 }
                 
