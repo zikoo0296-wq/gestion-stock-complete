@@ -991,6 +991,9 @@
             try {
                 const userId = currentSupabaseUser.id;
                 
+                console.log('💾 DÉBUT SAUVEGARDE');
+                console.log('📊 history:', JSON.stringify(history));
+                
                 // 1. Supprimer anciennes données
                 await supabaseClient.from('products').delete().eq('user_id', userId);
                 await supabaseClient.from('points_vente').delete().eq('user_id', userId);
@@ -1088,7 +1091,16 @@
                 if (allData.length > 0) {
                     const validData = allData.filter(function(d) { return d.quantity > 0; });
                     if (validData.length > 0) {
-                        await supabaseClient.from('movements').insert(validData);
+                        console.log('📤 INSERTION:', validData.length, 'mouvements');
+                        console.log('🔍 Premier mouvement:', JSON.stringify(validData[0]));
+                        
+                        const { data, error } = await supabaseClient.from('movements').insert(validData);
+                        
+                        if (error) {
+                            console.error('❌ ERREUR INSERT:', error);
+                        } else {
+                            console.log('✅ INSERT OK');
+                        }
                     }
                 }
                 
@@ -1533,6 +1545,9 @@
                 to: selectedPdv.name,
                 user: document.getElementById('user-name').textContent
             });
+            
+            console.log('📝 Historique après push:', history.length);
+            console.log('📋 Dernier élément:', JSON.stringify(history[history.length - 1]));
 
             // ATTENDRE que la sauvegarde finisse !
             await save();
@@ -1869,6 +1884,9 @@
         }
 
         function renderHist() {
+            console.log('🔍 renderHist() appelé - history.length:', history.length);
+            console.log('📋 history:', JSON.stringify(history));
+            
             const years = getYrs();
             document.getElementById('hy').innerHTML = '<option value="">Toutes les années</option>' + 
                 years.map(y => `<option value="${y}">${y}</option>`).join('');
@@ -1880,6 +1898,8 @@
         }
 
         function filtHist() {
+            console.log('🔍 filtHist() appelé - history.length:', history.length);
+            
             const s = document.getElementById('hs').value.toLowerCase();
             const d = document.getElementById('hd').value;
             const m = document.getElementById('hm').value;
@@ -1887,6 +1907,7 @@
             
             // UTILISER HISTORY AU LIEU DE MOVEMENTS !
             const sorted = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
+            console.log('📊 sorted.length:', sorted.length);
             
             const filtered = sorted.filter(mov => {
                 const date = new Date(mov.date);
@@ -1898,7 +1919,8 @@
                 const matchYear = !y || date.getFullYear() === parseInt(y);
                 return matchSearch && matchDate && matchMonth && matchYear;
             });
-
+            
+            console.log('✅ filtered.length:', filtered.length);
             document.getElementById('hist-body').innerHTML = renderHistTable(filtered);
         }
 
