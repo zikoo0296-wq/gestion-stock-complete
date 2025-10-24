@@ -473,11 +473,16 @@
             <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none;" onchange="handleImport(event)">
             <div class="card">
                 <div class="card-body">
-                    <input type="text" id="prod-search" class="search-input" placeholder="🔍 Rechercher par nom, référence, barcode...">
+                    <div style="display:flex;gap:10px;margin-bottom:15px;align-items:center;">
+                        <input type="text" id="prod-search" class="search-input" placeholder="🔍 Rechercher par nom, référence, barcode..." style="flex:1;">
+                        <button class="btn btn-primary" onclick="selectAllProducts()" style="white-space:nowrap;">☑️ Tout sélectionner</button>
+                        <button class="btn" onclick="deleteSelectedProducts()" style="background:#ef4444;white-space:nowrap;">🗑️ Supprimer sélection</button>
+                    </div>
                     <div class="table-container">
                         <table>
                             <thead>
                                 <tr>
+                                    <th style="width:40px;"><input type="checkbox" id="select-all-checkbox" onchange="toggleAllProducts(this.checked)"></th>
                                     <th>Image</th>
                                     <th>Nom</th>
                                     <th>Référence</th>
@@ -1334,6 +1339,7 @@
                 const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
                 
                 return `<tr>
+                    <td style="text-align:center;"><input type="checkbox" class="product-checkbox" data-product-id="${p.id}"></td>
                     <td style="text-align:center;">${imgHtml}</td>
                     <td><strong>${p.name}</strong></td>
                     <td>${p.reference}</td>
@@ -1377,7 +1383,20 @@
                     // Calculer le stock total = SOMME de tous les PDV
                     const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
                     
-                    return `<tr><td style="text-align:center;">${imgHtml}</td><td><strong>${p.name}</strong></td><td>${p.reference}</td><td>${p.barcode || '-'}</td><td><span class="badge badge-success">${totalStock}</span></td><td>${p.repetition || '-'}</td><td><button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button><button onclick="quickTransferToPdv('${p.id}')" class="btn-edit" style="background:#f59e0b;" title="Transférer vers PDV">🚚</button><button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button></td></tr>`;
+                    return `<tr>
+                        <td style="text-align:center;"><input type="checkbox" class="product-checkbox" data-product-id="${p.id}"></td>
+                        <td style="text-align:center;">${imgHtml}</td>
+                        <td><strong>${p.name}</strong></td>
+                        <td>${p.reference}</td>
+                        <td>${p.barcode || '-'}</td>
+                        <td><span class="badge badge-success">${totalStock}</span></td>
+                        <td>${p.repetition || '-'}</td>
+                        <td>
+                            <button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button>
+                            <button onclick="quickTransferToPdv('${p.id}')" class="btn-edit" style="background:#f59e0b;" title="Transférer vers PDV">🚚</button>
+                            <button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button>
+                        </td>
+                    </tr>`;
                 }).join('');
             };
         }
@@ -1403,6 +1422,36 @@
             overlay.appendChild(img);
             overlay.onclick = () => overlay.remove();
             document.body.appendChild(overlay);
+        }
+        
+        // Fonctions de sélection multiple des produits
+        function toggleAllProducts(checked) {
+            document.querySelectorAll('.product-checkbox').forEach(cb => cb.checked = checked);
+        }
+        
+        function selectAllProducts() {
+            document.getElementById('select-all-checkbox').checked = true;
+            toggleAllProducts(true);
+        }
+        
+        async function deleteSelectedProducts() {
+            const selected = Array.from(document.querySelectorAll('.product-checkbox:checked'))
+                .map(cb => cb.dataset.productId);
+            
+            if (selected.length === 0) {
+                alert('⚠️ Aucun produit sélectionné !');
+                return;
+            }
+            
+            if (!confirm(`🗑️ Voulez-vous vraiment supprimer ${selected.length} produit(s) ?\n\nCette action est irréversible !`)) {
+                return;
+            }
+            
+            products = products.filter(p => !selected.includes(p.id));
+            await save();
+            renderProds();
+            
+            alert(`✅ ${selected.length} produit(s) supprimé(s) !`);
         }
 
         function openModal(id) {
@@ -1838,13 +1887,20 @@
             
             if (!thead || !tbody) return;
             
-            // Créer l'en-tête avec une colonne par PDV
+            // Créer l'en-tête avec une colonne par PDV + bouton supprimer
             thead.innerHTML = `
                 <tr>
                     <th>Produit</th>
                     <th>Référence</th>
                     <th>QTY Total</th>
-                    ${pdvs.map(pdv => `<th style="color:#667eea;">🏪 ${pdv.name}</th>`).join('')}
+                    ${pdvs.map(pdv => `
+                        <th style="color:#667eea;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                <span>🏪 ${pdv.name}</span>
+                                <button onclick="deletePdv('${pdv.id}')" class="btn-delete" style="font-size:12px;padding:4px 8px;" title="Supprimer ce PDV">🗑️</button>
+                            </div>
+                        </th>
+                    `).join('')}
                 </tr>
             `;
             
@@ -1911,11 +1967,34 @@
             openModal('pdvModal');
         }
 
-        function delPdv(id) {
-            if (!confirm('Supprimer ce PDV ?')) return;
+        async function deletePdv(id) {
+            const pdv = pdvs.find(p => p.id === id);
+            if (!pdv) return;
+            
+            // Vérifier s'il y a du stock dans ce PDV
+            const hasStock = products.some(p => (p.pdvStock?.[id] || 0) > 0);
+            
+            let message = `🗑️ Supprimer le PDV "${pdv.name}" ?`;
+            if (hasStock) {
+                message += '\n\n⚠️ ATTENTION : Ce PDV contient du stock !\nLe stock sera perdu.';
+            }
+            message += '\n\nCette action est irréversible !';
+            
+            if (!confirm(message)) return;
+            
+            // Supprimer le PDV
             pdvs = pdvs.filter(p => p.id !== id);
-            save();
+            
+            // Supprimer le stock de ce PDV dans tous les produits
+            products.forEach(p => {
+                if (p.pdvStock && p.pdvStock[id]) {
+                    delete p.pdvStock[id];
+                }
+            });
+            
+            await save();
             renderPdv();
+            alert(`✅ PDV "${pdv.name}" supprimé !`);
         }
 
         function renderHist() {
