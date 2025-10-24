@@ -495,6 +495,7 @@
                             <tbody id="prod-body"></tbody>
                         </table>
                     </div>
+                    <div id="products-pagination"></div>
                 </div>
             </div>
         </div>
@@ -728,6 +729,7 @@
                             <tbody id="hist-body"></tbody>
                         </table>
                     </div>
+                    <div id="history-pagination"></div>
                 </div>
             </div>
         </div>
@@ -914,6 +916,83 @@
         ];
         let movements = JSON.parse(localStorage.getItem('movements')) || [];
         let history = JSON.parse(localStorage.getItem('history')) || [];
+        
+        // Variables de pagination
+        const ITEMS_PER_PAGE = 100;
+        let currentPage = {
+            products: 1,
+            pdv: 1,
+            history: 1,
+            dashboard: 1
+        };
+        
+        // Fonction de pagination générique
+        function paginateData(data, page) {
+            const start = (page - 1) * ITEMS_PER_PAGE;
+            const end = start + ITEMS_PER_PAGE;
+            return data.slice(start, end);
+        }
+        
+        function getTotalPages(totalItems) {
+            return Math.ceil(totalItems / ITEMS_PER_PAGE);
+        }
+        
+        function renderPagination(containerId, section, totalItems) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            const totalPages = getTotalPages(totalItems);
+            const current = currentPage[section];
+            
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:20px;padding:15px;background:#f9fafb;border-radius:8px;">
+                    <button onclick="changePage('${section}', ${current - 1})" 
+                            class="btn btn-primary" 
+                            ${current === 1 ? 'disabled' : ''}
+                            style="padding:8px 16px;${current === 1 ? 'opacity:0.5;cursor:not-allowed;' : ''}">
+                        ← Précédent
+                    </button>
+                    <span style="font-weight:bold;color:#374151;min-width:120px;text-align:center;">
+                        Page ${current} / ${totalPages}
+                    </span>
+                    <button onclick="changePage('${section}', ${current + 1})" 
+                            class="btn btn-primary" 
+                            ${current === totalPages ? 'disabled' : ''}
+                            style="padding:8px 16px;${current === totalPages ? 'opacity:0.5;cursor:not-allowed;' : ''}">
+                        Suivant →
+                    </button>
+                    <span style="color:#6b7280;margin-left:10px;">
+                        (${totalItems} éléments)
+                    </span>
+                </div>
+            `;
+        }
+        
+        function changePage(section, newPage) {
+            const totalPages = getTotalPages(
+                section === 'products' ? products.length :
+                section === 'history' ? [...movements, ...history].length :
+                section === 'dashboard' ? products.filter(p => {
+                    const prodStock = Object.values(p.pdvStock || {}).reduce((s, qty) => s + qty, 0);
+                    const minStock = parseInt(p.repetition) || 10;
+                    return prodStock < minStock;
+                }).length : 0
+            );
+            
+            if (newPage < 1 || newPage > totalPages) return;
+            
+            currentPage[section] = newPage;
+            
+            // Rafraîchir la vue appropriée
+            if (section === 'products') renderProds();
+            else if (section === 'history') renderHist();
+            else if (section === 'dashboard') renderDash();
+        }
 
         function checkAuth() {
             const user = JSON.parse(localStorage.getItem('currentUser'));
@@ -1347,6 +1426,10 @@
             const tbody = document.getElementById('prod-body');
             if (!tbody) return;
             
+            const searchInput = document.getElementById('prod-search');
+            const searchValue = searchInput ? searchInput.value.toLowerCase() : '';
+            const isSearching = searchValue.length > 0;
+            
             // Trier les produits par stock total (du plus grand au plus petit)
             const sortedProducts = [...products].sort((a, b) => {
                 const stockA = Object.values(a.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
@@ -1354,7 +1437,25 @@
                 return stockB - stockA; // Ordre décroissant
             });
             
-            tbody.innerHTML = sortedProducts.map(p => {
+            // Si recherche → Afficher TOUS les résultats, sinon → Paginer
+            let displayProducts;
+            if (isSearching) {
+                // RECHERCHE: Afficher tous les résultats filtrés
+                displayProducts = sortedProducts.filter(p => 
+                    p.name.toLowerCase().includes(searchValue) || 
+                    p.reference.toLowerCase().includes(searchValue) || 
+                    (p.barcode && p.barcode.toString().toLowerCase().includes(searchValue))
+                );
+                // Cacher la pagination
+                document.getElementById('products-pagination').innerHTML = '';
+            } else {
+                // PAS DE RECHERCHE: Paginer
+                displayProducts = paginateData(sortedProducts, currentPage.products);
+                // Afficher la pagination
+                renderPagination('products-pagination', 'products', sortedProducts.length);
+            }
+            
+            tbody.innerHTML = displayProducts.map(p => {
                 let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
                 
                 if (p.imageUrl) {
@@ -1388,51 +1489,14 @@
                 </tr>`;
             }).join('');
 
-            document.getElementById('prod-search').oninput = function() {
-                const s = this.value.toLowerCase();
-                const filtered = products.filter(p => 
-                    p.name.toLowerCase().includes(s) || 
-                    p.reference.toLowerCase().includes(s) || 
-                    (p.barcode && p.barcode.toString().toLowerCase().includes(s))
-                ).sort((a, b) => {
-                    const stockA = Object.values(a.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
-                    const stockB = Object.values(b.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
-                    return stockB - stockA; // Ordre décroissant
-                });
-                
-                tbody.innerHTML = filtered.map(p => {
-                    let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
-                    
-                    if (p.imageUrl) {
-                        const convertedUrl = convertGoogleDriveUrl(p.imageUrl);
-                        if (convertedUrl) {
-                            imgHtml = `<img src="${convertedUrl}" 
-                                            style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;" 
-                                            onclick="zoomImg('${convertedUrl.replace(/'/g, "\\'")}')"
-                                            onerror="this.onerror=null;this.outerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;\\'>📦</div>';"
-                                            alt="${p.name}">`;
-                        }
-                    }
-                    
-                    // Calculer le stock total = SOMME de tous les PDV
-                    const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
-                    
-                    return `<tr>
-                        <td style="text-align:center;"><input type="checkbox" class="product-checkbox" data-product-id="${p.id}"></td>
-                        <td style="text-align:center;">${imgHtml}</td>
-                        <td><strong>${p.name}</strong></td>
-                        <td>${p.reference}</td>
-                        <td>${p.barcode || '-'}</td>
-                        <td><span class="badge badge-success">${totalStock}</span></td>
-                        <td>${p.repetition || '-'}</td>
-                        <td>
-                            <button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button>
-                            <button onclick="quickTransferToPdv('${p.id}')" class="btn-edit" style="background:#f59e0b;" title="Transférer vers PDV">🚚</button>
-                            <button onclick="deleteProduct('${p.id}')" class="btn-delete">🗑️</button>
-                        </td>
-                    </tr>`;
-                }).join('');
-            };
+            // Setup recherche
+            if (!searchInput.onInputSet) {
+                searchInput.oninput = function() {
+                    currentPage.products = 1; // Reset à la page 1 lors de la recherche
+                    renderProds();
+                };
+                searchInput.onInputSet = true;
+            }
         }
 
         function zoomImg(url) {
@@ -2275,7 +2339,10 @@
             filtHist();
             
             ['hs', 'hd', 'hm', 'hy'].forEach(id => {
-                document.getElementById(id).addEventListener('input', filtHist);
+                document.getElementById(id).addEventListener('input', function() {
+                    currentPage.history = 1; // Reset à la page 1 lors du filtrage
+                    filtHist();
+                });
             });
         }
 
@@ -2288,6 +2355,8 @@
             const d = document.getElementById('hd').value;
             const m = document.getElementById('hm').value;
             const y = document.getElementById('hy').value;
+            
+            const isFiltering = s || d || m || y; // Détecte si un filtre est actif
             
             // COMBINER movements + history pour voir TOUS les mouvements !
             const allMovements = [...movements, ...history];
@@ -2310,7 +2379,22 @@
             });
             
             console.log('✅ filtered.length:', filtered.length);
-            document.getElementById('hist-body').innerHTML = renderHistTable(filtered);
+            
+            // Si filtre actif → Afficher TOUS les résultats, sinon → Paginer
+            let displayMovements;
+            if (isFiltering) {
+                // FILTRAGE: Afficher tous les résultats filtrés
+                displayMovements = filtered;
+                // Cacher la pagination
+                document.getElementById('history-pagination').innerHTML = '';
+            } else {
+                // PAS DE FILTRE: Paginer
+                displayMovements = paginateData(filtered, currentPage.history);
+                // Afficher la pagination
+                renderPagination('history-pagination', 'history', filtered.length);
+            }
+            
+            document.getElementById('hist-body').innerHTML = renderHistTable(displayMovements);
         }
 
         function renderHistTable(list) {
@@ -2367,6 +2451,7 @@
             document.getElementById('hd').value = '';
             document.getElementById('hm').value = '';
             document.getElementById('hy').value = '';
+            currentPage.history = 1; // Reset à la page 1
             filtHist();
         }
 
