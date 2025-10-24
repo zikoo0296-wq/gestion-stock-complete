@@ -1140,6 +1140,11 @@
                     .select('*')
                     .eq('user_id', currentSupabaseUser.id);
                 
+                console.log('📥 movData reçu:', movData ? movData.length : 0);
+                if (movData && movData.length > 0) {
+                    console.log('🔍 Premier mouvement:', JSON.stringify(movData[0]));
+                }
+                
                 // Convertir produits avec pdvStock
                 if (prodsData && prodsData.length > 0) {
                     products = prodsData.map(function(p) {
@@ -1186,7 +1191,9 @@
                 history = [];
                 
                 if (movData && movData.length > 0) {
+                    console.log('🔄 Traitement de', movData.length, 'mouvements...');
                     movData.forEach(function(m) {
+                        console.log('📋 Type:', m.type, '| Product:', m.product_name);
                         const obj = {
                             id: m.id.toString(),
                             productName: m.product_name || m.customer || 'Produit',
@@ -1203,9 +1210,11 @@
                         if (m.type === 'transfer') {
                             obj.type = 'transfer';
                             history.push(obj);
+                            console.log('  → Ajouté à HISTORY');
                         } else {
                             obj.type = m.type === 'entry' ? 'Entrée' : 'Sortie';
                             movements.push(obj);
+                            console.log('  → Ajouté à MOVEMENTS');
                         }
                     });
                 }
