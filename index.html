@@ -1885,13 +1885,14 @@
             const m = document.getElementById('hm').value;
             const y = document.getElementById('hy').value;
             
-            const sorted = [...movements].sort((a, b) => new Date(b.date) - new Date(a.date));
+            // UTILISER HISTORY AU LIEU DE MOVEMENTS !
+            const sorted = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
             
             const filtered = sorted.filter(mov => {
                 const date = new Date(mov.date);
-                const matchSearch = !s || mov.product.toLowerCase().includes(s) || 
-                    (mov.reason && mov.reason.toLowerCase().includes(s)) ||
-                    (mov.note && mov.note.toLowerCase().includes(s));
+                const matchSearch = !s || (mov.productName && mov.productName.toLowerCase().includes(s)) || 
+                    (mov.from && mov.from.toLowerCase().includes(s)) ||
+                    (mov.to && mov.to.toLowerCase().includes(s));
                 const matchDate = !d || date.toISOString().split('T')[0] === d;
                 const matchMonth = !m || date.getMonth() === parseInt(m);
                 const matchYear = !y || date.getFullYear() === parseInt(y);
@@ -1904,25 +1905,25 @@
         function renderHistTable(list) {
             if (!list || list.length === 0) return '<tr><td colspan="7" style="text-align:center;">Aucun mouvement</td></tr>';
             return list.map(m => {
-                const ic = m.type === 'in' ? '➕' : m.type === 'transfer' ? '🔄' : '➖';
-                const cl = m.type === 'in' ? '#10b981' : m.type === 'transfer' ? '#f59e0b' : '#ef4444';
-                const tp = m.type === 'in' ? 'Entrée' : m.type === 'transfer' ? 'Transfert' : 'Sortie';
-                const detail = m.type === 'transfer' ? `${m.from} → ${m.to}` : (m.pdv || '-') + ' / ' + (m.payment || '-');
+                const ic = '🚚';
+                const cl = '#f59e0b';
+                const tp = 'Transfert';
+                const detail = `${m.from || 'Stock Central'} → ${m.to || '-'}`;
                 return `<tr>
                     <td>${new Date(m.date).toLocaleString('fr-FR')}</td>
                     <td><span style="color:${cl};font-weight:bold;">${ic} ${tp}</span></td>
-                    <td>${m.reason || '-'}</td>
-                    <td><strong>${m.product}</strong></td>
+                    <td>-</td>
+                    <td><strong>${m.productName || 'Produit'}</strong></td>
                     <td><strong style="color:${cl};">${m.quantity}</strong></td>
                     <td>${detail}</td>
-                    <td>${m.note || '-'}</td>
+                    <td>${m.user || '-'}</td>
                 </tr>`;
             }).join('');
         }
 
         function getYrs() {
             const y = new Set();
-            movements.forEach(m => y.add(new Date(m.date).getFullYear()));
+            history.forEach(m => y.add(new Date(m.date).getFullYear()));
             return Array.from(y).sort((a, b) => b - a);
         }
 
