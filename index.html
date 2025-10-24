@@ -520,17 +520,32 @@
                                 </select>
                             </div>
                             
-                            <!-- POUR ENTRÉE: Champ Référence -->
-                            <div class="form-group" id="mov-reference-group" style="display:none;">
-                                <label class="form-label">Référence *</label>
-                                <input type="text" id="mov-reference" class="form-input" placeholder="Ex: REF-001">
-                                <small style="color:#6b7280;font-size:0.85rem;">Si la référence existe, le stock sera ajouté. Sinon, un nouveau produit sera créé.</small>
+                            <!-- POUR ENTRÉE: Sélection produit existant OU nouveau -->
+                            <div class="form-group" id="mov-entry-product-group" style="display:none;">
+                                <label class="form-label">Produit / Référence *</label>
+                                <div class="custom-select-container">
+                                    <div class="custom-select-button" id="mov-entry-select-btn" onclick="toggleMovEntryDropdown(event)">
+                                        Sélectionner ou créer un produit...
+                                    </div>
+                                    <div class="custom-select-dropdown" id="mov-entry-dropdown">
+                                        <div class="custom-select-search">
+                                            <input type="text" id="mov-entry-search-input" placeholder="🔍 Rechercher..." oninput="filterMovEntryList()" onclick="event.stopPropagation()">
+                                        </div>
+                                        <div class="custom-select-list" id="mov-entry-product-list"></div>
+                                    </div>
+                                    <input type="hidden" id="mov-entry-product">
+                                </div>
                             </div>
                             
-                            <!-- POUR ENTRÉE: Nom du produit (si nouvelle référence) -->
-                            <div class="form-group" id="mov-name-group" style="display:none;">
-                                <label class="form-label">Nom du produit</label>
-                                <input type="text" id="mov-product-name" class="form-input" placeholder="Nom du nouveau produit">
+                            <!-- POUR NOUVEAU PRODUIT: Champs Référence + Nom -->
+                            <div class="form-group" id="mov-new-reference-group" style="display:none;">
+                                <label class="form-label">Référence *</label>
+                                <input type="text" id="mov-new-reference" class="form-input" placeholder="Ex: REF-001">
+                            </div>
+                            
+                            <div class="form-group" id="mov-new-name-group" style="display:none;">
+                                <label class="form-label">Nom du produit *</label>
+                                <input type="text" id="mov-new-name" class="form-input" placeholder="Ex: Coca Cola 1L">
                             </div>
                             
                             <!-- POUR SORTIE: Sélecteur produit -->
@@ -1472,6 +1487,86 @@
             
             alert(`✅ ${selected.length} produit(s) supprimé(s) !`);
         }
+        
+        // ========== FONCTIONS POUR ENTRÉES (Dropdown produits) ==========
+        function renderMovEntryList() {
+            const list = document.getElementById('mov-entry-product-list');
+            if (!list) return;
+            
+            // Trier par nom
+            const sorted = [...products].sort((a, b) => a.name.localeCompare(b.name));
+            
+            list.innerHTML = `
+                <div class="custom-select-item" data-value="NEW" onclick="selectMovEntryProduct('NEW', '➕ Créer nouveau produit')" style="background:#10b981;color:white;font-weight:bold;">
+                    ➕ Créer nouveau produit
+                </div>
+                <div style="height:1px;background:#e5e7eb;margin:4px 0;"></div>
+                ${sorted.map(p => `
+                    <div class="custom-select-item" data-value="${p.id}" onclick="selectMovEntryProduct('${p.id}', '${p.name.replace(/'/g, "\\'")} (${p.reference})')">
+                        <strong>${p.name}</strong>
+                        <span style="color:#6b7280;font-size:0.85rem;margin-left:8px;">${p.reference}</span>
+                    </div>
+                `).join('')}
+            `;
+        }
+        
+        function toggleMovEntryDropdown(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('mov-entry-dropdown');
+            const button = document.getElementById('mov-entry-select-btn');
+            const isOpen = dropdown.classList.contains('show');
+            
+            // Fermer tous les autres dropdowns
+            document.querySelectorAll('.custom-select-dropdown').forEach(d => d.classList.remove('show'));
+            document.querySelectorAll('.custom-select-button').forEach(b => b.classList.remove('open'));
+            
+            if (!isOpen) {
+                dropdown.classList.add('show');
+                button.classList.add('open');
+                document.getElementById('mov-entry-search-input').focus();
+            }
+        }
+        
+        function filterMovEntryList() {
+            const search = document.getElementById('mov-entry-search-input').value.toLowerCase();
+            const items = document.querySelectorAll('#mov-entry-product-list .custom-select-item');
+            
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(search) || item.dataset.value === 'NEW') {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+        
+        function selectMovEntryProduct(id, displayText) {
+            document.getElementById('mov-entry-product').value = id;
+            document.getElementById('mov-entry-select-btn').textContent = displayText;
+            document.getElementById('mov-entry-dropdown').classList.remove('show');
+            document.getElementById('mov-entry-select-btn').classList.remove('open');
+            document.getElementById('mov-entry-search-input').value = '';
+            
+            // Si "Nouveau", afficher les champs référence + nom
+            const newReferenceGroup = document.getElementById('mov-new-reference-group');
+            const newNameGroup = document.getElementById('mov-new-name-group');
+            
+            if (id === 'NEW') {
+                newReferenceGroup.style.display = 'flex';
+                newNameGroup.style.display = 'flex';
+                document.getElementById('mov-new-reference').required = true;
+                document.getElementById('mov-new-name').required = true;
+            } else {
+                newReferenceGroup.style.display = 'none';
+                newNameGroup.style.display = 'none';
+                document.getElementById('mov-new-reference').required = false;
+                document.getElementById('mov-new-name').required = false;
+            }
+            
+            // Render la liste complète
+            renderMovEntryList();
+        }
 
         function openModal(id) {
             document.getElementById(id).style.display = 'flex';
@@ -1768,39 +1863,46 @@
             const type = document.getElementById('mov-type').value;
             
             // Groupes de champs
-            const referenceGroup = document.getElementById('mov-reference-group');
-            const nameGroup = document.getElementById('mov-name-group');
+            const entryProductGroup = document.getElementById('mov-entry-product-group');
+            const newReferenceGroup = document.getElementById('mov-new-reference-group');
+            const newNameGroup = document.getElementById('mov-new-name-group');
             const productGroup = document.getElementById('mov-product-group');
             const paymentGroup = document.getElementById('mov-payment-group');
             
             if (type === 'in') {
-                // ENTRÉE: Afficher Référence + Nom, cacher Produit + Paiement
-                referenceGroup.style.display = 'flex';
-                nameGroup.style.display = 'flex';
+                // ENTRÉE: Afficher dropdown sélection, cacher sorties
+                entryProductGroup.style.display = 'flex';
+                newReferenceGroup.style.display = 'none';
+                newNameGroup.style.display = 'none';
                 productGroup.style.display = 'none';
                 paymentGroup.style.display = 'none';
                 
-                // Rendre référence obligatoire
-                document.getElementById('mov-reference').required = true;
+                // Render la liste des produits pour les entrées
+                renderMovEntryList();
+                
+                // Champs requis
+                document.getElementById('mov-entry-product').required = true;
                 document.getElementById('mov-product').required = false;
                 document.getElementById('mov-payment').required = false;
                 
             } else if (type === 'out') {
-                // SORTIE: Afficher Produit + Paiement, cacher Référence + Nom
-                referenceGroup.style.display = 'none';
-                nameGroup.style.display = 'none';
+                // SORTIE: Afficher Produit + Paiement, cacher entrées
+                entryProductGroup.style.display = 'none';
+                newReferenceGroup.style.display = 'none';
+                newNameGroup.style.display = 'none';
                 productGroup.style.display = 'flex';
                 paymentGroup.style.display = 'flex';
                 
-                // Rendre produit + paiement obligatoires
-                document.getElementById('mov-reference').required = false;
+                // Champs requis
+                document.getElementById('mov-entry-product').required = false;
                 document.getElementById('mov-product').required = true;
                 document.getElementById('mov-payment').required = true;
                 
             } else {
                 // Rien sélectionné: Tout cacher
-                referenceGroup.style.display = 'none';
-                nameGroup.style.display = 'none';
+                entryProductGroup.style.display = 'none';
+                newReferenceGroup.style.display = 'none';
+                newNameGroup.style.display = 'none';
                 productGroup.style.display = 'none';
                 paymentGroup.style.display = 'none';
             }
@@ -1826,28 +1928,31 @@
             
             if (type === 'in') {
                 // ==================== ENTRÉE ====================
-                const reference = document.getElementById('mov-reference').value.trim().toUpperCase();
-                const productName = document.getElementById('mov-product-name').value.trim();
+                const selectedProductId = document.getElementById('mov-entry-product').value;
                 
-                if (!reference) {
-                    alert('❌ Veuillez saisir une référence');
+                if (!selectedProductId) {
+                    alert('❌ Veuillez sélectionner un produit ou créer un nouveau');
                     return;
                 }
                 
-                // Chercher si la référence existe
-                product = products.find(p => p.reference.toUpperCase() === reference);
-                
-                if (product) {
-                    // Référence existe → Ajouter au stock
-                    productId = product.id;
-                    console.log('✅ Référence trouvée:', product.name);
-                } else {
-                    // Référence n'existe pas → Créer nouveau produit
-                    if (!productName) {
-                        alert('❌ Cette référence n\'existe pas.\nVeuillez saisir le nom du nouveau produit.');
+                if (selectedProductId === 'NEW') {
+                    // CRÉER NOUVEAU PRODUIT
+                    const reference = document.getElementById('mov-new-reference').value.trim().toUpperCase();
+                    const productName = document.getElementById('mov-new-name').value.trim();
+                    
+                    if (!reference || !productName) {
+                        alert('❌ Veuillez saisir la référence et le nom du produit');
                         return;
                     }
                     
+                    // Vérifier si la référence existe déjà
+                    const existingProduct = products.find(p => p.reference.toUpperCase() === reference);
+                    if (existingProduct) {
+                        alert(`❌ Cette référence existe déjà !\n\nProduit: ${existingProduct.name}\nRéférence: ${existingProduct.reference}\n\nVeuillez sélectionner le produit existant dans la liste.`);
+                        return;
+                    }
+                    
+                    // Créer le nouveau produit
                     productId = Date.now().toString();
                     product = {
                         id: productId,
@@ -1865,7 +1970,17 @@
                     };
                     
                     products.push(product);
-                    console.log('✅ Nouveau produit créé:', productName);
+                    console.log('✅ Nouveau produit créé:', productName, reference);
+                    
+                } else {
+                    // PRODUIT EXISTANT
+                    product = products.find(p => p.id === selectedProductId);
+                    if (!product) {
+                        alert('❌ Produit invalide');
+                        return;
+                    }
+                    productId = product.id;
+                    console.log('✅ Produit existant sélectionné:', product.name);
                 }
                 
                 // Initialiser pdvStock si nécessaire
@@ -1900,8 +2015,10 @@
                 renderProds();
                 
                 e.target.reset();
+                document.getElementById('mov-entry-select-btn').textContent = 'Sélectionner ou créer un produit...';
+                document.getElementById('mov-entry-product').value = '';
                 toggleMovementType(); // Reset l'affichage
-                alert(`✅ Entrée enregistrée !\n\nProduit: ${product.name}\nRéférence: ${reference}\nStock ${pdv.name}: ${product.pdvStock[pdvId]}`);
+                alert(`✅ Entrée enregistrée !\n\nProduit: ${product.name}\nRéférence: ${product.reference}\nStock ${pdv.name}: ${product.pdvStock[pdvId]}`);
                 
             } else if (type === 'out') {
                 // ==================== SORTIE ====================
