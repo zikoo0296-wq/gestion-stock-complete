@@ -1565,6 +1565,11 @@
             // ATTENDRE que la sauvegarde finisse !
             await save();
             
+            // RAFRAÎCHIR L'HISTORIQUE EN TEMPS RÉEL !
+            if (document.getElementById('history').classList.contains('active')) {
+                renderHist();
+            }
+            
             renderProds();
             
             // Calculer le nouveau stock total (somme de tous les PDV)
@@ -1690,7 +1695,7 @@
             pdvGroup.style.display = type ? 'flex' : 'none';
         }
 
-        function addMovement(e) {
+        async function addMovement(e) {
             e.preventDefault();
             const type = document.getElementById('mov-type').value;
             const productId = document.getElementById('mov-product').value;
@@ -1725,19 +1730,25 @@
 
             movements.push({
                 id: Date.now().toString(),
-                type,
-                product: product.name,
-                productId,
-                pdv: pdv.name,
-                pdvId,
-                quantity,
-                payment,
-                reason,
-                note,
+                type: type,
+                productName: product.name,
+                productId: productId,
+                customer: pdv.name,
+                quantity: quantity,
+                reason: reason || '',
+                from: type === 'in' ? pdv.name : '',
+                to: type === 'out' ? pdv.name : '',
+                user: document.getElementById('user-name').textContent,
                 date: new Date().toISOString()
             });
 
-            save();
+            await save();
+            
+            // RAFRAÎCHIR L'HISTORIQUE EN TEMPS RÉEL !
+            if (document.getElementById('history').classList.contains('active')) {
+                renderHist();
+            }
+            
             e.target.reset();
             document.getElementById('mov-select-btn').textContent = 'Sélectionner un produit...';
             document.getElementById('mov-product').value = '';
@@ -1754,7 +1765,7 @@
                 pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
         }
 
-        function addTransfer(e) {
+        async function addTransfer(e) {
             e.preventDefault();
             const productId = document.getElementById('trans-product').value;
             const fromId = document.getElementById('trans-from').value;
@@ -1788,21 +1799,25 @@
             product.pdvStock[fromId] -= quantity;
             product.pdvStock[toId] += quantity;
 
-            movements.push({
+            history.push({
                 id: Date.now().toString(),
                 type: 'transfer',
-                product: product.name,
-                productId,
+                productName: product.name,
+                productId: productId,
                 from: fromPdv.name,
                 to: toPdv.name,
-                fromId,
-                toId,
-                quantity,
-                note,
+                quantity: quantity,
+                user: document.getElementById('user-name').textContent,
                 date: new Date().toISOString()
             });
 
-            save();
+            await save();
+            
+            // RAFRAÎCHIR L'HISTORIQUE EN TEMPS RÉEL !
+            if (document.getElementById('history').classList.contains('active')) {
+                renderHist();
+            }
+            
             e.target.reset();
             document.getElementById('trans-select-btn').textContent = 'Sélectionner un produit...';
             document.getElementById('trans-product').value = '';
@@ -1911,20 +1926,27 @@
         }
 
         function filtHist() {
-            console.log('🔍 filtHist() appelé - history.length:', history.length);
+            console.log('🔍 filtHist() appelé');
+            console.log('📊 movements.length:', movements.length);
+            console.log('📊 history.length:', history.length);
             
             const s = document.getElementById('hs').value.toLowerCase();
             const d = document.getElementById('hd').value;
             const m = document.getElementById('hm').value;
             const y = document.getElementById('hy').value;
             
-            // UTILISER HISTORY AU LIEU DE MOVEMENTS !
-            const sorted = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
+            // COMBINER movements + history pour voir TOUS les mouvements !
+            const allMovements = [...movements, ...history];
+            console.log('📊 allMovements.length:', allMovements.length);
+            
+            const sorted = allMovements.sort((a, b) => new Date(b.date) - new Date(a.date));
             console.log('📊 sorted.length:', sorted.length);
             
             const filtered = sorted.filter(mov => {
                 const date = new Date(mov.date);
-                const matchSearch = !s || (mov.productName && mov.productName.toLowerCase().includes(s)) || 
+                const matchSearch = !s || 
+                    (mov.productName && mov.productName.toLowerCase().includes(s)) || 
+                    (mov.customer && mov.customer.toLowerCase().includes(s)) ||
                     (mov.from && mov.from.toLowerCase().includes(s)) ||
                     (mov.to && mov.to.toLowerCase().includes(s));
                 const matchDate = !d || date.toISOString().split('T')[0] === d;
@@ -1940,14 +1962,35 @@
         function renderHistTable(list) {
             if (!list || list.length === 0) return '<tr><td colspan="7" style="text-align:center;">Aucun mouvement</td></tr>';
             return list.map(m => {
-                const ic = '🚚';
-                const cl = '#f59e0b';
-                const tp = 'Transfert';
-                const detail = `${m.from || 'Stock Central'} → ${m.to || '-'}`;
+                // Déterminer le type de mouvement
+                let ic, cl, tp, detail;
+                
+                if (m.type === 'transfer') {
+                    ic = '🚚';
+                    cl = '#f59e0b';
+                    tp = 'Transfert';
+                    detail = `${m.from || 'Stock Central'} → ${m.to || '-'}`;
+                } else if (m.type === 'Entrée' || m.type === 'entry') {
+                    ic = '📥';
+                    cl = '#10b981';
+                    tp = 'Entrée';
+                    detail = m.customer || '-';
+                } else if (m.type === 'Sortie' || m.type === 'exit') {
+                    ic = '📤';
+                    cl = '#ef4444';
+                    tp = 'Sortie';
+                    detail = m.customer || '-';
+                } else {
+                    ic = '❓';
+                    cl = '#6b7280';
+                    tp = m.type || '-';
+                    detail = '-';
+                }
+                
                 return `<tr>
                     <td>${new Date(m.date).toLocaleString('fr-FR')}</td>
                     <td><span style="color:${cl};font-weight:bold;">${ic} ${tp}</span></td>
-                    <td>-</td>
+                    <td>${m.reason || '-'}</td>
                     <td><strong>${m.productName || 'Produit'}</strong></td>
                     <td><strong style="color:${cl};">${m.quantity}</strong></td>
                     <td>${detail}</td>
@@ -1958,7 +2001,8 @@
 
         function getYrs() {
             const y = new Set();
-            history.forEach(m => y.add(new Date(m.date).getFullYear()));
+            // Combiner movements + history
+            [...movements, ...history].forEach(m => y.add(new Date(m.date).getFullYear()));
             return Array.from(y).sort((a, b) => b - a);
         }
 
