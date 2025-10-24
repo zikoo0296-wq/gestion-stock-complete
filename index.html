@@ -968,71 +968,36 @@
         });
 
         async function save() {
-            console.log('💾 === SAVE() APPELÉ ===');
-            console.log('📊 Données à sauvegarder:', {
-                products: products.length,
-                pdvs: pdvs.length,
-                movements: movements.length,
-                history: history.length
-            });
+            console.log('💾 Sauvegarde...');
             
             // Sauvegarder en local
             localStorage.setItem('products', JSON.stringify(products));
             localStorage.setItem('pdvs', JSON.stringify(pdvs));
             localStorage.setItem('movements', JSON.stringify(movements));
             localStorage.setItem('history', JSON.stringify(history));
-            console.log('✅ Sauvegarde localStorage OK');
             
             // Sauvegarder dans Supabase si connecté
-            console.log('🔍 Vérification Supabase:', {
-                useSupabase: useSupabase,
-                currentSupabaseUser: !!currentSupabaseUser,
-                supabaseClient: !!supabaseClient
-            });
-            
             if (useSupabase && currentSupabaseUser && supabaseClient) {
-                console.log('💾 Déclenchement saveToSupabase()...');
                 try {
                     await saveToSupabase();
-                    console.log('✅ saveToSupabase() terminée');
+                    console.log('✅ Sauvegarde OK');
                 } catch (error) {
                     console.error('❌ Erreur save():', error);
-                    alert('❌ Erreur de sauvegarde: ' + error.message);
                 }
-            } else {
-                console.warn('⚠️ Sauvegarde Supabase IGNORÉE !');
-                console.warn('Raisons:', {
-                    useSupabase: useSupabase,
-                    currentSupabaseUser: currentSupabaseUser ? 'Oui' : 'NON',
-                    supabaseClient: supabaseClient ? 'Oui' : 'NON'
-                });
             }
         }
         
         async function saveToSupabase() {
             try {
-                console.log('💾 === DÉBUT SAUVEGARDE SUPABASE ===');
-                console.log('📊 Données à sauvegarder:', {
-                    products: products.length,
-                    pdvs: pdvs.length,
-                    movements: movements.length,
-                    history: history.length
-                });
-                
                 const userId = currentSupabaseUser.id;
-                console.log('👤 User ID:', userId);
                 
                 // 1. Supprimer anciennes données
-                console.log('🗑️ Suppression anciennes données...');
                 await supabaseClient.from('products').delete().eq('user_id', userId);
                 await supabaseClient.from('points_vente').delete().eq('user_id', userId);
                 await supabaseClient.from('movements').delete().eq('user_id', userId);
-                // Note: on ne supprime pas transfers car la table n'existe peut-être pas
-                console.log('✅ Anciennes données supprimées');
                 
                 // 2. Sauvegarder produits avec pdvStock dans warehouse
                 if (products.length > 0) {
-                    console.log('📦 Préparation produits...');
                     const productsToInsert = products
                         .filter(function(p) { return p.reference && p.reference.trim(); })
                         .map(function(p) {
@@ -1058,20 +1023,12 @@
                         });
                     
                     if (productsToInsert.length > 0) {
-                        console.log('📤 Insertion de', productsToInsert.length, 'produits...');
-                        console.log('🔍 Premier produit:', JSON.stringify(productsToInsert[0]));
-                        const { data, error } = await supabaseClient.from('products').insert(productsToInsert);
-                        if (error) {
-                            console.error('❌ Erreur insertion produits:', error);
-                        } else {
-                            console.log('✅ Produits sauvegardés:', productsToInsert.length);
-                        }
+                        await supabaseClient.from('products').insert(productsToInsert);
                     }
                 }
                 
                 // 3. Sauvegarder points de vente
                 if (pdvs.length > 0) {
-                    console.log('🏪 Préparation PDV...');
                     const pdvsToInsert = pdvs
                         .filter(function(p) { return p.name && p.name.trim(); })
                         .map(function(p) {
@@ -1086,13 +1043,7 @@
                         });
                     
                     if (pdvsToInsert.length > 0) {
-                        console.log('📤 Insertion de', pdvsToInsert.length, 'PDV...');
-                        const { data, error } = await supabaseClient.from('points_vente').insert(pdvsToInsert);
-                        if (error) {
-                            console.error('❌ Erreur insertion PDV:', error);
-                        } else {
-                            console.log('✅ PDV sauvegardés:', pdvsToInsert.length);
-                        }
+                        await supabaseClient.from('points_vente').insert(pdvsToInsert);
                     }
                 }
                 
@@ -1134,58 +1085,18 @@
                     });
                 }
                 
-                console.log('📝 Total mouvements + historique:', allData.length);
-                
                 if (allData.length > 0) {
                     const validData = allData.filter(function(d) { return d.quantity > 0; });
-                    
                     if (validData.length > 0) {
-                        console.log('📤 Insertion de', validData.length, 'mouvements...');
-                        const { data, error } = await supabaseClient.from('movements').insert(validData);
-                        if (error) {
-                            console.error('❌ Erreur insertion mouvements:', error);
-                        } else {
-                            console.log('✅ Mouvements sauvegardés:', validData.length);
-                        }
+                        await supabaseClient.from('movements').insert(validData);
                     }
                 }
                 
-                console.log('✅ === SAUVEGARDE COMPLÈTE TERMINÉE ===');
-                
-                // Notification visuelle de succès
-                showNotification('✅ Données sauvegardées dans le cloud !', 'success');
+                console.log('✅ Sauvegarde complète');
                 
             } catch (error) {
-                console.error('❌ === ERREUR SAUVEGARDE ===');
-                console.error('Message:', error.message);
-                console.error('Stack:', error.stack);
-                showNotification('❌ Erreur de sauvegarde: ' + error.message, 'error');
+                console.error('❌ Erreur sauvegarde:', error.message);
             }
-        }
-        
-        // Fonction pour afficher des notifications
-        function showNotification(message, type) {
-            const notif = document.createElement('div');
-            notif.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 15px 25px;
-                background: ${type === 'success' ? '#10b981' : '#ef4444'};
-                color: white;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                z-index: 10000;
-                font-weight: 600;
-                animation: slideIn 0.3s ease;
-            `;
-            notif.textContent = message;
-            document.body.appendChild(notif);
-            
-            setTimeout(() => {
-                notif.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => notif.remove(), 300);
-            }, 3000);
         }
         
         // Fonction pour charger depuis Supabase
@@ -1556,7 +1467,7 @@
             renderProds();
         }
 
-        function quickTransferToPdv(productId) {
+        async function quickTransferToPdv(productId) {
             const product = products.find(p => p.id === productId);
             if (!product) {
                 alert('❌ Produit introuvable !');
@@ -1623,7 +1534,9 @@
                 user: document.getElementById('user-name').textContent
             });
 
-            save();
+            // ATTENDRE que la sauvegarde finisse !
+            await save();
+            
             renderProds();
             
             // Calculer le nouveau stock total (somme de tous les PDV)
