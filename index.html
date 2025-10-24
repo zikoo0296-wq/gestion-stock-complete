@@ -513,13 +513,28 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Type *</label>
-                                <select id="mov-type" class="form-select" required onchange="togglePdvSelect()">
+                                <select id="mov-type" class="form-select" required onchange="toggleMovementType()">
                                     <option value="">Sélectionner...</option>
                                     <option value="in">Entrée (+)</option>
                                     <option value="out">Sortie (-)</option>
                                 </select>
                             </div>
-                            <div class="form-group">
+                            
+                            <!-- POUR ENTRÉE: Champ Référence -->
+                            <div class="form-group" id="mov-reference-group" style="display:none;">
+                                <label class="form-label">Référence *</label>
+                                <input type="text" id="mov-reference" class="form-input" placeholder="Ex: REF-001">
+                                <small style="color:#6b7280;font-size:0.85rem;">Si la référence existe, le stock sera ajouté. Sinon, un nouveau produit sera créé.</small>
+                            </div>
+                            
+                            <!-- POUR ENTRÉE: Nom du produit (si nouvelle référence) -->
+                            <div class="form-group" id="mov-name-group" style="display:none;">
+                                <label class="form-label">Nom du produit</label>
+                                <input type="text" id="mov-product-name" class="form-input" placeholder="Nom du nouveau produit">
+                            </div>
+                            
+                            <!-- POUR SORTIE: Sélecteur produit -->
+                            <div class="form-group" id="mov-product-group" style="display:none;">
                                 <label class="form-label">Produit *</label>
                                 <div class="custom-select-container">
                                     <div class="custom-select-button" id="mov-select-btn" onclick="toggleMovDropdown(event)">
@@ -531,9 +546,10 @@
                                         </div>
                                         <div class="custom-select-list" id="mov-product-list"></div>
                                     </div>
-                                    <input type="hidden" id="mov-product" required>
+                                    <input type="hidden" id="mov-product">
                                 </div>
                             </div>
+                            
                             <div class="form-group">
                                 <label class="form-label">Point de Vente *</label>
                                 <select id="mov-pdv" class="form-select" required>
@@ -544,14 +560,17 @@
                                 <label class="form-label">Quantité *</label>
                                 <input type="number" id="mov-quantity" class="form-input" min="1" required>
                             </div>
-                            <div class="form-group">
+                            
+                            <!-- Mode de paiement - SEULEMENT pour SORTIE -->
+                            <div class="form-group" id="mov-payment-group" style="display:none;">
                                 <label class="form-label">Mode de Paiement *</label>
-                                <select id="mov-payment" class="form-select" required>
+                                <select id="mov-payment" class="form-select">
                                     <option value="">Sélectionner...</option>
                                     <option value="Espèce">Espèce</option>
                                     <option value="Virement">Virement</option>
                                 </select>
                             </div>
+                            
                             <div class="form-group">
                                 <label class="form-label">Raison</label>
                                 <input type="text" id="mov-reason" class="form-input" placeholder="Facultatif">
@@ -1745,70 +1764,202 @@
                 pdvs.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
         }
 
-        function togglePdvSelect() {
+        function toggleMovementType() {
             const type = document.getElementById('mov-type').value;
-            const pdvGroup = document.getElementById('mov-pdv').closest('.form-group');
-            pdvGroup.style.display = type ? 'flex' : 'none';
+            
+            // Groupes de champs
+            const referenceGroup = document.getElementById('mov-reference-group');
+            const nameGroup = document.getElementById('mov-name-group');
+            const productGroup = document.getElementById('mov-product-group');
+            const paymentGroup = document.getElementById('mov-payment-group');
+            
+            if (type === 'in') {
+                // ENTRÉE: Afficher Référence + Nom, cacher Produit + Paiement
+                referenceGroup.style.display = 'flex';
+                nameGroup.style.display = 'flex';
+                productGroup.style.display = 'none';
+                paymentGroup.style.display = 'none';
+                
+                // Rendre référence obligatoire
+                document.getElementById('mov-reference').required = true;
+                document.getElementById('mov-product').required = false;
+                document.getElementById('mov-payment').required = false;
+                
+            } else if (type === 'out') {
+                // SORTIE: Afficher Produit + Paiement, cacher Référence + Nom
+                referenceGroup.style.display = 'none';
+                nameGroup.style.display = 'none';
+                productGroup.style.display = 'flex';
+                paymentGroup.style.display = 'flex';
+                
+                // Rendre produit + paiement obligatoires
+                document.getElementById('mov-reference').required = false;
+                document.getElementById('mov-product').required = true;
+                document.getElementById('mov-payment').required = true;
+                
+            } else {
+                // Rien sélectionné: Tout cacher
+                referenceGroup.style.display = 'none';
+                nameGroup.style.display = 'none';
+                productGroup.style.display = 'none';
+                paymentGroup.style.display = 'none';
+            }
         }
+
 
         async function addMovement(e) {
             e.preventDefault();
             const type = document.getElementById('mov-type').value;
-            const productId = document.getElementById('mov-product').value;
             const pdvId = document.getElementById('mov-pdv').value;
             const quantity = parseInt(document.getElementById('mov-quantity').value);
-            const payment = document.getElementById('mov-payment').value;
             const reason = document.getElementById('mov-reason').value.trim();
             const note = document.getElementById('mov-note').value.trim();
-
-            const product = products.find(p => p.id === productId);
-            const pdv = pdvs.find(v => v.id === pdvId);
             
-            if (!product || !pdv) {
-                alert('❌ Produit ou PDV invalide');
+            const pdv = pdvs.find(v => v.id === pdvId);
+            if (!pdv) {
+                alert('❌ PDV invalide');
                 return;
             }
-
-            if (!product.pdvStock) product.pdvStock = {};
-            if (!product.pdvStock[pdvId]) product.pdvStock[pdvId] = 0;
-
+            
+            let product;
+            let productId;
+            
             if (type === 'in') {
-                product.pdvStock[pdvId] += quantity;
-                product.quantity = (product.quantity || 0) + quantity;
-            } else if (type === 'out') {
-                if (product.pdvStock[pdvId] < quantity) {
-                    alert('❌ Stock insuffisant dans ce PDV');
+                // ==================== ENTRÉE ====================
+                const reference = document.getElementById('mov-reference').value.trim().toUpperCase();
+                const productName = document.getElementById('mov-product-name').value.trim();
+                
+                if (!reference) {
+                    alert('❌ Veuillez saisir une référence');
                     return;
                 }
+                
+                // Chercher si la référence existe
+                product = products.find(p => p.reference.toUpperCase() === reference);
+                
+                if (product) {
+                    // Référence existe → Ajouter au stock
+                    productId = product.id;
+                    console.log('✅ Référence trouvée:', product.name);
+                } else {
+                    // Référence n'existe pas → Créer nouveau produit
+                    if (!productName) {
+                        alert('❌ Cette référence n\'existe pas.\nVeuillez saisir le nom du nouveau produit.');
+                        return;
+                    }
+                    
+                    productId = Date.now().toString();
+                    product = {
+                        id: productId,
+                        name: productName,
+                        realName: productName,
+                        conventionalName: '',
+                        reference: reference,
+                        barcode: '',
+                        repetition: '',
+                        quantity: 0,
+                        category: '',
+                        brand: '',
+                        imageUrl: '',
+                        pdvStock: {}
+                    };
+                    
+                    products.push(product);
+                    console.log('✅ Nouveau produit créé:', productName);
+                }
+                
+                // Initialiser pdvStock si nécessaire
+                if (!product.pdvStock) product.pdvStock = {};
+                if (!product.pdvStock[pdvId]) product.pdvStock[pdvId] = 0;
+                
+                // Ajouter au stock
+                product.pdvStock[pdvId] += quantity;
+                product.quantity = (product.quantity || 0) + quantity;
+                
+                // Enregistrer dans movements
+                movements.push({
+                    id: Date.now().toString(),
+                    type: 'Entrée',
+                    productName: product.name,
+                    productId: productId,
+                    customer: pdv.name,
+                    quantity: quantity,
+                    reason: reason || '',
+                    from: pdv.name,
+                    to: '',
+                    user: document.getElementById('user-name').textContent,
+                    date: new Date().toISOString()
+                });
+                
+                await save();
+                
+                // RAFRAÎCHIR
+                if (document.getElementById('history').classList.contains('active')) {
+                    renderHist();
+                }
+                renderProds();
+                
+                e.target.reset();
+                toggleMovementType(); // Reset l'affichage
+                alert(`✅ Entrée enregistrée !\n\nProduit: ${product.name}\nRéférence: ${reference}\nStock ${pdv.name}: ${product.pdvStock[pdvId]}`);
+                
+            } else if (type === 'out') {
+                // ==================== SORTIE ====================
+                productId = document.getElementById('mov-product').value;
+                const payment = document.getElementById('mov-payment').value;
+                
+                if (!productId || !payment) {
+                    alert('❌ Veuillez sélectionner un produit et un mode de paiement');
+                    return;
+                }
+                
+                product = products.find(p => p.id === productId);
+                
+                if (!product) {
+                    alert('❌ Produit invalide');
+                    return;
+                }
+                
+                if (!product.pdvStock) product.pdvStock = {};
+                if (!product.pdvStock[pdvId]) product.pdvStock[pdvId] = 0;
+                
+                if (product.pdvStock[pdvId] < quantity) {
+                    alert(`❌ Stock insuffisant dans ce PDV\n\nStock actuel: ${product.pdvStock[pdvId]}\nDemandé: ${quantity}`);
+                    return;
+                }
+                
+                // Retirer du stock
                 product.pdvStock[pdvId] -= quantity;
                 product.quantity = (product.quantity || 0) - quantity;
+                
+                // Enregistrer dans movements
+                movements.push({
+                    id: Date.now().toString(),
+                    type: 'Sortie',
+                    productName: product.name,
+                    productId: productId,
+                    customer: pdv.name + ' / ' + payment,
+                    quantity: quantity,
+                    reason: reason || '',
+                    from: '',
+                    to: pdv.name,
+                    user: document.getElementById('user-name').textContent,
+                    date: new Date().toISOString()
+                });
+                
+                await save();
+                
+                // RAFRAÎCHIR
+                if (document.getElementById('history').classList.contains('active')) {
+                    renderHist();
+                }
+                
+                e.target.reset();
+                document.getElementById('mov-select-btn').textContent = 'Sélectionner un produit...';
+                document.getElementById('mov-product').value = '';
+                toggleMovementType(); // Reset l'affichage
+                alert(`✅ Sortie enregistrée !\n\nStock ${pdv.name}: ${product.pdvStock[pdvId]}`);
             }
-
-            movements.push({
-                id: Date.now().toString(),
-                type: type === 'in' ? 'Entrée' : 'Sortie',  // Convertir in/out → Entrée/Sortie
-                productName: product.name,
-                productId: productId,
-                customer: pdv.name,
-                quantity: quantity,
-                reason: reason || '',
-                from: type === 'in' ? pdv.name : '',
-                to: type === 'out' ? pdv.name : '',
-                user: document.getElementById('user-name').textContent,
-                date: new Date().toISOString()
-            });
-
-            await save();
-            
-            // RAFRAÎCHIR L'HISTORIQUE EN TEMPS RÉEL !
-            if (document.getElementById('history').classList.contains('active')) {
-                renderHist();
-            }
-            
-            e.target.reset();
-            document.getElementById('mov-select-btn').textContent = 'Sélectionner un produit...';
-            document.getElementById('mov-product').value = '';
-            alert(`✅ Mouvement enregistré ! Stock ${pdv.name}: ${product.pdvStock[pdvId]}`);
         }
 
         function renderTransForm() {
