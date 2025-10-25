@@ -2803,6 +2803,253 @@
                 document.getElementById('login-password').value = '';
             }
         }
+    
+
+        // ========================================
+        // GESTION DE L'ADMINISTRATION
+        // ========================================
+
+        let currentUserEdit = null;
+
+        // Afficher la page Administration
+        async function showAdministration() {
+            hideAllPages();
+            document.getElementById('administration-page').style.display = 'block';
+            setActiveNav('admin-menu-item');
+            await loadUsers();
+        }
+
+        // Charger les utilisateurs depuis Supabase
+        async function loadUsers() {
+            try {
+                const { data: users, error } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const tbody = document.getElementById('users-list');
+                tbody.innerHTML = '';
+
+                if (users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;">Aucun utilisateur trouvé</td></tr>';
+                    return;
+                }
+
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.username}</td>
+                        <td>${user.full_name}</td>
+                        <td>${user.email || '-'}</td>
+                        <td>
+                            <span class="badge badge-${getRoleBadgeColor(user.role)}">
+                                ${getRoleLabel(user.role)}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-${user.is_active ? 'success' : 'danger'}">
+                                ${user.is_active ? '✅ Actif' : '🔒 Inactif'}
+                            </span>
+                        </td>
+                        <td>${new Date(user.created_at).toLocaleDateString('fr-FR')}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="editUser('${user.id}')" title="Modifier">
+                                ✏️
+                            </button>
+                            <button class="btn btn-sm btn-${user.is_active ? 'warning' : 'success'}" 
+                                    onclick="toggleUserStatus('${user.id}', ${user.is_active})" 
+                                    title="${user.is_active ? 'Désactiver' : 'Activer'}">
+                                ${user.is_active ? '🔒' : '🔓'}
+                            </button>
+                            ${user.username !== 'admin' ? `
+                            <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.id}', '${user.username}')" title="Supprimer">
+                                🗑️
+                            </button>
+                            ` : ''}
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+            } catch (error) {
+                console.error('Erreur chargement users:', error);
+                showNotification('Erreur lors du chargement des utilisateurs: ' + error.message, 'error');
+            }
+        }
+
+        // Afficher le modal utilisateur
+        function showUserModal(userId = null) {
+            currentUserEdit = userId;
+            document.getElementById('user-modal').style.display = 'flex';
+            document.getElementById('user-modal-title').textContent = 
+                userId ? 'Modifier l\'utilisateur' : 'Nouvel Utilisateur';
+            
+            if (!userId) {
+                document.getElementById('user-form').reset();
+                document.getElementById('user-id').value = '';
+            }
+        }
+
+        // Fermer le modal
+        function closeUserModal() {
+            document.getElementById('user-modal').style.display = 'none';
+            document.getElementById('user-form').reset();
+            currentUserEdit = null;
+        }
+
+        // Éditer un utilisateur
+        async function editUser(userId) {
+            try {
+                const { data: user, error } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .eq('id', userId)
+                    .single();
+
+                if (error) throw error;
+
+                document.getElementById('user-id').value = user.id;
+                document.getElementById('user-username').value = user.username;
+                document.getElementById('user-fullname').value = user.full_name;
+                document.getElementById('user-email').value = user.email || '';
+                document.getElementById('user-password').value = user.password;
+                document.getElementById('user-role').value = user.role;
+                document.getElementById('user-active').checked = user.is_active;
+
+                showUserModal(userId);
+
+            } catch (error) {
+                console.error('Erreur chargement user:', error);
+                showNotification('Erreur lors du chargement de l\'utilisateur: ' + error.message, 'error');
+            }
+        }
+
+        // Sauvegarder un utilisateur
+        async function saveUser(event) {
+            event.preventDefault();
+
+            const userId = document.getElementById('user-id').value;
+            const userData = {
+                username: document.getElementById('user-username').value,
+                full_name: document.getElementById('user-fullname').value,
+                email: document.getElementById('user-email').value || null,
+                password: document.getElementById('user-password').value,
+                role: document.getElementById('user-role').value,
+                is_active: document.getElementById('user-active').checked,
+                updated_at: new Date().toISOString()
+            };
+
+            try {
+                let error;
+
+                if (userId) {
+                    // Mise à jour
+                    ({ error } = await supabaseClient
+                        .from('users')
+                        .update(userData)
+                        .eq('id', userId));
+                } else {
+                    // Création
+                    userData.created_by = currentUser.username;
+                    ({ error } = await supabaseClient
+                        .from('users')
+                        .insert([userData]));
+                }
+
+                if (error) throw error;
+
+                showNotification(
+                    userId ? 'Utilisateur modifié avec succès !' : 'Utilisateur créé avec succès !',
+                    'success'
+                );
+                closeUserModal();
+                await loadUsers();
+
+            } catch (error) {
+                console.error('Erreur sauvegarde user:', error);
+                showNotification('Erreur : ' + error.message, 'error');
+            }
+        }
+
+        // Activer/Désactiver un utilisateur
+        async function toggleUserStatus(userId, currentStatus) {
+            if (!confirm(`Voulez-vous ${currentStatus ? 'désactiver' : 'activer'} cet utilisateur ?`)) {
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('users')
+                    .update({ is_active: !currentStatus })
+                    .eq('id', userId);
+
+                if (error) throw error;
+
+                showNotification('Statut modifié avec succès !', 'success');
+                await loadUsers();
+
+            } catch (error) {
+                console.error('Erreur toggle status:', error);
+                showNotification('Erreur lors de la modification du statut: ' + error.message, 'error');
+            }
+        }
+
+        // Supprimer un utilisateur
+        async function deleteUser(userId, username) {
+            if (!confirm(`Voulez-vous vraiment supprimer l'utilisateur "${username}" ?
+
+Cette action est irréversible !`)) {
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('users')
+                    .delete()
+                    .eq('id', userId);
+
+                if (error) throw error;
+
+                showNotification('Utilisateur supprimé avec succès !', 'success');
+                await loadUsers();
+
+            } catch (error) {
+                console.error('Erreur suppression user:', error);
+                showNotification('Erreur lors de la suppression: ' + error.message, 'error');
+            }
+        }
+
+        // Helpers
+        function getRoleBadgeColor(role) {
+            const colors = {
+                'admin': 'danger',
+                'manager': 'warning',
+                'transfer': 'info',
+                'viewer': 'success'
+            };
+            return colors[role] || 'secondary';
+        }
+
+        function getRoleLabel(role) {
+            const labels = {
+                'admin': '🔴 Admin',
+                'manager': '🟡 Manager',
+                'transfer': '🔵 Transfer',
+                'viewer': '🟢 Viewer'
+            };
+            return labels[role] || role;
+        }
+
+        // Afficher/Masquer le menu Admin selon le rôle
+        function updateAdminMenuVisibility() {
+            const adminMenuItem = document.getElementById('admin-menu-item');
+            if (adminMenuItem && currentUser) {
+                adminMenuItem.style.display = currentUser.role === 'admin' ? 'block' : 'none';
+            }
+        }
+
     </script>
 </body>
 </html>
