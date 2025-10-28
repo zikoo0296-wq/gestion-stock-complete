@@ -547,6 +547,10 @@
                 <span class="nav-icon">📜</span>
                 <span>Historique</span>
             </div>
+            <div class="nav-item" onclick="showSection('bestsellers')">
+                <span class="nav-icon">🏆</span>
+                <span>Plus Vendus</span>
+            </div>
             <div class="nav-item" onclick="logout()">
                 <span class="nav-icon">🚪</span>
                 <span>Déconnexion</span>
@@ -841,6 +845,34 @@
                         </table>
                     </div>
                     <div id="history-pagination"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PRODUITS LES PLUS VENDUS -->
+        <div id="bestsellers" class="section">
+            <div class="top-bar">
+                <h1 class="page-title">🏆 Produits les Plus Vendus</h1>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <input type="text" id="bestsellers-search" class="search-input" placeholder="🔍 Rechercher..." style="width:100%;margin-bottom:20px;">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Rang</th>
+                                    <th>Photo</th>
+                                    <th>Produit</th>
+                                    <th>Référence</th>
+                                    <th>Total Vendu</th>
+                                    <th>Stock Restant</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bestsellers-body"></tbody>
+                        </table>
+                    </div>
+                    <div id="bestsellers-pagination"></div>
                 </div>
             </div>
         </div>
@@ -1455,6 +1487,7 @@
             if (sec === 'transfer') { renderTransForm(); populateTransProductList(); }
             if (sec === 'pdv') renderPdv();
             if (sec === 'history') renderHist();
+            if (sec === 'bestsellers') renderBestsellers();
         }
 
         function renderDash() {
@@ -2381,8 +2414,15 @@
                        p.reference.toLowerCase().includes(searchTerm);
             });
             
+            // TRIER par quantité totale (du plus grand au plus petit)
+            const sortedFiltered = filtered.sort((a, b) => {
+                const qtyA = Object.values(a.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                const qtyB = Object.values(b.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                return qtyB - qtyA; // Ordre décroissant
+            });
+            
             // Si pas de résultats
-            if (filtered.length === 0) {
+            if (sortedFiltered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="${3 + pdvs.length}" style="text-align:center;padding:30px;color:#6b7280;">Aucun produit trouvé</td></tr>`;
                 document.getElementById('pdv-pagination').innerHTML = '';
                 return;
@@ -2392,14 +2432,14 @@
             let displayProducts;
             if (isSearching) {
                 // RECHERCHE: Afficher tous les résultats filtrés
-                displayProducts = filtered;
+                displayProducts = sortedFiltered;
                 // Cacher la pagination
                 document.getElementById('pdv-pagination').innerHTML = '';
             } else {
                 // PAS DE RECHERCHE: Paginer
-                displayProducts = paginateData(filtered, currentPage.pdv);
+                displayProducts = paginateData(sortedFiltered, currentPage.pdv);
                 // Afficher la pagination
-                renderPagination('pdv-pagination', 'pdv', filtered.length);
+                renderPagination('pdv-pagination', 'pdv', sortedFiltered.length);
             }
             
             tbody.innerHTML = displayProducts.map(product => {
@@ -2639,6 +2679,115 @@
             document.getElementById('hy').value = '';
             currentPage.history = 1; // Reset à la page 1
             filtHist();
+        }
+        
+        // ========== PRODUITS LES PLUS VENDUS ==========
+        function renderBestsellers() {
+            const searchValue = document.getElementById('bestsellers-search')?.value.toLowerCase() || '';
+            const isSearching = searchValue.length > 0;
+            
+            // Calculer les ventes totales pour chaque produit (Sorties uniquement)
+            const salesData = {};
+            
+            movements.forEach(m => {
+                if (m.type === 'Sortie' || m.type === 'exit' || m.type === 'out') {
+                    const productName = m.productName || 'Produit';
+                    if (!salesData[productName]) {
+                        salesData[productName] = 0;
+                    }
+                    salesData[productName] += parseInt(m.quantity) || 0;
+                }
+            });
+            
+            // Créer un tableau avec les données de vente
+            const bestsellers = products.map(p => {
+                const totalSold = salesData[p.name] || 0;
+                const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                return {
+                    ...p,
+                    totalSold: totalSold,
+                    totalStock: totalStock
+                };
+            });
+            
+            // Trier par total vendu (décroissant)
+            const sortedBestsellers = bestsellers.sort((a, b) => b.totalSold - a.totalSold);
+            
+            // Filtrer si recherche
+            let displayBestsellers;
+            if (isSearching) {
+                displayBestsellers = sortedBestsellers.filter(p => 
+                    p.name.toLowerCase().includes(searchValue) || 
+                    p.reference.toLowerCase().includes(searchValue)
+                );
+                document.getElementById('bestsellers-pagination').innerHTML = '';
+            } else {
+                displayBestsellers = paginateData(sortedBestsellers, currentPage.bestsellers || 1);
+                renderPagination('bestsellers-pagination', 'bestsellers', sortedBestsellers.length);
+            }
+            
+            // Afficher le tableau
+            const tbody = document.getElementById('bestsellers-body');
+            if (!tbody) return;
+            
+            if (displayBestsellers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucun produit trouvé</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = displayBestsellers.map((p, index) => {
+                // Calculer le rang global
+                const globalRank = isSearching ? sortedBestsellers.indexOf(p) + 1 : ((currentPage.bestsellers || 1) - 1) * ITEMS_PER_PAGE + index + 1;
+                
+                // Image
+                let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
+                if (p.imageUrl) {
+                    const convertedUrl = convertGoogleDriveUrl(p.imageUrl);
+                    if (convertedUrl) {
+                        imgHtml = `<img src="${convertedUrl}" 
+                                        style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;" 
+                                        onclick="zoomImg('${convertedUrl.replace(/'/g, "\\'")}')"
+                                        onerror="this.onerror=null;this.outerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;\\'>📦</div>';"
+                                        alt="${p.name}">`;
+                    }
+                }
+                
+                // Badge couleur selon le rang
+                let rankBadge = '';
+                if (globalRank === 1) {
+                    rankBadge = `<span style="background:gold;color:#000;padding:6px 12px;border-radius:8px;font-weight:bold;">🥇 ${globalRank}</span>`;
+                } else if (globalRank === 2) {
+                    rankBadge = `<span style="background:silver;color:#000;padding:6px 12px;border-radius:8px;font-weight:bold;">🥈 ${globalRank}</span>`;
+                } else if (globalRank === 3) {
+                    rankBadge = `<span style="background:#cd7f32;color:#fff;padding:6px 12px;border-radius:8px;font-weight:bold;">🥉 ${globalRank}</span>`;
+                } else {
+                    rankBadge = `<span style="background:#e5e7eb;color:#1f2937;padding:6px 12px;border-radius:8px;font-weight:bold;">${globalRank}</span>`;
+                }
+                
+                return `<tr>
+                    <td style="text-align:center;">${rankBadge}</td>
+                    <td style="text-align:center;">${imgHtml}</td>
+                    <td><strong>${p.name}</strong></td>
+                    <td>${p.reference}</td>
+                    <td><span style="background:#ef4444;color:white;padding:6px 14px;border-radius:8px;font-weight:bold;">${p.totalSold}</span></td>
+                    <td><span class="badge badge-success">${p.totalStock}</span></td>
+                </tr>`;
+            }).join('');
+            
+            // Setup recherche
+            const searchInput = document.getElementById('bestsellers-search');
+            if (searchInput && !searchInput.onInputSet) {
+                searchInput.oninput = function() {
+                    currentPage.bestsellers = 1;
+                    renderBestsellers();
+                };
+                searchInput.onInputSet = true;
+            }
+        }
+        
+        // Initialiser currentPage.bestsellers
+        if (!currentPage.bestsellers) {
+            currentPage.bestsellers = 1;
         }
 
         function exportToExcel() {
