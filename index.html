@@ -496,6 +496,7 @@
                         onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
                     🔓 Se connecter
                 </button>
+                <div id="login-error" style="display:none;background:#fee2e2;color:#991b1b;padding:12px;border-radius:8px;margin-top:15px;font-size:0.9rem;"></div>
             </form>
             <div style="margin-top:25px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center;">
                 <p style="color:#9ca3af;font-size:0.85rem;margin:0;">
@@ -829,6 +830,7 @@
                                     <th>Date</th>
                                     <th>Type</th>
                                     <th>Raison</th>
+                                    <th>Photo</th>
                                     <th>Produit</th>
                                     <th>Quantité</th>
                                     <th>PDV/Paiement</th>
@@ -1218,17 +1220,15 @@
         
         async function saveToSupabase() {
             try {
-                const userId = currentSupabaseUser.id;
+                const userId = currentUser?.id || currentSupabaseUser?.id || 'shared-user';
                 
-                console.log('💾 DÉBUT SAUVEGARDE');
+                console.log('💾 DÉBUT SAUVEGARDE (Mode partagé - pas de suppression)');
                 console.log('📊 history:', JSON.stringify(history));
                 
-                // 1. Supprimer anciennes données
-                await supabaseClient.from('products').delete().eq('user_id', userId);
-                await supabaseClient.from('points_vente').delete().eq('user_id', userId);
-                await supabaseClient.from('movements').delete().eq('user_id', userId);
+                // NE PAS supprimer les anciennes données ! On garde tout pour tous les utilisateurs
+                // Les données sont partagées entre tous les utilisateurs
                 
-                // 2. Sauvegarder produits avec pdvStock dans warehouse
+                // 2. Sauvegarder produits avec pdvStock dans warehouse (UPSERT au lieu de DELETE + INSERT)
                 if (products.length > 0) {
                     const productsToInsert = products
                         .filter(function(p) { return p.reference && p.reference.trim(); })
@@ -1353,28 +1353,25 @@
         
         // Fonction pour charger depuis Supabase
         async function loadFromSupabase() {
-            if (!currentSupabaseUser) return;
+            if (!currentSupabaseUser && !currentUser) return;
             
             try {
-                console.log('📥 Chargement depuis Supabase...');
+                console.log('📥 Chargement depuis Supabase (TOUS les utilisateurs)...');
                 
-                // Charger produits
+                // Charger TOUS les produits (pas de filtre user_id)
                 const { data: prodsData } = await supabaseClient
                     .from('products')
-                    .select('*')
-                    .eq('user_id', currentSupabaseUser.id);
+                    .select('*');
                 
-                // Charger PDV
+                // Charger TOUS les PDV (pas de filtre user_id)
                 const { data: pdvData } = await supabaseClient
                     .from('points_vente')
-                    .select('*')
-                    .eq('user_id', currentSupabaseUser.id);
+                    .select('*');
                 
-                // Charger mouvements
+                // Charger TOUS les mouvements (pas de filtre user_id)
                 const { data: movData } = await supabaseClient
                     .from('movements')
-                    .select('*')
-                    .eq('user_id', currentSupabaseUser.id);
+                    .select('*');
                 
                 console.log('📥 movData reçu:', movData ? movData.length : 0);
                 if (movData && movData.length > 0) {
@@ -2588,7 +2585,7 @@
         }
 
         function renderHistTable(list) {
-            if (!list || list.length === 0) return '<tr><td colspan="7" style="text-align:center;">Aucun mouvement</td></tr>';
+            if (!list || list.length === 0) return '<tr><td colspan="8" style="text-align:center;">Aucun mouvement</td></tr>';
             return list.map(m => {
                 // Déterminer le type de mouvement - supporter TOUS les formats
                 let ic, cl, tp, detail;
@@ -2617,10 +2614,29 @@
                     detail = '-';
                 }
                 
+                // Trouver le produit correspondant pour récupérer son image
+                const product = products.find(p => p.name === m.productName || p.id === m.productId);
+                
+                // Gestion de l'image
+                let imgHtml = '<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;">📦</div>';
+                
+                if (product && product.imageUrl) {
+                    const convertedUrl = convertGoogleDriveUrl(product.imageUrl);
+                    
+                    if (convertedUrl) {
+                        imgHtml = `<img src="${convertedUrl}" 
+                                        style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;margin:auto;" 
+                                        onclick="zoomImg('${convertedUrl.replace(/'/g, "\\'")}')"
+                                        onerror="this.onerror=null;this.outerHTML='<div style=\\'width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;\\'>📦</div>';"
+                                        alt="${product.name}">`;
+                    }
+                }
+                
                 return `<tr>
                     <td>${new Date(m.date).toLocaleString('fr-FR')}</td>
                     <td><span style="color:${cl};font-weight:bold;">${ic} ${tp}</span></td>
                     <td>${m.reason || '-'}</td>
+                    <td style="text-align:center;">${imgHtml}</td>
                     <td><strong>${m.productName || 'Produit'}</strong></td>
                     <td><strong style="color:${cl};">${m.quantity}</strong></td>
                     <td>${detail}</td>
@@ -2826,27 +2842,49 @@ function doLogin() {
     var pass = document.getElementById('login-password').value;
     var errDiv = document.getElementById('login-error');
     
+    if (!supabaseClient) {
+        errDiv.style.display = 'block';
+        errDiv.textContent = 'Erreur: Supabase non initialisé';
+        return;
+    }
+    
     supabaseClient
         .from('users')
         .select('*')
         .eq('password', pass)
-        .eq('is_active', true)
         .or('username.eq.' + user + ',email.eq.' + user)
         .single()
         .then(function(result) {
             if (result.error || !result.data) {
                 errDiv.style.display = 'block';
                 errDiv.textContent = 'Identifiants incorrects';
+                console.error('Erreur login:', result.error);
                 return;
             }
             currentUser = result.data;
-            document.getElementById('login-page').style.display = 'none';
-            showDashboard();
-            showNotification('Bienvenue ' + currentUser.full_name, 'success');
+            useSupabase = true;
+            
+            // Charger les données depuis Supabase
+            loadFromSupabase().then(function() {
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('user-name').textContent = currentUser.full_name || 'Utilisateur';
+                document.getElementById('user-email').textContent = currentUser.email || currentUser.username;
+                
+                renderProds();
+                renderPdv();
+                renderMovForm();
+                renderHist();
+                renderDash();
+                
+                showNotification('Bienvenue ' + currentUser.full_name, 'success');
+                console.log('✅ Connexion réussie:', currentUser.username);
+            });
         })
         .catch(function(err) {
             errDiv.style.display = 'block';
             errDiv.textContent = 'Erreur: ' + err.message;
+            console.error('Erreur catch:', err);
         });
 }
 
