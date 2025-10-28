@@ -1210,38 +1210,67 @@
         });
 
         async function save() {
-            console.log('💾 Sauvegarde...');
+            console.log('💾 save() appelée');
+            console.log('📊 useSupabase:', useSupabase);
+            console.log('👤 currentSupabaseUser:', currentSupabaseUser?.email || currentSupabaseUser?.username);
+            console.log('👤 currentUser:', currentUser?.email || currentUser?.username);
+            console.log('🔌 supabaseClient:', !!supabaseClient);
             
             // Sauvegarder en local
             localStorage.setItem('products', JSON.stringify(products));
             localStorage.setItem('pdvs', JSON.stringify(pdvs));
             localStorage.setItem('movements', JSON.stringify(movements));
             localStorage.setItem('history', JSON.stringify(history));
+            console.log('✅ Sauvegarde localStorage OK');
             
             // Sauvegarder dans Supabase si connecté
-            if (useSupabase && currentSupabaseUser && supabaseClient) {
+            if (useSupabase && (currentSupabaseUser || currentUser) && supabaseClient) {
                 try {
+                    console.log('🌐 Appel saveToSupabase()...');
                     await saveToSupabase();
-                    console.log('✅ Sauvegarde OK');
+                    console.log('✅ Sauvegarde Supabase terminée');
                 } catch (error) {
                     console.error('❌ Erreur save():', error);
                 }
+            } else {
+                console.warn('⚠️ Pas de sauvegarde Supabase - conditions non remplies');
             }
         }
         
         async function saveToSupabase() {
             try {
-                const userId = currentUser?.id || currentSupabaseUser?.id || 'shared-user';
+                const userId = currentUser?.id || currentSupabaseUser?.id;
                 
-                console.log('💾 DÉBUT SAUVEGARDE (Mode partagé - pas de suppression)');
-                console.log('📊 history:', JSON.stringify(history));
+                if (!userId) {
+                    console.error('❌ Pas de userId - impossible de sauvegarder');
+                    return;
+                }
                 
-                // NE PAS supprimer les anciennes données ! On garde tout pour tous les utilisateurs
-                // Les données sont partagées entre tous les utilisateurs
+                console.log('💾 DÉBUT SAUVEGARDE pour user:', userId);
+                console.log('📊 Nombre de produits:', products.length);
+                console.log('📊 Nombre de PDV:', pdvs.length);
+                console.log('📊 Nombre de mouvements:', movements.length);
+                console.log('📊 Nombre historique:', history.length);
                 
-                // 2. Sauvegarder produits avec pdvStock dans warehouse (UPSERT par référence)
+                // 1. SUPPRIMER les anciennes données de CET utilisateur uniquement
+                console.log('🗑️ DELETE products...');
+                const delProd = await supabaseClient.from('products').delete().eq('user_id', userId);
+                console.log('🗑️ DELETE products result:', delProd.error ? 'ERROR: ' + delProd.error.message : 'OK');
+                
+                console.log('🗑️ DELETE points_vente...');
+                const delPdv = await supabaseClient.from('points_vente').delete().eq('user_id', userId);
+                console.log('🗑️ DELETE points_vente result:', delPdv.error ? 'ERROR: ' + delPdv.error.message : 'OK');
+                
+                console.log('🗑️ DELETE movements...');
+                const delMov = await supabaseClient.from('movements').delete().eq('user_id', userId);
+                console.log('🗑️ DELETE movements result:', delMov.error ? 'ERROR: ' + delMov.error.message : 'OK');
+                
+                console.log('✅ Anciennes données supprimées');
+                
+                // 2. Sauvegarder produits avec pdvStock dans warehouse
+                console.log('📦 Préparation des produits...');
                 if (products.length > 0) {
-                    const productsToUpsert = products
+                    const productsToInsert = products
                         .filter(function(p) { return p.reference && p.reference.trim(); })
                         .map(function(p) {
                             // Calculer le stock total = somme de tous les PDV
@@ -1251,7 +1280,6 @@
                             const pdvStockJson = JSON.stringify(p.pdvStock || {});
                             
                             return {
-                                // NE PAS envoyer l'ID - laisser Supabase le gérer
                                 user_id: userId,
                                 real_name: (p.realName || p.name || 'Produit').substring(0, 255),
                                 conventional_name: (p.conventionalName || '').substring(0, 255),
@@ -1266,24 +1294,25 @@
                             };
                         });
                     
-                    if (productsToUpsert.length > 0) {
-                        // UPSERT basé sur la référence: met à jour si la référence existe, insère sinon
-                        const { data, error } = await supabaseClient
-                            .from('products')
-                            .upsert(productsToUpsert, { 
-                                onConflict: 'reference',
-                                ignoreDuplicates: false 
-                            });
+                    console.log('📦 Produits à insérer:', productsToInsert.length);
+                    if (productsToInsert.length > 0) {
+                        console.log('📦 Premier produit:', JSON.stringify(productsToInsert[0]));
+                        const { data, error } = await supabaseClient.from('products').insert(productsToInsert);
                         
                         if (error) {
                             console.error('❌ Erreur sauvegarde produits:', error);
+                            console.error('❌ Code:', error.code);
+                            console.error('❌ Message:', error.message);
+                            console.error('❌ Details:', JSON.stringify(error.details));
                         } else {
-                            console.log('✅ Produits sauvegardés:', productsToUpsert.length);
+                            console.log('✅ Produits sauvegardés:', productsToInsert.length);
+                            console.log('✅ Data retournée:', data);
                         }
                     }
                 }
                 
                 // 3. Sauvegarder points de vente
+                console.log('🏪 Préparation des PDV...');
                 if (pdvs.length > 0) {
                     const pdvsToInsert = pdvs
                         .filter(function(p) { return p.name && p.name.trim(); })
@@ -1298,12 +1327,23 @@
                             };
                         });
                     
+                    console.log('🏪 PDV à insérer:', pdvsToInsert.length);
                     if (pdvsToInsert.length > 0) {
-                        await supabaseClient.from('points_vente').insert(pdvsToInsert);
+                        console.log('🏪 Premier PDV:', JSON.stringify(pdvsToInsert[0]));
+                        const { data, error } = await supabaseClient.from('points_vente').insert(pdvsToInsert);
+                        if (error) {
+                            console.error('❌ Erreur sauvegarde PDV:', error);
+                            console.error('❌ Code:', error.code);
+                            console.error('❌ Message:', error.message);
+                        } else {
+                            console.log('✅ PDV sauvegardés:', pdvsToInsert.length);
+                            console.log('✅ Data retournée:', data);
+                        }
                     }
                 }
                 
                 // 4. Sauvegarder mouvements (Entrées/Sorties) ET historique des transferts
+                console.log('📋 Préparation des mouvements...');
                 const allData = [];
                 
                 // Ajouter les mouvements
@@ -1329,6 +1369,7 @@
                         user_name: m.user || 'Utilisateur'
                     });
                 });
+                console.log('📋 Mouvements ajoutés:', allData.length);
                 
                 // Ajouter l'historique (transferts)
                 if (history && history.length > 0) {
@@ -1346,10 +1387,13 @@
                             user_name: h.user || 'Utilisateur'
                         });
                     });
+                    console.log('📋 Historique ajouté:', history.length);
                 }
+                console.log('📋 Total mouvements+historique:', allData.length);
                 
                 if (allData.length > 0) {
                     const validData = allData.filter(function(d) { return d.quantity > 0; });
+                    console.log('📋 Mouvements valides (qty>0):', validData.length);
                     if (validData.length > 0) {
                         console.log('📤 INSERTION:', validData.length, 'mouvements');
                         console.log('🔍 Premier mouvement:', JSON.stringify(validData[0]));
@@ -1364,8 +1408,13 @@
                             console.error('❌ Hint:', error.hint);
                         } else {
                             console.log('✅ INSERT OK');
+                            console.log('✅ Data retournée:', data);
                         }
+                    } else {
+                        console.log('⚠️ Aucun mouvement valide à sauvegarder');
                     }
+                } else {
+                    console.log('⚠️ Aucun mouvement à sauvegarder');
                 }
                 
                 console.log('✅ Sauvegarde complète');
