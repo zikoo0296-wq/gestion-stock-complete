@@ -1239,7 +1239,7 @@
                 // NE PAS supprimer les anciennes données ! On garde tout pour tous les utilisateurs
                 // Les données sont partagées entre tous les utilisateurs
                 
-                // 2. Sauvegarder produits avec pdvStock dans warehouse (UPSERT)
+                // 2. Sauvegarder produits avec pdvStock dans warehouse (UPSERT par référence)
                 if (products.length > 0) {
                     const productsToUpsert = products
                         .filter(function(p) { return p.reference && p.reference.trim(); })
@@ -1251,7 +1251,7 @@
                             const pdvStockJson = JSON.stringify(p.pdvStock || {});
                             
                             return {
-                                id: p.id, // IMPORTANT: garder l'ID pour UPSERT
+                                // NE PAS envoyer l'ID - laisser Supabase le gérer
                                 user_id: userId,
                                 real_name: (p.realName || p.name || 'Produit').substring(0, 255),
                                 conventional_name: (p.conventionalName || '').substring(0, 255),
@@ -1267,9 +1267,19 @@
                         });
                     
                     if (productsToUpsert.length > 0) {
-                        // UPSERT: met à jour si existe, insère sinon
-                        await supabaseClient.from('products').upsert(productsToUpsert, { onConflict: 'id' });
-                        console.log('✅ Produits sauvegardés:', productsToUpsert.length);
+                        // UPSERT basé sur la référence: met à jour si la référence existe, insère sinon
+                        const { data, error } = await supabaseClient
+                            .from('products')
+                            .upsert(productsToUpsert, { 
+                                onConflict: 'reference',
+                                ignoreDuplicates: false 
+                            });
+                        
+                        if (error) {
+                            console.error('❌ Erreur sauvegarde produits:', error);
+                        } else {
+                            console.log('✅ Produits sauvegardés:', productsToUpsert.length);
+                        }
                     }
                 }
                 
@@ -1387,14 +1397,11 @@
                     .from('movements')
                     .select('*');
                 
-                console.log('📥 movData reçu:', movData ? movData.length : 0);
-                if (movData && movData.length > 0) {
-                    console.log('🔍 Premier mouvement:', JSON.stringify(movData[0]));
-                }
+                console.log('📥 Données reçues - Produits:', prodsData?.length, '| PDV:', pdvData?.length, '| Mouvements:', movData?.length);
                 
-                // Convertir produits avec pdvStock
+                // Convertir produits avec pdvStock - FUSIONNER avec les existants
                 if (prodsData && prodsData.length > 0) {
-                    products = prodsData.map(function(p) {
+                    const loadedProducts = prodsData.map(function(p) {
                         // Récupérer pdvStock depuis warehouse (stocké en JSON)
                         let pdvStock = {};
                         try {
@@ -1420,6 +1427,10 @@
                             pdvStock: pdvStock
                         };
                     });
+                    
+                    // REMPLACER products avec les données de Supabase
+                    products = loadedProducts;
+                    console.log('✅ Produits chargés:', products.length);
                 }
                 
                 // Convertir PDV (récupérer l'ID original depuis phone)
@@ -1431,6 +1442,7 @@
                             location: p.address || ''
                         };
                     });
+                    console.log('✅ PDV chargés:', pdvs.length);
                 }
                 
                 // Convertir mouvements et séparer par type
@@ -2702,16 +2714,18 @@
                 }
             });
             
-            // Créer un tableau avec les données de vente
-            const bestsellers = products.map(p => {
-                const totalSold = salesData[p.name] || 0;
-                const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
-                return {
-                    ...p,
-                    totalSold: totalSold,
-                    totalStock: totalStock
-                };
-            });
+            // Créer un tableau avec les données de vente - SEULEMENT les produits vendus
+            const bestsellers = products
+                .map(p => {
+                    const totalSold = salesData[p.name] || 0;
+                    const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                    return {
+                        ...p,
+                        totalSold: totalSold,
+                        totalStock: totalStock
+                    };
+                })
+                .filter(p => p.totalSold > 0); // FILTRER: seulement les produits avec ventes
             
             // Trier par total vendu (décroissant)
             const sortedBestsellers = bestsellers.sort((a, b) => b.totalSold - a.totalSold);
