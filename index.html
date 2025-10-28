@@ -983,12 +983,16 @@
             document.getElementById('loginPage').style.display = 'flex';
         }
         
-        // ========== COMPTES UTILISATEURS - MODIFIEZ ICI ==========
+        // ========== COMPTES LOCAUX DÉSACTIVÉS ==========
+        // Tous les utilisateurs sont maintenant dans la table Supabase 'users'
+        // Plus besoin de comptes locaux !
+        /*
         const USERS = [
             { username: 'admin', password: 'admin123', fullName: 'Administrateur', role: 'admin' },
             { username: 'agent1', password: 'pass123', fullName: 'Agent 1', role: 'agent' },
             { username: 'agent2', password: 'pass456', fullName: 'Agent 2', role: 'agent' }
         ];
+        */
         
         // ========== FONCTION DE CONVERSION URL GOOGLE DRIVE ==========
         function convertGoogleDriveUrl(url) {
@@ -1147,84 +1151,94 @@
             const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
 
-            const user = USERS.find(function(u) { return u.username === username && u.password === password; });
+            if (!supabaseClient) {
+                alert('❌ Erreur : Supabase non initialisé !');
+                return;
+            }
 
-            if (user) {
-                // Connexion locale - AVERTISSEMENT
-                console.warn('⚠️ CONNEXION LOCALE - PAS DE SAUVEGARDE CLOUD !');
-                console.warn('⚠️ Vos données seront PERDUES après actualisation/déconnexion !');
-                console.warn('⚠️ Utilisez un EMAIL pour activer Supabase (ex: admin@ecomlik.com)');
+            try {
+                console.log('🔵 CONNEXION SUPABASE DATABASE...');
+                console.log('👤 Username/Email:', username);
                 
-                alert('⚠️ ATTENTION !\n\nVous êtes en mode LOCAL.\nVos données ne seront PAS sauvegardées dans le cloud.\n\nPour activer la sauvegarde cloud, connectez-vous avec un EMAIL\n(ex: admin@ecomlik.com)');
+                // Chercher l'utilisateur dans la table 'users' par username OU email
+                const { data: users, error } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .or(`username.eq.${username},email.eq.${username}`)
+                    .eq('password', password)
+                    .limit(1);
                 
-                useSupabase = false;
-                const userSession = {
+                if (error) {
+                    console.error('❌ Erreur query:', error);
+                    throw new Error('Erreur de connexion à la base de données');
+                }
+                
+                console.log('📊 Résultats:', users);
+                
+                if (!users || users.length === 0) {
+                    console.warn('❌ Aucun utilisateur trouvé');
+                    alert('❌ Nom d\'utilisateur/email ou mot de passe incorrect !');
+                    return;
+                }
+                
+                const user = users[0];
+                console.log('✅ Utilisateur trouvé !');
+                console.log('👤 ID:', user.id);
+                console.log('👤 Username:', user.username);
+                console.log('👤 Email:', user.email);
+                console.log('👤 Role:', user.role);
+                
+                // Stocker l'utilisateur
+                currentUser = {
+                    id: user.id,
                     username: user.username,
-                    fullName: user.fullName,
+                    email: user.email,
+                    fullName: user.full_name || user.username,
                     role: user.role
                 };
-                localStorage.setItem('currentUser', JSON.stringify(userSession));
-                document.getElementById('user-name').textContent = user.fullName + ' (LOCAL)';
-                document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur (Pas de sauvegarde cloud)' : 'Agent (Pas de sauvegarde cloud)';
+                currentSupabaseUser = currentUser; // Pour compatibilité avec le code existant
+                useSupabase = true;
+                
+                console.log('💾 Utilisateur stocké:', currentUser);
+                console.log('🔄 useSupabase:', useSupabase);
+                
+                // Sauvegarder la session
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                console.log('📥 CHARGEMENT DES DONNÉES DEPUIS SUPABASE...');
+                // Charger les données depuis Supabase
+                await loadFromSupabase();
+                console.log('✅ Données chargées:', products.length, 'produits,', pdvs.length, 'PDV,', movements.length, 'mouvements');
+                
+                // Afficher l'interface
+                document.getElementById('user-name').textContent = user.full_name || user.username;
+                document.getElementById('user-email').textContent = user.email + ' (' + user.role + ') - ✅ Cloud Database';
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'block';
+                
+                // Rendre toutes les sections
+                console.log('🔄 Rendu des interfaces...');
+                renderProds();
+                renderPdv();
+                renderMovForm();
+                renderHist();
                 renderDash();
-            } else if (username.includes('@') && supabaseClient) {
-                // Connexion Supabase
-                try {
-                    console.log('🔵 CONNEXION SUPABASE EN COURS...');
-                    console.log('📧 Email:', username);
-                    
-                    const result = await supabaseClient.auth.signInWithPassword({
-                        email: username,
-                        password: password
-                    });
-                    
-                    if (result.error) {
-                        console.error('❌ Erreur authentification:', result.error);
-                        throw result.error;
-                    }
-                    
-                    console.log('✅ Authentification réussie !');
-                    console.log('👤 User ID:', result.data.user.id);
-                    console.log('📧 Email:', result.data.user.email);
-                    
-                    currentSupabaseUser = result.data.user;
-                    currentUser = {
-                        id: result.data.user.id,
-                        email: result.data.user.email,
-                        fullName: result.data.user.user_metadata.full_name || 'Utilisateur'
-                    };
-                    useSupabase = true;
-                    
-                    console.log('📥 CHARGEMENT DES DONNÉES DEPUIS SUPABASE...');
-                    // Charger les données depuis Supabase
-                    await loadFromSupabase();
-                    console.log('✅ Données chargées depuis Supabase');
-                    
-                    document.getElementById('user-name').textContent = (result.data.user.user_metadata.full_name || 'Utilisateur') + ' (CLOUD)';
-                    document.getElementById('user-email').textContent = result.data.user.email + ' ✅ Sauvegarde cloud activée';
-                    document.getElementById('loginPage').style.display = 'none';
-                    document.getElementById('mainApp').style.display = 'block';
-                    
-                    // Rendre toutes les sections
-                    console.log('🔄 Rendu des interfaces...');
-                    renderProds();
-                    renderPdv();
-                    renderMovForm();
-                    renderHist();
-                    renderDash();
-                    
-                    alert('✅ CONNEXION SUPABASE RÉUSSIE !\n\n📊 Produits: ' + products.length + '\n🏪 Points de vente: ' + pdvs.length + '\n📦 Mouvements: ' + movements.length + '\n\n✅ Toutes vos données sont maintenant sauvegardées dans le cloud !');
-                    
-                    console.log('✅✅✅ CONNEXION SUPABASE COMPLÈTE !');
-                } catch (error) {
-                    console.error('❌ ERREUR CONNEXION:', error);
-                    console.error('❌ Message:', error.message);
-                    alert('❌ Erreur de connexion !\n\n' + error.message + '\n\nVérifiez:\n1. L\'email existe dans Supabase Authentication\n2. Le mot de passe est correct\n3. L\'utilisateur est confirmé (pas pending)');
-                }
-            } else {
-                alert('❌ Nom d\'utilisateur ou mot de passe incorrect !\n\nPour Supabase: utilisez un EMAIL (ex: admin@ecomlik.com)\nPour local: utilisez admin, agent1, ou agent2');
+                
+                alert('✅ CONNEXION RÉUSSIE !\n\n' + 
+                      '👤 ' + (user.full_name || user.username) + '\n' +
+                      '📧 ' + user.email + '\n' +
+                      '🔐 ' + user.role + '\n\n' +
+                      '📊 Produits chargés: ' + products.length + '\n' +
+                      '🏪 Points de vente: ' + pdvs.length + '\n' +
+                      '📦 Mouvements: ' + movements.length + '\n\n' +
+                      '✅ Toutes vos données sont sauvegardées dans Supabase !');
+                
+                console.log('✅✅✅ CONNEXION COMPLÈTE !');
+                
+            } catch (error) {
+                console.error('❌ ERREUR CONNEXION:', error);
+                console.error('❌ Message:', error.message);
+                alert('❌ Erreur de connexion !\n\n' + error.message);
             }
         }
 
