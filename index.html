@@ -933,33 +933,12 @@
                 supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
                 console.log('✅ Supabase initialisé');
                 
-                // Vérifier session au démarrage (AUTO-RECONNEXION)
-                supabaseClient.auth.getSession().then(function(result) {
-                    if (result.data && result.data.session) {
-                        currentSupabaseUser = result.data.session.user;
-                        useSupabase = true;
-                        console.log('✅ Session Supabase:', currentSupabaseUser.email);
-                        
-                        // AUTO-RECONNEXION : Charger les données et afficher l'app
-                        loadFromSupabase().then(function() {
-                            document.getElementById('user-name').textContent = currentSupabaseUser.user_metadata.full_name || 'Utilisateur';
-                            document.getElementById('user-email').textContent = currentSupabaseUser.email;
-                            document.getElementById('initialLoader').style.display = 'none';
-                            document.getElementById('loginPage').style.display = 'none';
-                            document.getElementById('mainApp').style.display = 'block';
-                            renderProds();
-                            renderPdv();
-                            renderMovForm();
-                            renderHist();
-                            renderDash();
-                            console.log('✅ Auto-reconnexion réussie !');
-                        });
-                    } else {
-                        // Pas de session - afficher la page de connexion
-                        document.getElementById('initialLoader').style.display = 'none';
-                        document.getElementById('loginPage').style.display = 'flex';
-                    }
-                });
+                // DÉSACTIVER l'auto-reconnexion Supabase Auth
+                // On utilise uniquement la table 'users' pour l'authentification
+                // Toujours afficher la page de connexion
+                document.getElementById('initialLoader').style.display = 'none';
+                document.getElementById('loginPage').style.display = 'flex';
+                console.log('✅ Supabase initialisé - Mode table users uniquement');
             } catch (error) {
                 console.error('Erreur init Supabase:', error);
                 // En cas d'erreur, afficher quand même la page de connexion
