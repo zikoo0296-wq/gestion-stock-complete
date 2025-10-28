@@ -1160,16 +1160,26 @@
                 showLoginPage();
                 return false;
             }
-            const userExists = USERS.find(u => u.username === user.username);
-            if (!userExists) {
-                localStorage.removeItem('currentUser');
-                showLoginPage();
-                return false;
-            }
-            document.getElementById('user-name').textContent = user.fullName;
-            document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur' : 'Agent';
+            
+            // Restaurer l'utilisateur depuis localStorage
+            currentUser = user;
+            useSupabase = true;
+            
+            document.getElementById('user-name').textContent = user.fullName || user.username;
+            document.getElementById('user-email').textContent = user.email + ' (' + user.role + ')';
             document.getElementById('loginPage').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
+            
+            // Charger les données depuis Supabase
+            loadFromSupabase().then(function() {
+                console.log('✅ Données chargées depuis Supabase');
+                renderProds();
+                renderPdv();
+                renderMovForm();
+                renderHist();
+                renderDash();
+            });
+            
             return true;
         }
 
@@ -1501,26 +1511,36 @@
             if (!currentSupabaseUser && !currentUser) return;
             
             try {
-                console.log('📥 Chargement depuis Supabase (TOUS les utilisateurs)...');
+                const userId = currentUser?.id || currentSupabaseUser?.id;
                 
-                // Charger TOUS les produits (pas de filtre user_id)
+                if (!userId) {
+                    console.error('❌ Pas de userId pour charger les données');
+                    return;
+                }
+                
+                console.log('📥 Chargement depuis Supabase pour user:', userId);
+                
+                // Charger UNIQUEMENT les produits de CET utilisateur
                 const { data: prodsData } = await supabaseClient
                     .from('products')
-                    .select('*');
+                    .select('*')
+                    .eq('user_id', userId);
                 
-                // Charger TOUS les PDV (pas de filtre user_id)
+                // Charger UNIQUEMENT les PDV de CET utilisateur
                 const { data: pdvData } = await supabaseClient
                     .from('points_vente')
-                    .select('*');
+                    .select('*')
+                    .eq('user_id', userId);
                 
-                // Charger TOUS les mouvements (pas de filtre user_id)
+                // Charger UNIQUEMENT les mouvements de CET utilisateur
                 const { data: movData } = await supabaseClient
                     .from('movements')
-                    .select('*');
+                    .select('*')
+                    .eq('user_id', userId);
                 
                 console.log('📥 Données reçues - Produits:', prodsData?.length, '| PDV:', pdvData?.length, '| Mouvements:', movData?.length);
                 
-                // Convertir produits avec pdvStock - FUSIONNER avec les existants
+                // Convertir produits avec pdvStock
                 if (prodsData && prodsData.length > 0) {
                     const loadedProducts = prodsData.map(function(p) {
                         // Récupérer pdvStock depuis warehouse (stocké en JSON)
@@ -1552,6 +1572,9 @@
                     // REMPLACER products avec les données de Supabase
                     products = loadedProducts;
                     console.log('✅ Produits chargés:', products.length);
+                } else {
+                    products = [];
+                    console.log('⚠️ Aucun produit trouvé pour cet utilisateur');
                 }
                 
                 // Convertir PDV (récupérer l'ID original depuis phone)
@@ -1564,6 +1587,9 @@
                         };
                     });
                     console.log('✅ PDV chargés:', pdvs.length);
+                } else {
+                    pdvs = [];
+                    console.log('⚠️ Aucun PDV trouvé pour cet utilisateur');
                 }
                 
                 // Convertir mouvements et séparer par type
@@ -1573,7 +1599,6 @@
                 if (movData && movData.length > 0) {
                     console.log('🔄 Traitement de', movData.length, 'mouvements...');
                     movData.forEach(function(m) {
-                        console.log('📋 Type:', m.type, '| Product:', m.product_name);
                         const obj = {
                             id: m.id.toString(),
                             productName: m.product_name || m.customer || 'Produit',
@@ -1590,11 +1615,9 @@
                         if (m.type === 'transfer') {
                             obj.type = 'transfer';
                             history.push(obj);
-                            console.log('  → Ajouté à HISTORY');
                         } else {
                             obj.type = m.type === 'entry' ? 'Entrée' : 'Sortie';
                             movements.push(obj);
-                            console.log('  → Ajouté à MOVEMENTS');
                         }
                     });
                 }
