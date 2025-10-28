@@ -1239,9 +1239,9 @@
                 // NE PAS supprimer les anciennes données ! On garde tout pour tous les utilisateurs
                 // Les données sont partagées entre tous les utilisateurs
                 
-                // 2. Sauvegarder produits avec pdvStock dans warehouse (UPSERT au lieu de DELETE + INSERT)
+                // 2. Sauvegarder produits avec pdvStock dans warehouse (UPSERT)
                 if (products.length > 0) {
-                    const productsToInsert = products
+                    const productsToUpsert = products
                         .filter(function(p) { return p.reference && p.reference.trim(); })
                         .map(function(p) {
                             // Calculer le stock total = somme de tous les PDV
@@ -1251,6 +1251,7 @@
                             const pdvStockJson = JSON.stringify(p.pdvStock || {});
                             
                             return {
+                                id: p.id, // IMPORTANT: garder l'ID pour UPSERT
                                 user_id: userId,
                                 real_name: (p.realName || p.name || 'Produit').substring(0, 255),
                                 conventional_name: (p.conventionalName || '').substring(0, 255),
@@ -1265,8 +1266,10 @@
                             };
                         });
                     
-                    if (productsToInsert.length > 0) {
-                        await supabaseClient.from('products').insert(productsToInsert);
+                    if (productsToUpsert.length > 0) {
+                        // UPSERT: met à jour si existe, insère sinon
+                        await supabaseClient.from('products').upsert(productsToUpsert, { onConflict: 'id' });
+                        console.log('✅ Produits sauvegardés:', productsToUpsert.length);
                     }
                 }
                 
@@ -2990,6 +2993,7 @@ function doLogin() {
                 return;
             }
             currentUser = result.data;
+            currentSupabaseUser = result.data; // IMPORTANT: pour que save() fonctionne
             useSupabase = true;
             
             // Charger les données depuis Supabase
