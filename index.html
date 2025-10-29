@@ -970,7 +970,7 @@
                 // Toujours afficher la page de connexion
                 document.getElementById('initialLoader').style.display = 'none';
                 document.getElementById('loginPage').style.display = 'flex';
-                console.log('✅ Supabase initialisé - Mode table users uniquement');
+                console.log('✅ Supabase initialisé - Mode BASE COLLABORATIVE (tous les users)');
             } catch (error) {
                 console.error('Erreur init Supabase:', error);
                 // En cas d'erreur, afficher quand même la page de connexion
@@ -1160,16 +1160,31 @@
                 showLoginPage();
                 return false;
             }
-            const userExists = USERS.find(u => u.username === user.username);
-            if (!userExists) {
-                localStorage.removeItem('currentUser');
-                showLoginPage();
-                return false;
-            }
-            document.getElementById('user-name').textContent = user.fullName;
-            document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur' : 'Agent';
+            
+            // IMPORTANT : Restaurer la session Supabase
+            currentUser = user;
+            useSupabase = true;  // ← ACTIVER SUPABASE !
+            
+            console.log('✅ Session restaurée depuis localStorage');
+            console.log('👤 User:', user.username);
+            console.log('🔄 useSupabase:', useSupabase);
+            
+            document.getElementById('user-name').textContent = user.fullName || user.username;
+            document.getElementById('user-email').textContent = user.email + ' (' + user.role + ')';
             document.getElementById('loginPage').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
+            
+            // Charger les données depuis Supabase
+            console.log('📥 Chargement depuis Supabase...');
+            loadFromSupabase().then(function() {
+                console.log('✅ Données chargées depuis Supabase');
+                renderProds();
+                renderPdv();
+                renderMovForm();
+                renderHist();
+                renderDash();
+            });
+            
             return true;
         }
 
