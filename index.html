@@ -1318,37 +1318,19 @@
                     return;
                 }
                 
-                console.log('💾 DÉBUT SAUVEGARDE pour user:', userId);
-                console.log('📊 Nombre de produits:', products.length);
-                console.log('📊 Nombre de PDV:', pdvs.length);
-                console.log('📊 Nombre de mouvements:', movements.length);
-                console.log('📊 Nombre historique:', history.length);
+                console.log('💾 SAUVEGARDE COLLABORATIVE (UPSERT - pas de doublons)');
+                console.log('👤 User:', currentUser?.username || currentUser?.email);
+                console.log('📊 Produits:', products.length, '| PDV:', pdvs.length, '| Mouvements:', movements.length);
                 
-                // 1. SUPPRIMER les anciennes données de CET utilisateur uniquement
-                console.log('🗑️ DELETE products...');
-                const delProd = await supabaseClient.from('products').delete().eq('user_id', userId);
-                console.log('🗑️ DELETE products result:', delProd.error ? 'ERROR: ' + delProd.error.message : 'OK');
+                // PAS DE DELETE ! Utiliser UPSERT pour éviter les doublons
                 
-                console.log('🗑️ DELETE points_vente...');
-                const delPdv = await supabaseClient.from('points_vente').delete().eq('user_id', userId);
-                console.log('🗑️ DELETE points_vente result:', delPdv.error ? 'ERROR: ' + delPdv.error.message : 'OK');
-                
-                console.log('🗑️ DELETE movements...');
-                const delMov = await supabaseClient.from('movements').delete().eq('user_id', userId);
-                console.log('🗑️ DELETE movements result:', delMov.error ? 'ERROR: ' + delMov.error.message : 'OK');
-                
-                console.log('✅ Anciennes données supprimées');
-                
-                // 2. Sauvegarder produits avec pdvStock dans warehouse
-                console.log('📦 Préparation des produits...');
+                // 1. Sauvegarder produits avec UPSERT
+                console.log('📦 UPSERT produits...');
                 if (products.length > 0) {
-                    const productsToInsert = products
+                    const productsToUpsert = products
                         .filter(function(p) { return p.reference && p.reference.trim(); })
                         .map(function(p) {
-                            // Calculer le stock total = somme de tous les PDV
                             const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
-                            
-                            // Sauvegarder pdvStock en JSON dans le champ warehouse
                             const pdvStockJson = JSON.stringify(p.pdvStock || {});
                             
                             return {
@@ -1366,130 +1348,57 @@
                             };
                         });
                     
-                    console.log('📦 Produits à insérer:', productsToInsert.length);
-                    if (productsToInsert.length > 0) {
-                        console.log('📦 Premier produit:', JSON.stringify(productsToInsert[0]));
-                        const { data, error } = await supabaseClient.from('products').insert(productsToInsert);
+                    if (productsToUpsert.length > 0) {
+                        console.log('📦 UPSERT', productsToUpsert.length, 'produits...');
+                        // UPSERT avec reference comme clé unique
+                        const { data, error } = await supabaseClient
+                            .from('products')
+                            .upsert(productsToUpsert, { onConflict: 'reference' });
                         
                         if (error) {
-                            console.error('❌ Erreur sauvegarde produits:', error);
-                            console.error('❌ Code:', error.code);
-                            console.error('❌ Message:', error.message);
-                            console.error('❌ Details:', JSON.stringify(error.details));
+                            console.error('❌ Erreur UPSERT produits:', error.message);
                         } else {
-                            console.log('✅ Produits sauvegardés:', productsToInsert.length);
-                            console.log('✅ Data retournée:', data);
+                            console.log('✅ Produits sauvegardés:', productsToUpsert.length);
                         }
                     }
                 }
                 
-                // 3. Sauvegarder points de vente
-                console.log('🏪 Préparation des PDV...');
+                // 2. Sauvegarder PDV avec UPSERT (basé sur phone qui contient l'ID)
+                console.log('🏪 UPSERT PDV...');
                 if (pdvs.length > 0) {
-                    const pdvsToInsert = pdvs
+                    const pdvsToUpsert = pdvs
                         .filter(function(p) { return p.name && p.name.trim(); })
                         .map(function(p) {
                             return {
                                 user_id: userId,
                                 name: p.name.trim().substring(0, 255),
                                 address: (p.location || '').substring(0, 500),
-                                phone: p.id || '',
+                                phone: p.id || Date.now().toString(),
                                 email: '',
                                 manager: ''
                             };
                         });
                     
-                    console.log('🏪 PDV à insérer:', pdvsToInsert.length);
-                    if (pdvsToInsert.length > 0) {
-                        console.log('🏪 Premier PDV:', JSON.stringify(pdvsToInsert[0]));
-                        const { data, error } = await supabaseClient.from('points_vente').insert(pdvsToInsert);
+                    if (pdvsToUpsert.length > 0) {
+                        console.log('🏪 UPSERT', pdvsToUpsert.length, 'PDV...');
+                        // UPSERT avec phone comme clé unique
+                        const { data, error } = await supabaseClient
+                            .from('points_vente')
+                            .upsert(pdvsToUpsert, { onConflict: 'phone' });
+                        
                         if (error) {
-                            console.error('❌ Erreur sauvegarde PDV:', error);
-                            console.error('❌ Code:', error.code);
-                            console.error('❌ Message:', error.message);
+                            console.error('❌ Erreur UPSERT PDV:', error.message);
                         } else {
-                            console.log('✅ PDV sauvegardés:', pdvsToInsert.length);
-                            console.log('✅ Data retournée:', data);
+                            console.log('✅ PDV sauvegardés:', pdvsToUpsert.length);
                         }
                     }
                 }
                 
-                // 4. Sauvegarder mouvements (Entrées/Sorties) ET historique des transferts
-                console.log('📋 Préparation des mouvements...');
-                const allData = [];
+                // 3. Sauvegarder mouvements (INSERT seulement les nouveaux)
+                // On ne sauvegarde PAS les mouvements existants, uniquement les nouveaux
+                console.log('📋 Mouvements déjà en base, pas de resauvegarde');
                 
-                // Ajouter les mouvements
-                movements.forEach(function(m) {
-                    // Normaliser le type : in/Entrée/entry → entry, out/Sortie/exit → exit
-                    let normalizedType = 'transfer';
-                    if (m.type === 'Entrée' || m.type === 'entry' || m.type === 'in') {
-                        normalizedType = 'entry';
-                    } else if (m.type === 'Sortie' || m.type === 'exit' || m.type === 'out') {
-                        normalizedType = 'exit';
-                    }
-                    
-                    allData.push({
-                        user_id: userId,
-                        product_name: m.productName || m.customer || 'Produit',
-                        type: normalizedType,
-                        quantity: parseInt(m.quantity) || 0,
-                        reason: (m.reason || '').substring(0, 500),
-                        customer: (m.customer || '').substring(0, 255),
-                        from_location: (m.from || '').substring(0, 255),
-                        to_location: (m.to || '').substring(0, 255),
-                        date: m.date ? m.date.split('T')[0] : new Date().toISOString().split('T')[0],
-                        user_name: m.user || 'Utilisateur'
-                    });
-                });
-                console.log('📋 Mouvements ajoutés:', allData.length);
-                
-                // Ajouter l'historique (transferts)
-                if (history && history.length > 0) {
-                    history.forEach(function(h) {
-                        allData.push({
-                            user_id: userId,
-                            product_name: h.productName || 'Produit',
-                            type: 'transfer',
-                            quantity: parseInt(h.quantity) || 0,
-                            reason: '',
-                            customer: h.productName || '',
-                            from_location: (h.from || 'Stock Central').substring(0, 255),
-                            to_location: (h.to || '').substring(0, 255),
-                            date: h.date ? h.date.split('T')[0] : new Date().toISOString().split('T')[0],
-                            user_name: h.user || 'Utilisateur'
-                        });
-                    });
-                    console.log('📋 Historique ajouté:', history.length);
-                }
-                console.log('📋 Total mouvements+historique:', allData.length);
-                
-                if (allData.length > 0) {
-                    const validData = allData.filter(function(d) { return d.quantity > 0; });
-                    console.log('📋 Mouvements valides (qty>0):', validData.length);
-                    if (validData.length > 0) {
-                        console.log('📤 INSERTION:', validData.length, 'mouvements');
-                        console.log('🔍 Premier mouvement:', JSON.stringify(validData[0]));
-                        
-                        const { data, error } = await supabaseClient.from('movements').insert(validData);
-                        
-                        if (error) {
-                            console.error('❌ ERREUR INSERT:', error);
-                            console.error('❌ Code:', error.code);
-                            console.error('❌ Message:', error.message);
-                            console.error('❌ Details:', JSON.stringify(error.details));
-                            console.error('❌ Hint:', error.hint);
-                        } else {
-                            console.log('✅ INSERT OK');
-                            console.log('✅ Data retournée:', data);
-                        }
-                    } else {
-                        console.log('⚠️ Aucun mouvement valide à sauvegarder');
-                    }
-                } else {
-                    console.log('⚠️ Aucun mouvement à sauvegarder');
-                }
-                
-                console.log('✅ Sauvegarde complète');
+                console.log('✅ Sauvegarde collaborative terminée (UPSERT - PAS de doublons)');
                 
             } catch (error) {
                 console.error('❌ Erreur sauvegarde:', error.message);
