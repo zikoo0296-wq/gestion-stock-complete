@@ -1121,45 +1121,64 @@
         }
 
         function checkAuth() {
-            const user = JSON.parse(localStorage.getItem('currentUser'));
-            console.log('🔍 checkAuth - user depuis localStorage:', user);
+            console.log('🔍 ========== CHECK AUTH ==========');
             
-            if (!user) {
-                console.log('❌ Pas de user dans localStorage - afficher login');
+            // Récupérer la session
+            const sessionData = localStorage.getItem('currentUser');
+            console.log('📋 localStorage.getItem("currentUser"):', sessionData);
+            
+            if (!sessionData) {
+                console.log('❌ Pas de session - afficher login');
                 showLoginPage();
                 return false;
             }
             
-            // RESTAURER useSupabase et currentUser pour que la sauvegarde fonctionne
+            // Parser les données
+            let user;
+            try {
+                user = JSON.parse(sessionData);
+                console.log('✅ Session trouvée:', user.username);
+            } catch (e) {
+                console.error('❌ Erreur parse JSON:', e);
+                showLoginPage();
+                return false;
+            }
+            
+            // RESTAURER les variables globales
             currentUser = user;
             useSupabase = true;
-            console.log('✅ Session restaurée depuis localStorage');
-            console.log('👤 User:', user.username);
-            console.log('🔄 useSupabase:', useSupabase);
             
+            console.log('✅ currentUser restauré:', currentUser.username);
+            console.log('✅ useSupabase:', useSupabase);
+            
+            // Afficher l'interface
             document.getElementById('user-name').textContent = user.fullName || user.username;
             document.getElementById('user-email').textContent = (user.email || user.username) + ' (' + (user.role || 'user') + ')';
+            
+            // Cacher login, montrer app
             document.getElementById('loginPage').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
             
-            // Charger les données depuis Supabase
-            console.log('📥 Chargement depuis Supabase...');
-            loadFromSupabase().then(function() {
-                console.log('✅ Données chargées depuis Supabase');
-                renderProds();
-                renderPdv();
-                renderMovForm();
-                renderHist();
-                renderDash();
-            }).catch(function(error) {
-                console.error('❌ Erreur chargement:', error);
-                // Même si le chargement échoue, afficher l'interface
-                renderProds();
-                renderPdv();
-                renderMovForm();
-                renderHist();
-                renderDash();
-            });
+            console.log('✅ Interface affichée - utilisateur connecté !');
+            
+            // Charger les données
+            loadFromSupabase()
+                .then(function() {
+                    console.log('✅ Données chargées');
+                    renderProds();
+                    renderPdv();
+                    renderMovForm();
+                    renderHist();
+                    renderDash();
+                })
+                .catch(function(error) {
+                    console.error('⚠️ Erreur chargement (pas grave):', error);
+                    renderProds();
+                    renderPdv();
+                    renderMovForm();
+                    renderHist();
+                    renderDash();
+                });
             
             return true;
         }
@@ -1173,10 +1192,15 @@
             event.preventDefault();
             const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
+            
+            console.log('🔑 DÉBUT handleLogin');
+            console.log('   Username:', username);
 
             const user = USERS.find(function(u) { return u.username === username && u.password === password; });
 
             if (user) {
+                console.log('✅ Utilisateur trouvé dans USERS:', user.username);
+                
                 // Connexion locale
                 currentUser = user;
                 useSupabase = true;  // ACTIVER SUPABASE pour tous !
@@ -1190,7 +1214,23 @@
                 };
                 
                 currentUser = userSession;
+                
+                console.log('💾 SAUVEGARDE dans localStorage...');
+                console.log('   Données à sauvegarder:', JSON.stringify(userSession));
+                
                 localStorage.setItem('currentUser', JSON.stringify(userSession));
+                
+                // VÉRIFICATION IMMÉDIATE
+                const verification = localStorage.getItem('currentUser');
+                console.log('🔍 VÉRIFICATION immédiate - localStorage contient:', verification);
+                
+                if (verification) {
+                    console.log('✅ SAUVEGARDE localStorage CONFIRMÉE');
+                } else {
+                    console.error('❌ ÉCHEC SAUVEGARDE localStorage !!!');
+                    alert('⚠️ ATTENTION: La sauvegarde de session a échoué. Vous serez déconnecté après F5.');
+                }
+                
                 console.log('✅ Connexion locale - useSupabase:', useSupabase);
                 
                 // Charger depuis Supabase
@@ -1206,6 +1246,8 @@
                 renderMovForm();
                 renderHist();
                 renderDash();
+                
+                console.log('🎉 Connexion terminée avec succès');
             } else if (username.includes('@') && supabaseClient) {
                 // Connexion Supabase
                 try {
@@ -1257,9 +1299,36 @@
         }
 
         window.addEventListener('DOMContentLoaded', function() {
-            if (!checkAuth()) {
+            console.log('🚀 ========================================');
+            console.log('🚀 PAGE CHARGÉE - DOMContentLoaded');
+            console.log('🚀 ========================================');
+            console.log('🔍 Vérification localStorage...');
+            
+            const stored = localStorage.getItem('currentUser');
+            if (stored) {
+                console.log('✅ localStorage contient currentUser:');
+                console.log('   Données:', stored);
+                try {
+                    const parsed = JSON.parse(stored);
+                    console.log('   Username:', parsed.username);
+                    console.log('   FullName:', parsed.fullName);
+                } catch(e) {
+                    console.error('❌ Erreur parse JSON:', e);
+                }
+            } else {
+                console.log('❌ localStorage est VIDE - Aucun currentUser');
+            }
+            
+            console.log('🔑 Appel de checkAuth()...');
+            const authResult = checkAuth();
+            console.log('🔑 checkAuth() retourné:', authResult);
+            
+            if (!authResult) {
+                console.log('❌ checkAuth a retourné false - Affichage page login');
                 return;
             }
+            
+            console.log('✅ checkAuth OK - Affichage dashboard');
             renderDash();
         });
 
