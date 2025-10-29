@@ -1399,6 +1399,9 @@
                 
                 // 2. Sauvegarder points de vente avec UPSERT
                 if (pdvs.length > 0) {
+                    console.log('📋 PDV à sauvegarder:', pdvs.length);
+                    console.log('📋 Détails PDV:', pdvs);
+                    
                     const pdvsToInsert = pdvs
                         .filter(function(p) { return p.name && p.name.trim(); })
                         .map(function(p) {
@@ -1414,15 +1417,27 @@
                     
                     if (pdvsToInsert.length > 0) {
                         console.log('📤 Envoi de', pdvsToInsert.length, 'PDV...');
-                        const { error } = await supabaseClient
+                        console.log('📤 PDV à envoyer:', pdvsToInsert);
+                        
+                        const { data, error } = await supabaseClient
                             .from('points_vente')
                             .upsert(pdvsToInsert, { onConflict: 'phone' });
+                        
                         if (error) {
                             console.error('❌ Erreur UPSERT PDV:', error);
+                            console.error('❌ Message:', error.message);
+                            console.error('❌ Details:', error.details);
+                            console.error('❌ Hint:', error.hint);
+                            alert('❌ Erreur sauvegarde PDV: ' + error.message + '\n\nVoir console (F12) pour plus de détails');
                         } else {
                             console.log('✅ PDV sauvegardés (UPSERT):', pdvsToInsert.length);
+                            console.log('✅ Données retournées:', data);
                         }
+                    } else {
+                        console.warn('⚠️ Aucun PDV valide à sauvegarder (tous filtrés)');
                     }
+                } else {
+                    console.warn('⚠️ pdvs.length = 0, rien à sauvegarder');
                 }
                 
                 console.log('✅ Sauvegarde cloud terminée');
