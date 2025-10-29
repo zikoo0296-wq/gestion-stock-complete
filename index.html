@@ -1367,6 +1367,49 @@
             }
         }
         
+        // Fonction pour sauvegarder UN mouvement dans Supabase immédiatement
+        async function saveMovementToSupabase(movement) {
+            if (!useSupabase || (!currentUser && !currentSupabaseUser)) {
+                console.log('⚠️ Pas de sauvegarde Supabase pour le mouvement');
+                return;
+            }
+            
+            try {
+                const userId = currentUser?.id || currentSupabaseUser?.id;
+                
+                // Normaliser le type
+                let normalizedType = 'transfer';
+                if (movement.type === 'Entrée' || movement.type === 'entry' || movement.type === 'in') {
+                    normalizedType = 'entry';
+                } else if (movement.type === 'Sortie' || movement.type === 'exit' || movement.type === 'out') {
+                    normalizedType = 'exit';
+                }
+                
+                const movementData = {
+                    user_id: userId,
+                    product_name: movement.productName || 'Produit',
+                    type: normalizedType,
+                    quantity: parseInt(movement.quantity) || 0,
+                    reason: (movement.reason || '').substring(0, 500),
+                    customer: (movement.customer || '').substring(0, 255),
+                    from_location: (movement.from || '').substring(0, 255),
+                    to_location: (movement.to || '').substring(0, 255),
+                    date: movement.date ? movement.date.split('T')[0] : new Date().toISOString().split('T')[0],
+                    user_name: movement.user || 'Utilisateur'
+                };
+                
+                const { error } = await supabaseClient.from('movements').insert([movementData]);
+                
+                if (error) {
+                    console.error('❌ Erreur sauvegarde mouvement:', error);
+                } else {
+                    console.log('✅ Mouvement sauvegardé dans Supabase');
+                }
+            } catch (error) {
+                console.error('❌ Erreur saveMovementToSupabase:', error);
+            }
+        }
+        
         // Fonction pour charger depuis Supabase
         async function loadFromSupabase() {
             if (!currentSupabaseUser && !currentUser) return;
@@ -1959,7 +2002,7 @@
 
             // Enregistrer dans l'historique
             const now = new Date();
-            history.push({
+            const newTransfer = {
                 date: now.toISOString(),
                 productId: product.id,
                 productName: product.name,
@@ -1968,7 +2011,11 @@
                 from: 'Stock Central',
                 to: selectedPdv.name,
                 user: document.getElementById('user-name').textContent
-            });
+            };
+            history.push(newTransfer);
+            
+            // Sauvegarder dans Supabase immédiatement
+            await saveMovementToSupabase(newTransfer);
             
             console.log('📝 Historique après push:', history.length);
             console.log('📋 Dernier élément:', JSON.stringify(history[history.length - 1]));
@@ -2233,7 +2280,7 @@
                 product.quantity = (product.quantity || 0) + quantity;
                 
                 // Enregistrer dans movements
-                movements.push({
+                const newMovement = {
                     id: Date.now().toString(),
                     type: 'Entrée',
                     productName: product.name,
@@ -2245,7 +2292,11 @@
                     to: '',
                     user: document.getElementById('user-name').textContent,
                     date: new Date().toISOString()
-                });
+                };
+                movements.push(newMovement);
+                
+                // Sauvegarder dans Supabase immédiatement
+                await saveMovementToSupabase(newMovement);
                 
                 await save();
                 
@@ -2291,7 +2342,7 @@
                 product.quantity = (product.quantity || 0) - quantity;
                 
                 // Enregistrer dans movements
-                movements.push({
+                const newMovement = {
                     id: Date.now().toString(),
                     type: 'Sortie',
                     productName: product.name,
@@ -2303,7 +2354,11 @@
                     to: pdv.name,
                     user: document.getElementById('user-name').textContent,
                     date: new Date().toISOString()
-                });
+                };
+                movements.push(newMovement);
+                
+                // Sauvegarder dans Supabase immédiatement
+                await saveMovementToSupabase(newMovement);
                 
                 await save();
                 
@@ -2364,7 +2419,7 @@
             product.pdvStock[fromId] -= quantity;
             product.pdvStock[toId] += quantity;
 
-            history.push({
+            const newTransfer = {
                 id: Date.now().toString(),
                 type: 'transfer',
                 productName: product.name,
@@ -2374,7 +2429,11 @@
                 quantity: quantity,
                 user: document.getElementById('user-name').textContent,
                 date: new Date().toISOString()
-            });
+            };
+            history.push(newTransfer);
+            
+            // Sauvegarder dans Supabase immédiatement
+            await saveMovementToSupabase(newTransfer);
 
             await save();
             
