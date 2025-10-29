@@ -1167,17 +1167,33 @@
 
             if (user) {
                 // Connexion locale
-                useSupabase = false;
+                currentUser = user;
+                useSupabase = true;  // ACTIVER SUPABASE pour tous !
+                
                 const userSession = {
+                    id: user.id || 'local-' + user.username,
                     username: user.username,
                     fullName: user.fullName,
+                    email: user.username + '@local',
                     role: user.role
                 };
+                
+                currentUser = userSession;
                 localStorage.setItem('currentUser', JSON.stringify(userSession));
+                console.log('✅ Connexion locale - useSupabase:', useSupabase);
+                
+                // Charger depuis Supabase
+                await loadFromSupabase();
+                
                 document.getElementById('user-name').textContent = user.fullName;
-                document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur' : 'Agent';
+                document.getElementById('user-email').textContent = userSession.email + ' (' + user.role + ')';
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'block';
+                
+                renderProds();
+                renderPdv();
+                renderMovForm();
+                renderHist();
                 renderDash();
             } else if (username.includes('@') && supabaseClient) {
                 // Connexion Supabase
@@ -1191,13 +1207,24 @@
                     if (result.error) throw result.error;
                     
                     currentSupabaseUser = result.data.user;
+                    currentUser = {
+                        id: result.data.user.id,
+                        username: result.data.user.email,
+                        fullName: result.data.user.user_metadata.full_name || 'Utilisateur',
+                        email: result.data.user.email,
+                        role: result.data.user.user_metadata.role || 'user'
+                    };
                     useSupabase = true;
+                    
+                    // SAUVEGARDER dans localStorage
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    console.log('✅ Connexion Supabase - useSupabase:', useSupabase);
                     
                     // Charger les données depuis Supabase
                     await loadFromSupabase();
                     
-                    document.getElementById('user-name').textContent = result.data.user.user_metadata.full_name || 'Utilisateur';
-                    document.getElementById('user-email').textContent = result.data.user.email;
+                    document.getElementById('user-name').textContent = currentUser.fullName;
+                    document.getElementById('user-email').textContent = currentUser.email;
                     document.getElementById('loginPage').style.display = 'none';
                     document.getElementById('mainApp').style.display = 'block';
                     
@@ -1330,74 +1357,13 @@
                     }
                 }
                 
-                // 3. Sauvegarder mouvements (INSERT seulement les nouveaux)
-                const allData = [];
-                
-                // Ajouter les mouvements
-                movements.forEach(function(m) {
-                    let normalizedType = 'transfer';
-                    if (m.type === 'Entrée' || m.type === 'entry' || m.type === 'in') {
-                        normalizedType = 'entry';
-                    } else if (m.type === 'Sortie' || m.type === 'exit' || m.type === 'out') {
-                        normalizedType = 'exit';
-                    }
-                    
-                    allData.push({
-                        user_id: userId,
-                        product_name: m.productName || m.customer || 'Produit',
-                        type: normalizedType,
-                        quantity: parseInt(m.quantity) || 0,
-                        reason: (m.reason || '').substring(0, 500),
-                        customer: (m.customer || '').substring(0, 255),
-                        from_location: (m.from || '').substring(0, 255),
-                        to_location: (m.to || '').substring(0, 255),
-                        date: m.date ? m.date.split('T')[0] : new Date().toISOString().split('T')[0],
-                        user_name: m.user || 'Utilisateur'
-                    });
-                });
-                
-                // Ajouter l'historique (transferts)
-                if (history && history.length > 0) {
-                    history.forEach(function(h) {
-                        allData.push({
-                            user_id: userId,
-                            product_name: h.productName || 'Produit',
-                            type: 'transfer',
-                            quantity: parseInt(h.quantity) || 0,
-                            reason: '',
-                            customer: h.productName || '',
-                            from_location: (h.from || 'Stock Central').substring(0, 255),
-                            to_location: (h.to || '').substring(0, 255),
-                            date: h.date ? h.date.split('T')[0] : new Date().toISOString().split('T')[0],
-                            user_name: h.user || 'Utilisateur'
-                        });
-                    });
-                }
-                
-                if (allData.length > 0) {
-                    const validData = allData.filter(function(d) { return d.quantity > 0; });
-                    if (validData.length > 0) {
-                        console.log('📤 INSERTION:', validData.length, 'mouvements');
-                        console.log('🔍 Premier mouvement:', JSON.stringify(validData[0]));
-                        
-                        const { data, error } = await supabaseClient.from('movements').insert(validData);
-                        
-                        if (error) {
-                            console.error('❌ ERREUR INSERT:', error);
-                            console.error('❌ Code:', error.code);
-                            console.error('❌ Message:', error.message);
-                            console.error('❌ Details:', JSON.stringify(error.details));
-                            console.error('❌ Hint:', error.hint);
-                        } else {
-                            console.log('✅ INSERT OK');
-                        }
-                    }
-                }
-                
-                console.log('✅ Sauvegarde complète');
+                // 3. NE PAS sauvegarder les mouvements ici (ils sont déjà sauvegardés quand créés)
+                // Sinon on crée des doublons à chaque actualisation
+                console.log('ℹ️ Mouvements déjà sauvegardés en temps réel (pas de resauvegarde)');
+                console.log('✅ Sauvegarde UPSERT terminée (pas de doublons)');
                 
             } catch (error) {
-                console.error('❌ Erreur sauvegarde:', error.message);
+                console.error('❌ Erreur saveToSupabase:', error.message);
             }
         }
         
