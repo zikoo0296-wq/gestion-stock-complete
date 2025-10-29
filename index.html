@@ -1033,13 +1033,12 @@
             return url;
         }
         
-        let products = JSON.parse(localStorage.getItem('products')) || [];
-        let pdvs = JSON.parse(localStorage.getItem('pdvs')) || [
-            {id: 'al-baraka', name: 'Al Baraka', location: 'Centre-ville'},
-            {id: 'alghafla', name: 'Alghafla', location: 'Zone industrielle'}
-        ];
-        let movements = JSON.parse(localStorage.getItem('movements')) || [];
-        let history = JSON.parse(localStorage.getItem('history')) || [];
+        // ⚠️ VERSION CLOUD PURE : NE PAS charger localStorage au démarrage !
+        // Les données viennent UNIQUEMENT de Supabase (cloud)
+        let products = [];
+        let pdvs = [];
+        let movements = [];
+        let history = [];
         
         // Variables de pagination
         const ITEMS_PER_PAGE = 100;
@@ -1580,11 +1579,8 @@
                 
                 console.log('✅ Chargé:', products.length, 'produits,', pdvs.length, 'PDV,', movements.length, 'mouvements,', history.length, 'historique');
                 
-                // Sauvegarder en local aussi
-                localStorage.setItem('products', JSON.stringify(products));
-                localStorage.setItem('pdvs', JSON.stringify(pdvs));
-                localStorage.setItem('movements', JSON.stringify(movements));
-                localStorage.setItem('history', JSON.stringify(history));
+                // VERSION CLOUD PURE : PAS de sauvegarde localStorage
+                console.log('☁️ Données en mémoire uniquement (cloud)');
             } catch (error) {
                 console.error('❌ Erreur chargement:', error);
             }
