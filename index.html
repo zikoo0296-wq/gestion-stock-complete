@@ -985,9 +985,11 @@
         
         // ========== COMPTES UTILISATEURS - MODIFIEZ ICI ==========
         const USERS = [
-            { username: 'admin', password: 'admin123', fullName: 'Administrateur', role: 'admin' },
-            { username: 'agent1', password: 'pass123', fullName: 'Agent 1', role: 'agent' },
-            { username: 'agent2', password: 'pass456', fullName: 'Agent 2', role: 'agent' }
+            { id: 'user-admin', username: 'admin', password: 'admin123', fullName: 'Administrateur', role: 'admin' },
+            { id: 'user-manager1', username: 'manager1', password: 'manager123', fullName: 'Manager 1', role: 'manager' },
+            { id: 'user-transfer', username: 'transfer', password: 'transfer123', fullName: 'Agent Transfer', role: 'transfer' },
+            { id: 'user-agent1', username: 'agent1', password: 'pass123', fullName: 'Agent 1', role: 'agent' },
+            { id: 'user-agent2', username: 'agent2', password: 'pass456', fullName: 'Agent 2', role: 'agent' }
         ];
         
         // ========== FONCTION DE CONVERSION URL GOOGLE DRIVE ==========
@@ -1120,7 +1122,10 @@
 
         function checkAuth() {
             const user = JSON.parse(localStorage.getItem('currentUser'));
+            console.log('🔍 checkAuth - user depuis localStorage:', user);
+            
             if (!user) {
+                console.log('❌ Pas de user dans localStorage - afficher login');
                 showLoginPage();
                 return false;
             }
@@ -1133,7 +1138,7 @@
             console.log('🔄 useSupabase:', useSupabase);
             
             document.getElementById('user-name').textContent = user.fullName || user.username;
-            document.getElementById('user-email').textContent = user.email + ' (' + user.role + ')';
+            document.getElementById('user-email').textContent = (user.email || user.username) + ' (' + (user.role || 'user') + ')';
             document.getElementById('loginPage').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
             
@@ -1148,6 +1153,12 @@
                 renderDash();
             }).catch(function(error) {
                 console.error('❌ Erreur chargement:', error);
+                // Même si le chargement échoue, afficher l'interface
+                renderProds();
+                renderPdv();
+                renderMovForm();
+                renderHist();
+                renderDash();
             });
             
             return true;
@@ -3074,7 +3085,6 @@ function doLogin() {
                 renderHist();
                 renderDash();
                 
-                showNotification('Bienvenue ' + currentUser.full_name, 'success');
                 console.log('✅ Connexion réussie:', currentUser.username);
             });
         })
