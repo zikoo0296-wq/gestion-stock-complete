@@ -1333,46 +1333,31 @@
         });
 
         async function save() {
-            console.log('💾 save() appelée');
-            console.log('📊 useSupabase:', useSupabase);
-            console.log('👤 currentSupabaseUser:', currentSupabaseUser?.email || currentSupabaseUser?.username);
-            console.log('👤 currentUser:', currentUser?.email || currentUser?.username);
-            console.log('🔌 supabaseClient:', !!supabaseClient);
+            console.log('💾 ========== SAUVEGARDE CLOUD UNIQUEMENT ==========');
             
-            // Sauvegarder en local
-            localStorage.setItem('products', JSON.stringify(products));
-            localStorage.setItem('pdvs', JSON.stringify(pdvs));
-            localStorage.setItem('movements', JSON.stringify(movements));
-            localStorage.setItem('history', JSON.stringify(history));
-            console.log('✅ Sauvegarde localStorage OK');
+            // PAS DE localStorage pour les données !
+            // Seulement Supabase (cloud)
             
-            // Sauvegarder dans Supabase si connecté
-            if (useSupabase && (currentSupabaseUser || currentUser) && supabaseClient) {
+            if (supabaseClient) {
                 try {
-                    console.log('🌐 Appel saveToSupabase()...');
+                    console.log('🌐 Sauvegarde dans Supabase...');
                     await saveToSupabase();
-                    console.log('✅ Sauvegarde Supabase terminée');
+                    console.log('✅ Sauvegarde cloud terminée');
                 } catch (error) {
-                    console.error('❌ Erreur save():', error);
+                    console.error('❌ Erreur sauvegarde:', error);
                 }
             } else {
-                console.warn('⚠️ Pas de sauvegarde Supabase - conditions non remplies');
+                console.error('❌ Supabase non disponible');
             }
         }
         
         async function saveToSupabase() {
             try {
-                const userId = currentUser?.id || currentSupabaseUser?.id;
+                // USER_ID PARTAGÉ pour base collaborative
+                const userId = 'shared';
                 
-                if (!userId) {
-                    console.error('❌ Pas de userId - impossible de sauvegarder');
-                    return;
-                }
-                
-                console.log('💾 SAUVEGARDE UPSERT (pas de DELETE - pas de doublons)');
-                console.log('👤 User:', userId);
-                
-                // PAS DE DELETE ! Utiliser UPSERT pour éviter les doublons
+                console.log('💾 SAUVEGARDE CLOUD (BASE COLLABORATIVE)');
+                console.log('👥 Mode: Tous les utilisateurs partagent les mêmes données');
                 
                 // 1. Sauvegarder produits avec UPSERT
                 if (products.length > 0) {
@@ -1404,6 +1389,7 @@
                         
                         if (error) {
                             console.error('❌ Erreur UPSERT produits:', error);
+                            alert('❌ Erreur sauvegarde produits: ' + error.message);
                         } else {
                             console.log('✅ Produits sauvegardés (UPSERT):', productsToInsert.length);
                         }
@@ -1437,25 +1423,24 @@
                     }
                 }
                 
-                // 3. NE PAS sauvegarder les mouvements ici (ils sont déjà sauvegardés quand créés)
-                // Sinon on crée des doublons à chaque actualisation
-                console.log('ℹ️ Mouvements déjà sauvegardés en temps réel (pas de resauvegarde)');
-                console.log('✅ Sauvegarde UPSERT terminée (pas de doublons)');
+                console.log('✅ Sauvegarde cloud terminée');
                 
             } catch (error) {
                 console.error('❌ Erreur saveToSupabase:', error.message);
+                alert('❌ Erreur sauvegarde Supabase: ' + error.message);
             }
         }
         
         // Fonction pour sauvegarder UN mouvement dans Supabase immédiatement
         async function saveMovementToSupabase(movement) {
-            if (!useSupabase || (!currentUser && !currentSupabaseUser)) {
-                console.log('⚠️ Pas de sauvegarde Supabase pour le mouvement');
+            if (!supabaseClient) {
+                console.log('⚠️ Pas de client Supabase');
                 return;
             }
             
             try {
-                const userId = currentUser?.id || currentSupabaseUser?.id;
+                // USER_ID PARTAGÉ
+                const userId = 'shared';
                 
                 // Normaliser le type
                 let normalizedType = 'transfer';
