@@ -490,6 +490,13 @@
                            onfocus="this.style.borderColor='#667eea'" 
                            onblur="this.style.borderColor='#e5e7eb'">
                 </div>
+                <div style="margin-bottom:20px;">
+                    <label style="display:flex;align-items:center;cursor:pointer;user-select:none;">
+                        <input type="checkbox" id="remember-me" checked
+                               style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#667eea;">
+                        <span style="color:#4b5563;font-size:0.95rem;">Rester connecté après actualisation</span>
+                    </label>
+                </div>
                 <button type="submit" 
                         style="width:100%;padding:14px;background:linear-gradient(135deg, #667eea, #764ba2);color:white;border:none;border-radius:8px;font-size:1.1rem;font-weight:600;cursor:pointer;transition:all 0.3s;"
                         onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(102,126,234,0.4)'"
@@ -1200,6 +1207,10 @@
             if (user) {
                 console.log('✅ Utilisateur trouvé dans USERS:', user.username);
                 
+                // Vérifier si l'utilisateur veut rester connecté
+                const rememberMe = document.getElementById('remember-me').checked;
+                console.log('📌 Rester connecté:', rememberMe);
+                
                 // Connexion locale
                 currentUser = user;
                 useSupabase = true;  // ACTIVER SUPABASE pour tous !
@@ -1209,7 +1220,8 @@
                     username: user.username,
                     fullName: user.fullName,
                     email: user.username + '@local',
-                    role: user.role
+                    role: user.role,
+                    rememberMe: rememberMe
                 };
                 
                 currentUser = userSession;
@@ -1217,7 +1229,9 @@
                 console.log('💾 SAUVEGARDE dans localStorage...');
                 console.log('   Données à sauvegarder:', JSON.stringify(userSession));
                 
+                // TOUJOURS sauvegarder dans localStorage (l'utilisateur doit décocher s'il ne veut pas)
                 localStorage.setItem('currentUser', JSON.stringify(userSession));
+                localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
                 
                 // VÉRIFICATION IMMÉDIATE
                 const verification = localStorage.getItem('currentUser');
@@ -1225,6 +1239,9 @@
                 
                 if (verification) {
                     console.log('✅ SAUVEGARDE localStorage CONFIRMÉE');
+                    if (!rememberMe) {
+                        console.log('⚠️ Option "Rester connecté" non cochée - Session temporaire');
+                    }
                 } else {
                     console.error('❌ ÉCHEC SAUVEGARDE localStorage !!!');
                     alert('⚠️ ATTENTION: La sauvegarde de session a échoué. Vous serez déconnecté après F5.');
