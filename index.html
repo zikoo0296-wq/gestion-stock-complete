@@ -970,7 +970,7 @@
                 // Toujours afficher la page de connexion
                 document.getElementById('initialLoader').style.display = 'none';
                 document.getElementById('loginPage').style.display = 'flex';
-                console.log('✅ Supabase initialisé - Mode BASE COLLABORATIVE (tous les users)');
+                console.log('✅ Supabase initialisé - Mode table users uniquement');
             } catch (error) {
                 console.error('Erreur init Supabase:', error);
                 // En cas d'erreur, afficher quand même la page de connexion
@@ -983,48 +983,12 @@
             document.getElementById('loginPage').style.display = 'flex';
         }
         
-        // ========== COMPTES LOCAUX DÉSACTIVÉS ==========
-        // Tous les utilisateurs sont maintenant dans la table Supabase 'users'
-        // Plus besoin de comptes locaux !
-        /*
+        // ========== COMPTES UTILISATEURS - MODIFIEZ ICI ==========
         const USERS = [
             { username: 'admin', password: 'admin123', fullName: 'Administrateur', role: 'admin' },
             { username: 'agent1', password: 'pass123', fullName: 'Agent 1', role: 'agent' },
             { username: 'agent2', password: 'pass456', fullName: 'Agent 2', role: 'agent' }
         ];
-        */
-        
-        // ========== FONCTION DE NOTIFICATION ==========
-        function showNotification(message, type) {
-            // Créer une notification simple sans dépendance externe
-            const notif = document.createElement('div');
-            notif.textContent = message;
-            notif.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 15px 25px;
-                background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-                color: white;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                z-index: 10000;
-                font-size: 14px;
-                font-weight: 500;
-                animation: slideInRight 0.3s ease-out;
-            `;
-            document.body.appendChild(notif);
-            
-            // Supprimer après 3 secondes
-            setTimeout(function() {
-                notif.style.animation = 'slideOutRight 0.3s ease-out';
-                setTimeout(function() {
-                    if (notif.parentNode) {
-                        notif.parentNode.removeChild(notif);
-                    }
-                }, 300);
-            }, 3000);
-        }
         
         // ========== FONCTION DE CONVERSION URL GOOGLE DRIVE ==========
         function convertGoogleDriveUrl(url) {
@@ -1161,10 +1125,9 @@
                 return false;
             }
             
-            // IMPORTANT : Restaurer la session Supabase
+            // RESTAURER useSupabase et currentUser pour que la sauvegarde fonctionne
             currentUser = user;
-            useSupabase = true;  // ← ACTIVER SUPABASE !
-            
+            useSupabase = true;
             console.log('✅ Session restaurée depuis localStorage');
             console.log('👤 User:', user.username);
             console.log('🔄 useSupabase:', useSupabase);
@@ -1183,6 +1146,8 @@
                 renderMovForm();
                 renderHist();
                 renderDash();
+            }).catch(function(error) {
+                console.error('❌ Erreur chargement:', error);
             });
             
             return true;
@@ -1198,94 +1163,58 @@
             const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
 
-            if (!supabaseClient) {
-                alert('❌ Erreur : Supabase non initialisé !');
-                return;
-            }
+            const user = USERS.find(function(u) { return u.username === username && u.password === password; });
 
-            try {
-                console.log('🔵 CONNEXION SUPABASE DATABASE...');
-                console.log('👤 Username/Email:', username);
-                
-                // Chercher l'utilisateur dans la table 'users' par username OU email
-                const { data: users, error } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .or(`username.eq.${username},email.eq.${username}`)
-                    .eq('password', password)
-                    .limit(1);
-                
-                if (error) {
-                    console.error('❌ Erreur query:', error);
-                    throw new Error('Erreur de connexion à la base de données');
-                }
-                
-                console.log('📊 Résultats:', users);
-                
-                if (!users || users.length === 0) {
-                    console.warn('❌ Aucun utilisateur trouvé');
-                    alert('❌ Nom d\'utilisateur/email ou mot de passe incorrect !');
-                    return;
-                }
-                
-                const user = users[0];
-                console.log('✅ Utilisateur trouvé !');
-                console.log('👤 ID:', user.id);
-                console.log('👤 Username:', user.username);
-                console.log('👤 Email:', user.email);
-                console.log('👤 Role:', user.role);
-                
-                // Stocker l'utilisateur
-                currentUser = {
-                    id: user.id,
+            if (user) {
+                // Connexion locale
+                useSupabase = false;
+                const userSession = {
                     username: user.username,
-                    email: user.email,
-                    fullName: user.full_name || user.username,
+                    fullName: user.fullName,
                     role: user.role
                 };
-                currentSupabaseUser = currentUser; // Pour compatibilité avec le code existant
-                useSupabase = true;
-                
-                console.log('💾 Utilisateur stocké:', currentUser);
-                console.log('🔄 useSupabase:', useSupabase);
-                
-                // Sauvegarder la session
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                
-                console.log('📥 CHARGEMENT DES DONNÉES DEPUIS SUPABASE...');
-                // Charger les données depuis Supabase
-                await loadFromSupabase();
-                console.log('✅ Données chargées:', products.length, 'produits,', pdvs.length, 'PDV,', movements.length, 'mouvements');
-                
-                // Afficher l'interface
-                document.getElementById('user-name').textContent = user.full_name || user.username;
-                document.getElementById('user-email').textContent = user.email + ' (' + user.role + ') - ✅ Cloud Database';
+                localStorage.setItem('currentUser', JSON.stringify(userSession));
+                document.getElementById('user-name').textContent = user.fullName;
+                document.getElementById('user-email').textContent = user.role === 'admin' ? 'Administrateur' : 'Agent';
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'block';
-                
-                // Rendre toutes les sections
-                console.log('🔄 Rendu des interfaces...');
-                renderProds();
-                renderPdv();
-                renderMovForm();
-                renderHist();
                 renderDash();
-                
-                alert('✅ CONNEXION RÉUSSIE !\n\n' + 
-                      '👤 ' + (user.full_name || user.username) + '\n' +
-                      '📧 ' + user.email + '\n' +
-                      '🔐 ' + user.role + '\n\n' +
-                      '📊 Produits chargés: ' + products.length + '\n' +
-                      '🏪 Points de vente: ' + pdvs.length + '\n' +
-                      '📦 Mouvements: ' + movements.length + '\n\n' +
-                      '✅ Toutes vos données sont sauvegardées dans Supabase !');
-                
-                console.log('✅✅✅ CONNEXION COMPLÈTE !');
-                
-            } catch (error) {
-                console.error('❌ ERREUR CONNEXION:', error);
-                console.error('❌ Message:', error.message);
-                alert('❌ Erreur de connexion !\n\n' + error.message);
+            } else if (username.includes('@') && supabaseClient) {
+                // Connexion Supabase
+                try {
+                    console.log('🔵 Connexion Supabase...');
+                    const result = await supabaseClient.auth.signInWithPassword({
+                        email: username,
+                        password: password
+                    });
+                    
+                    if (result.error) throw result.error;
+                    
+                    currentSupabaseUser = result.data.user;
+                    useSupabase = true;
+                    
+                    // Charger les données depuis Supabase
+                    await loadFromSupabase();
+                    
+                    document.getElementById('user-name').textContent = result.data.user.user_metadata.full_name || 'Utilisateur';
+                    document.getElementById('user-email').textContent = result.data.user.email;
+                    document.getElementById('loginPage').style.display = 'none';
+                    document.getElementById('mainApp').style.display = 'block';
+                    
+                    // Rendre toutes les sections
+                    renderProds();
+                    renderPdv();
+                    renderMovForm();
+                    renderHist();
+                    renderDash();
+                    
+                    console.log('✅ Connexion Supabase réussie');
+                } catch (error) {
+                    console.error('❌ Erreur:', error);
+                    alert('❌ Email ou mot de passe incorrect !');
+                }
+            } else {
+                alert('❌ Nom d\'utilisateur ou mot de passe incorrect !');
             }
         }
 
@@ -1333,16 +1262,14 @@
                     return;
                 }
                 
-                console.log('💾 SAUVEGARDE COLLABORATIVE (UPSERT - pas de doublons)');
-                console.log('👤 User:', currentUser?.username || currentUser?.email);
-                console.log('📊 Produits:', products.length, '| PDV:', pdvs.length, '| Mouvements:', movements.length);
+                console.log('💾 SAUVEGARDE UPSERT (pas de DELETE - pas de doublons)');
+                console.log('👤 User:', userId);
                 
                 // PAS DE DELETE ! Utiliser UPSERT pour éviter les doublons
                 
                 // 1. Sauvegarder produits avec UPSERT
-                console.log('📦 UPSERT produits...');
                 if (products.length > 0) {
-                    const productsToUpsert = products
+                    const productsToInsert = products
                         .filter(function(p) { return p.reference && p.reference.trim(); })
                         .map(function(p) {
                             const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
@@ -1363,25 +1290,22 @@
                             };
                         });
                     
-                    if (productsToUpsert.length > 0) {
-                        console.log('📦 UPSERT', productsToUpsert.length, 'produits...');
-                        // UPSERT avec reference comme clé unique
+                    if (productsToInsert.length > 0) {
                         const { data, error } = await supabaseClient
                             .from('products')
-                            .upsert(productsToUpsert, { onConflict: 'reference' });
+                            .upsert(productsToInsert, { onConflict: 'reference' });
                         
                         if (error) {
-                            console.error('❌ Erreur UPSERT produits:', error.message);
+                            console.error('❌ Erreur UPSERT produits:', error);
                         } else {
-                            console.log('✅ Produits sauvegardés:', productsToUpsert.length);
+                            console.log('✅ Produits sauvegardés (UPSERT):', productsToInsert.length);
                         }
                     }
                 }
                 
-                // 2. Sauvegarder PDV avec UPSERT (basé sur phone qui contient l'ID)
-                console.log('🏪 UPSERT PDV...');
+                // 2. Sauvegarder points de vente avec UPSERT
                 if (pdvs.length > 0) {
-                    const pdvsToUpsert = pdvs
+                    const pdvsToInsert = pdvs
                         .filter(function(p) { return p.name && p.name.trim(); })
                         .map(function(p) {
                             return {
@@ -1394,26 +1318,83 @@
                             };
                         });
                     
-                    if (pdvsToUpsert.length > 0) {
-                        console.log('🏪 UPSERT', pdvsToUpsert.length, 'PDV...');
-                        // UPSERT avec phone comme clé unique
-                        const { data, error } = await supabaseClient
+                    if (pdvsToInsert.length > 0) {
+                        const { error } = await supabaseClient
                             .from('points_vente')
-                            .upsert(pdvsToUpsert, { onConflict: 'phone' });
-                        
+                            .upsert(pdvsToInsert, { onConflict: 'phone' });
                         if (error) {
-                            console.error('❌ Erreur UPSERT PDV:', error.message);
+                            console.error('❌ Erreur UPSERT PDV:', error);
                         } else {
-                            console.log('✅ PDV sauvegardés:', pdvsToUpsert.length);
+                            console.log('✅ PDV sauvegardés (UPSERT):', pdvsToInsert.length);
                         }
                     }
                 }
                 
                 // 3. Sauvegarder mouvements (INSERT seulement les nouveaux)
-                // On ne sauvegarde PAS les mouvements existants, uniquement les nouveaux
-                console.log('📋 Mouvements déjà en base, pas de resauvegarde');
+                const allData = [];
                 
-                console.log('✅ Sauvegarde collaborative terminée (UPSERT - PAS de doublons)');
+                // Ajouter les mouvements
+                movements.forEach(function(m) {
+                    let normalizedType = 'transfer';
+                    if (m.type === 'Entrée' || m.type === 'entry' || m.type === 'in') {
+                        normalizedType = 'entry';
+                    } else if (m.type === 'Sortie' || m.type === 'exit' || m.type === 'out') {
+                        normalizedType = 'exit';
+                    }
+                    
+                    allData.push({
+                        user_id: userId,
+                        product_name: m.productName || m.customer || 'Produit',
+                        type: normalizedType,
+                        quantity: parseInt(m.quantity) || 0,
+                        reason: (m.reason || '').substring(0, 500),
+                        customer: (m.customer || '').substring(0, 255),
+                        from_location: (m.from || '').substring(0, 255),
+                        to_location: (m.to || '').substring(0, 255),
+                        date: m.date ? m.date.split('T')[0] : new Date().toISOString().split('T')[0],
+                        user_name: m.user || 'Utilisateur'
+                    });
+                });
+                
+                // Ajouter l'historique (transferts)
+                if (history && history.length > 0) {
+                    history.forEach(function(h) {
+                        allData.push({
+                            user_id: userId,
+                            product_name: h.productName || 'Produit',
+                            type: 'transfer',
+                            quantity: parseInt(h.quantity) || 0,
+                            reason: '',
+                            customer: h.productName || '',
+                            from_location: (h.from || 'Stock Central').substring(0, 255),
+                            to_location: (h.to || '').substring(0, 255),
+                            date: h.date ? h.date.split('T')[0] : new Date().toISOString().split('T')[0],
+                            user_name: h.user || 'Utilisateur'
+                        });
+                    });
+                }
+                
+                if (allData.length > 0) {
+                    const validData = allData.filter(function(d) { return d.quantity > 0; });
+                    if (validData.length > 0) {
+                        console.log('📤 INSERTION:', validData.length, 'mouvements');
+                        console.log('🔍 Premier mouvement:', JSON.stringify(validData[0]));
+                        
+                        const { data, error } = await supabaseClient.from('movements').insert(validData);
+                        
+                        if (error) {
+                            console.error('❌ ERREUR INSERT:', error);
+                            console.error('❌ Code:', error.code);
+                            console.error('❌ Message:', error.message);
+                            console.error('❌ Details:', JSON.stringify(error.details));
+                            console.error('❌ Hint:', error.hint);
+                        } else {
+                            console.log('✅ INSERT OK');
+                        }
+                    }
+                }
+                
+                console.log('✅ Sauvegarde complète');
                 
             } catch (error) {
                 console.error('❌ Erreur sauvegarde:', error.message);
