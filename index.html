@@ -1352,11 +1352,12 @@
         
         async function saveToSupabase() {
             try {
-                // USER_ID PARTAGÉ pour base collaborative
-                const userId = 'shared';
+                // UUID PARTAGÉ pour base collaborative (au lieu de 'shared' en texte)
+                const userId = '00000000-0000-0000-0000-000000000001';
                 
                 console.log('💾 SAUVEGARDE CLOUD (BASE COLLABORATIVE)');
                 console.log('👥 Mode: Tous les utilisateurs partagent les mêmes données');
+                console.log('🆔 UUID partagé:', userId);
                 
                 // 1. Sauvegarder produits avec UPSERT
                 if (products.length > 0) {
@@ -1382,6 +1383,7 @@
                         });
                     
                     if (productsToInsert.length > 0) {
+                        console.log('📤 Envoi de', productsToInsert.length, 'produits...');
                         const { data, error } = await supabaseClient
                             .from('products')
                             .upsert(productsToInsert, { onConflict: 'reference' });
@@ -1411,6 +1413,7 @@
                         });
                     
                     if (pdvsToInsert.length > 0) {
+                        console.log('📤 Envoi de', pdvsToInsert.length, 'PDV...');
                         const { error } = await supabaseClient
                             .from('points_vente')
                             .upsert(pdvsToInsert, { onConflict: 'phone' });
@@ -1438,8 +1441,8 @@
             }
             
             try {
-                // USER_ID PARTAGÉ
-                const userId = 'shared';
+                // UUID PARTAGÉ (au lieu de 'shared' en texte)
+                const userId = '00000000-0000-0000-0000-000000000001';
                 
                 // Normaliser le type
                 let normalizedType = 'transfer';
