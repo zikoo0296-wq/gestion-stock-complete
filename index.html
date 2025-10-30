@@ -1233,18 +1233,23 @@
                 localStorage.setItem('currentUser', JSON.stringify(userSession));
                 localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
                 
+                // TEST IMMÉDIAT pour vérifier que ça a vraiment été sauvegardé
+                const testRead = localStorage.getItem('currentUser');
+                
                 // VÉRIFICATION IMMÉDIATE
                 const verification = localStorage.getItem('currentUser');
                 console.log('🔍 VÉRIFICATION immédiate - localStorage contient:', verification);
                 
-                if (verification) {
+                if (verification && testRead === JSON.stringify(userSession)) {
                     console.log('✅ SAUVEGARDE localStorage CONFIRMÉE');
-                    if (!rememberMe) {
+                    if (rememberMe) {
+                        console.log('✅ Vous resterez connecté après F5!');
+                    } else {
                         console.log('⚠️ Option "Rester connecté" non cochée - Session temporaire');
                     }
                 } else {
                     console.error('❌ ÉCHEC SAUVEGARDE localStorage !!!');
-                    alert('⚠️ ATTENTION: La sauvegarde de session a échoué. Vous serez déconnecté après F5.');
+                    alert('⚠️ ATTENTION: Impossible de sauvegarder la session.\n\nVotre navigateur bloque localStorage.');
                 }
                 
                 console.log('✅ Connexion locale - useSupabase:', useSupabase);
@@ -1321,6 +1326,8 @@
             console.log('🔍 Vérification localStorage...');
             
             const stored = localStorage.getItem('currentUser');
+            
+            // DIAGNOSTIC VISIBLE
             if (stored) {
                 console.log('✅ localStorage contient currentUser:');
                 console.log('   Données:', stored);
@@ -1343,6 +1350,9 @@
                 console.log('❌ checkAuth a retourné false - Affichage page login');
                 return;
             }
+            
+            // Marquer qu'on était connecté
+            sessionStorage.setItem('wasLoggedIn', 'true');
             
             console.log('✅ checkAuth OK - Affichage dashboard');
             renderDash();
