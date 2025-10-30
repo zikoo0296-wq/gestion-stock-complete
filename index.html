@@ -1320,42 +1320,63 @@
         }
 
         window.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 ========================================');
-            console.log('🚀 PAGE CHARGÉE - DOMContentLoaded');
-            console.log('🚀 ========================================');
-            console.log('🔍 Vérification localStorage...');
+            console.log('🚀 ========== PAGE CHARGÉE ==========');
             
-            const stored = localStorage.getItem('currentUser');
+            // VÉRIFIER SI SESSION EXISTE
+            const savedSession = localStorage.getItem('currentUser');
             
-            // DIAGNOSTIC VISIBLE
-            if (stored) {
-                console.log('✅ localStorage contient currentUser:');
-                console.log('   Données:', stored);
+            if (savedSession) {
                 try {
-                    const parsed = JSON.parse(stored);
-                    console.log('   Username:', parsed.username);
-                    console.log('   FullName:', parsed.fullName);
+                    // RESTAURER LA SESSION
+                    const user = JSON.parse(savedSession);
+                    console.log('✅ SESSION TROUVÉE:', user.username);
+                    
+                    // RESTAURER LES VARIABLES GLOBALES
+                    currentUser = user;
+                    useSupabase = true;
+                    
+                    // AFFICHER L'APP (PAS LE LOGIN)
+                    document.getElementById('loginPage').style.display = 'none';
+                    document.getElementById('mainApp').style.display = 'block';
+                    
+                    // AFFICHER LE NOM
+                    document.getElementById('user-name').textContent = user.fullName || user.username;
+                    document.getElementById('user-email').textContent = (user.email || user.username) + ' (' + (user.role || 'user') + ')';
+                    
+                    console.log('✅ APP AFFICHÉE - Chargement des données...');
+                    
+                    // CHARGER LES DONNÉES
+                    loadFromSupabase()
+                        .then(function() {
+                            console.log('✅ Données chargées depuis Supabase');
+                            renderProds();
+                            renderPdv();
+                            renderMovForm();
+                            renderHist();
+                            renderDash();
+                        })
+                        .catch(function(err) {
+                            console.error('⚠️ Erreur chargement:', err);
+                            // Même en cas d'erreur, afficher l'interface
+                            renderProds();
+                            renderPdv();
+                            renderMovForm();
+                            renderHist();
+                            renderDash();
+                        });
+                    
                 } catch(e) {
-                    console.error('❌ Erreur parse JSON:', e);
+                    console.error('❌ Erreur parse session:', e);
+                    // Session corrompue, afficher login
+                    document.getElementById('loginPage').style.display = 'flex';
+                    document.getElementById('mainApp').style.display = 'none';
                 }
             } else {
-                console.log('❌ localStorage est VIDE - Aucun currentUser');
+                console.log('❌ Pas de session - Affichage login');
+                // Pas de session, afficher login
+                document.getElementById('loginPage').style.display = 'flex';
+                document.getElementById('mainApp').style.display = 'none';
             }
-            
-            console.log('🔑 Appel de checkAuth()...');
-            const authResult = checkAuth();
-            console.log('🔑 checkAuth() retourné:', authResult);
-            
-            if (!authResult) {
-                console.log('❌ checkAuth a retourné false - Affichage page login');
-                return;
-            }
-            
-            // Marquer qu'on était connecté
-            sessionStorage.setItem('wasLoggedIn', 'true');
-            
-            console.log('✅ checkAuth OK - Affichage dashboard');
-            renderDash();
         });
 
         async function save() {
