@@ -490,13 +490,6 @@
                            onfocus="this.style.borderColor='#667eea'" 
                            onblur="this.style.borderColor='#e5e7eb'">
                 </div>
-                <div style="margin-bottom:20px;">
-                    <label style="display:flex;align-items:center;cursor:pointer;user-select:none;">
-                        <input type="checkbox" id="remember-me" checked
-                               style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#667eea;">
-                        <span style="color:#4b5563;font-size:0.95rem;">Rester connecté après actualisation</span>
-                    </label>
-                </div>
                 <button type="submit" 
                         style="width:100%;padding:14px;background:linear-gradient(135deg, #667eea, #764ba2);color:white;border:none;border-radius:8px;font-size:1.1rem;font-weight:600;cursor:pointer;transition:all 0.3s;"
                         onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(102,126,234,0.4)'"
@@ -1202,63 +1195,35 @@
             console.log('🔑 DÉBUT handleLogin');
             console.log('   Username:', username);
 
-            const user = USERS.find(function(u) { return u.username === username && u.password === password; });
+            // ÉTAPE 1 : Vérifier dans USERS locaux (admin, zakaria)
+            const localUser = USERS.find(function(u) { return u.username === username && u.password === password; });
 
-            if (user) {
-                console.log('✅ Utilisateur trouvé dans USERS:', user.username);
+            if (localUser) {
+                console.log('✅ Utilisateur LOCAL trouvé:', localUser.username);
                 
-                // Vérifier si l'utilisateur veut rester connecté
-                const rememberMe = document.getElementById('remember-me').checked;
-                console.log('📌 Rester connecté:', rememberMe);
-                
-                // Connexion locale
-                currentUser = user;
-                useSupabase = true;  // ACTIVER SUPABASE pour tous !
+                currentUser = localUser;
+                useSupabase = true;
                 
                 const userSession = {
-                    id: user.id || 'local-' + user.username,
-                    username: user.username,
-                    fullName: user.fullName,
-                    email: user.username + '@local',
-                    role: user.role,
-                    rememberMe: rememberMe
+                    id: localUser.id || 'local-' + localUser.username,
+                    username: localUser.username,
+                    fullName: localUser.fullName,
+                    email: localUser.username + '@local',
+                    role: localUser.role
                 };
                 
                 currentUser = userSession;
                 
-                console.log('💾 SAUVEGARDE dans localStorage...');
-                console.log('   Données à sauvegarder:', JSON.stringify(userSession));
-                
-                // TOUJOURS sauvegarder dans localStorage (l'utilisateur doit décocher s'il ne veut pas)
+                // SAUVEGARDER SESSION
                 localStorage.setItem('currentUser', JSON.stringify(userSession));
-                localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
+                console.log('✅ Session locale sauvegardée');
                 
-                // TEST IMMÉDIAT pour vérifier que ça a vraiment été sauvegardé
-                const testRead = localStorage.getItem('currentUser');
-                
-                // VÉRIFICATION IMMÉDIATE
-                const verification = localStorage.getItem('currentUser');
-                console.log('🔍 VÉRIFICATION immédiate - localStorage contient:', verification);
-                
-                if (verification && testRead === JSON.stringify(userSession)) {
-                    console.log('✅ SAUVEGARDE localStorage CONFIRMÉE');
-                    if (rememberMe) {
-                        console.log('✅ Vous resterez connecté après F5!');
-                    } else {
-                        console.log('⚠️ Option "Rester connecté" non cochée - Session temporaire');
-                    }
-                } else {
-                    console.error('❌ ÉCHEC SAUVEGARDE localStorage !!!');
-                    alert('⚠️ ATTENTION: Impossible de sauvegarder la session.\n\nVotre navigateur bloque localStorage.');
-                }
-                
-                console.log('✅ Connexion locale - useSupabase:', useSupabase);
-                
-                // Charger depuis Supabase
+                // Charger données
                 await loadFromSupabase();
                 
-                document.getElementById('user-name').textContent = user.fullName;
-                document.getElementById('user-email').textContent = userSession.email + ' (' + user.role + ')';
+                // Afficher app
+                document.getElementById('user-name').textContent = localUser.fullName;
+                document.getElementById('user-email').textContent = userSession.email + ' (' + localUser.role + ')';
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'block';
                 
@@ -1268,87 +1233,97 @@
                 renderHist();
                 renderDash();
                 
-                console.log('🎉 Connexion terminée avec succès');
-            } else if (username.includes('@') && supabaseClient) {
-                // Connexion Supabase
+                console.log('🎉 Connexion locale réussie');
+                return;
+            }
+            
+            // ÉTAPE 2 : Vérifier dans la TABLE Supabase "users"
+            if (supabaseClient) {
                 try {
-                    console.log('🔵 Connexion Supabase...');
-                    const result = await supabaseClient.auth.signInWithPassword({
-                        email: username,
-                        password: password
-                    });
+                    console.log('🔵 Vérification dans table Supabase users...');
                     
-                    if (result.error) throw result.error;
+                    const { data, error } = await supabaseClient
+                        .from('users')
+                        .select('*')
+                        .eq('username', username)
+                        .eq('password', password)
+                        .single();
                     
-                    currentSupabaseUser = result.data.user;
-                    currentUser = {
-                        id: result.data.user.id,
-                        username: result.data.user.email,
-                        fullName: result.data.user.user_metadata.full_name || 'Utilisateur',
-                        email: result.data.user.email,
-                        role: result.data.user.user_metadata.role || 'user'
-                    };
-                    useSupabase = true;
+                    if (error) {
+                        console.error('❌ Erreur Supabase:', error);
+                        alert('❌ Nom d\'utilisateur ou mot de passe incorrect !');
+                        return;
+                    }
                     
-                    // SAUVEGARDER dans localStorage
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    console.log('✅ Connexion Supabase - useSupabase:', useSupabase);
-                    
-                    // Charger les données depuis Supabase
-                    await loadFromSupabase();
-                    
-                    document.getElementById('user-name').textContent = currentUser.fullName;
-                    document.getElementById('user-email').textContent = currentUser.email;
-                    document.getElementById('loginPage').style.display = 'none';
-                    document.getElementById('mainApp').style.display = 'block';
-                    
-                    // Rendre toutes les sections
-                    renderProds();
-                    renderPdv();
-                    renderMovForm();
-                    renderHist();
-                    renderDash();
-                    
-                    console.log('✅ Connexion Supabase réussie');
+                    if (data) {
+                        console.log('✅ Utilisateur SUPABASE trouvé:', data.username);
+                        
+                        currentUser = {
+                            id: data.id,
+                            username: data.username,
+                            fullName: data.full_name || data.username,
+                            email: data.username + '@supabase',
+                            role: 'user'
+                        };
+                        useSupabase = true;
+                        
+                        // SAUVEGARDER SESSION
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        console.log('✅ Session Supabase sauvegardée');
+                        
+                        // Charger données
+                        await loadFromSupabase();
+                        
+                        // Afficher app
+                        document.getElementById('user-name').textContent = currentUser.fullName;
+                        document.getElementById('user-email').textContent = currentUser.email;
+                        document.getElementById('loginPage').style.display = 'none';
+                        document.getElementById('mainApp').style.display = 'block';
+                        
+                        renderProds();
+                        renderPdv();
+                        renderMovForm();
+                        renderHist();
+                        renderDash();
+                        
+                        console.log('🎉 Connexion Supabase réussie');
+                        return;
+                    }
                 } catch (error) {
                     console.error('❌ Erreur:', error);
-                    alert('❌ Email ou mot de passe incorrect !');
                 }
-            } else {
-                alert('❌ Nom d\'utilisateur ou mot de passe incorrect !');
             }
+            
+            // ÉTAPE 3 : Aucun utilisateur trouvé
+            alert('❌ Nom d\'utilisateur ou mot de passe incorrect !');
         }
 
+        // ========== SESSION AUTOMATIQUE AU CHARGEMENT ==========
         window.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 ========== PAGE CHARGÉE ==========');
+            console.log('📱 CHARGEMENT PAGE');
             
-            // VÉRIFIER SI SESSION EXISTE
-            const savedSession = localStorage.getItem('currentUser');
+            // LIRE SESSION
+            const session = localStorage.getItem('currentUser');
+            console.log('🔍 Session:', session ? 'TROUVÉE' : 'VIDE');
             
-            if (savedSession) {
+            if (session) {
+                // RESTAURER SESSION
                 try {
-                    // RESTAURER LA SESSION
-                    const user = JSON.parse(savedSession);
-                    console.log('✅ SESSION TROUVÉE:', user.username);
-                    
-                    // RESTAURER LES VARIABLES GLOBALES
+                    const user = JSON.parse(session);
                     currentUser = user;
                     useSupabase = true;
                     
-                    // AFFICHER L'APP (PAS LE LOGIN)
+                    // AFFICHER APP
                     document.getElementById('loginPage').style.display = 'none';
                     document.getElementById('mainApp').style.display = 'block';
-                    
-                    // AFFICHER LE NOM
                     document.getElementById('user-name').textContent = user.fullName || user.username;
-                    document.getElementById('user-email').textContent = (user.email || user.username) + ' (' + (user.role || 'user') + ')';
+                    document.getElementById('user-email').textContent = user.email + ' (' + user.role + ')';
                     
-                    console.log('✅ APP AFFICHÉE - Chargement des données...');
+                    console.log('✅ CONNECTÉ:', user.username);
                     
-                    // CHARGER LES DONNÉES
+                    // CHARGER DONNÉES
                     loadFromSupabase()
                         .then(function() {
-                            console.log('✅ Données chargées depuis Supabase');
                             renderProds();
                             renderPdv();
                             renderMovForm();
@@ -1356,8 +1331,7 @@
                             renderDash();
                         })
                         .catch(function(err) {
-                            console.error('⚠️ Erreur chargement:', err);
-                            // Même en cas d'erreur, afficher l'interface
+                            console.log('⚠️ Erreur Supabase:', err);
                             renderProds();
                             renderPdv();
                             renderMovForm();
@@ -1366,18 +1340,18 @@
                         });
                     
                 } catch(e) {
-                    console.error('❌ Erreur parse session:', e);
-                    // Session corrompue, afficher login
+                    console.error('❌ Erreur:', e);
                     document.getElementById('loginPage').style.display = 'flex';
                     document.getElementById('mainApp').style.display = 'none';
                 }
             } else {
-                console.log('❌ Pas de session - Affichage login');
-                // Pas de session, afficher login
+                // AFFICHER LOGIN
+                console.log('❌ Pas de session');
                 document.getElementById('loginPage').style.display = 'flex';
                 document.getElementById('mainApp').style.display = 'none';
             }
         });
+
 
         async function save() {
             console.log('💾 ========== SAUVEGARDE CLOUD UNIQUEMENT ==========');
@@ -3098,7 +3072,6 @@
                         const existing = products.find(p => p.reference === reference);
                         
                         if (existing) {
-                            // MISE À JOUR : Additionner les quantités au lieu de remplacer
                             existing.name = name;
                             existing.realName = realName;
                             existing.conventionalName = conventionalName;
@@ -3107,19 +3080,10 @@
                             existing.repetition = repetition;
                             existing.category = category;
                             existing.brand = brand;
-                            
-                            // IMPORTANT : Additionner les quantités des PDVs
-                            if (!existing.pdvStock) existing.pdvStock = {};
-                            Object.keys(pdvStock).forEach(pdvId => {
-                                if (!existing.pdvStock[pdvId]) existing.pdvStock[pdvId] = 0;
-                                existing.pdvStock[pdvId] += pdvStock[pdvId]; // ADDITIONNER
-                                console.log(`➕ ${name} - PDV ${pdvId}: ${pdvStock[pdvId]} ajouté (total: ${existing.pdvStock[pdvId]})`);
-                            });
-                            
-                            // IMPORTANT : Additionner au stock total
-                            existing.quantity = (existing.quantity || 0) + totalQty; // ADDITIONNER
+                            existing.pdvStock = pdvStock;
+                            existing.quantity = totalQty;
                             updated++;
-                            console.log(`🔄 Produit mis à jour: ${name} (${reference}) - Stock total: ${existing.quantity}`);
+                            console.log(`🔄 Produit mis à jour: ${name} (${reference})`);
                         } else {
                             products.push({
                                 id: Date.now().toString() + Math.random(),
