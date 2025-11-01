@@ -1771,7 +1771,7 @@
                 document.getElementById('products-pagination').innerHTML = '';
             } else {
                 // PAS DE RECHERCHE: Paginer
-                displayProducts = paginateData(sortedProducts, currentPage.products);
+                displayProducts = paginateData([...sortedProducts], currentPage.products);
                 // Afficher la pagination
                 renderPagination('products-pagination', 'products', sortedProducts.length);
             }
