@@ -1221,19 +1221,26 @@
                 currentUser = localUser;
                 useSupabase = true;
                 
+                // Calculer date d'expiration (30 jours)
+                const expiresAt = new Date();
+                expiresAt.setDate(expiresAt.getDate() + 30);
+                
                 const userSession = {
                     id: localUser.id || 'local-' + localUser.username,
                     username: localUser.username,
                     fullName: localUser.fullName,
                     email: localUser.username + '@local',
-                    role: localUser.role
+                    role: localUser.role,
+                    createdAt: new Date().toISOString(),
+                    expiresAt: expiresAt.toISOString()
                 };
                 
                 currentUser = userSession;
                 
-                // SAUVEGARDER SESSION
+                // SAUVEGARDER SESSION (30 JOURS)
                 localStorage.setItem('currentUser', JSON.stringify(userSession));
-                console.log('✅ Session locale sauvegardée');
+                console.log('✅ Session locale sauvegardée (expire dans 30 jours)');
+                console.log('   Expire le:', expiresAt.toLocaleDateString());
                 
                 // Charger données
                 await loadFromSupabase();
@@ -1251,6 +1258,24 @@
                 renderDash();
                 
                 console.log('🎉 Connexion locale réussie');
+                
+                // Notification de session permanente
+                setTimeout(function() {
+                    const notification = document.createElement('div');
+                    notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:20px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.3);z-index:10000;max-width:400px;font-size:14px;';
+                    notification.innerHTML = `
+                        <div style="display:flex;align-items:start;gap:15px;">
+                            <div style="font-size:32px;">✅</div>
+                            <div>
+                                <div style="font-weight:bold;font-size:16px;margin-bottom:8px;">Connexion réussie !</div>
+                                <div>Vous restez connecté pendant 30 jours, même après fermeture du navigateur.</div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(notification);
+                    setTimeout(() => notification.remove(), 5000);
+                }, 500);
+                
                 return;
             }
             
@@ -1275,18 +1300,25 @@
                     if (data) {
                         console.log('✅ Utilisateur SUPABASE trouvé:', data.username);
                         
+                        // Calculer date d'expiration (30 jours)
+                        const expiresAt = new Date();
+                        expiresAt.setDate(expiresAt.getDate() + 30);
+                        
                         currentUser = {
                             id: data.id,
                             username: data.username,
                             fullName: data.full_name || data.username,
                             email: data.username + '@supabase',
-                            role: 'user'
+                            role: 'user',
+                            createdAt: new Date().toISOString(),
+                            expiresAt: expiresAt.toISOString()
                         };
                         useSupabase = true;
                         
-                        // SAUVEGARDER SESSION
+                        // SAUVEGARDER SESSION (30 JOURS)
                         localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                        console.log('✅ Session Supabase sauvegardée');
+                        console.log('✅ Session Supabase sauvegardée (expire dans 30 jours)');
+                        console.log('   Expire le:', expiresAt.toLocaleDateString());
                         
                         // Charger données
                         await loadFromSupabase();
@@ -1304,6 +1336,24 @@
                         renderDash();
                         
                         console.log('🎉 Connexion Supabase réussie');
+                        
+                        // Notification de session permanente
+                        setTimeout(function() {
+                            const notification = document.createElement('div');
+                            notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:20px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.3);z-index:10000;max-width:400px;font-size:14px;';
+                            notification.innerHTML = `
+                                <div style="display:flex;align-items:start;gap:15px;">
+                                    <div style="font-size:32px;">✅</div>
+                                    <div>
+                                        <div style="font-weight:bold;font-size:16px;margin-bottom:8px;">Connexion réussie !</div>
+                                        <div>Vous restez connecté pendant 30 jours, même après fermeture du navigateur.</div>
+                                    </div>
+                                </div>
+                            `;
+                            document.body.appendChild(notification);
+                            setTimeout(() => notification.remove(), 5000);
+                        }, 500);
+                        
                         return;
                     }
                 } catch (error) {
@@ -1317,16 +1367,56 @@
 
         // ========== SESSION AUTOMATIQUE AU CHARGEMENT ==========
         window.addEventListener('DOMContentLoaded', function() {
-            console.log('📱 CHARGEMENT PAGE');
+            console.log('📱 ===========================================');
+            console.log('📱 CHARGEMENT PAGE - Vérification session');
+            console.log('📱 ===========================================');
             
             // LIRE SESSION
             const session = localStorage.getItem('currentUser');
-            console.log('🔍 Session:', session ? 'TROUVÉE' : 'VIDE');
+            console.log('🔍 Session localStorage:', session ? 'TROUVÉE' : 'VIDE');
             
             if (session) {
                 // RESTAURER SESSION
                 try {
                     const user = JSON.parse(session);
+                    
+                    // VÉRIFIER EXPIRATION
+                    if (user.expiresAt) {
+                        const expirationDate = new Date(user.expiresAt);
+                        const now = new Date();
+                        
+                        if (now > expirationDate) {
+                            console.log('❌ SESSION EXPIRÉE!');
+                            console.log('   Créée le:', user.createdAt);
+                            console.log('   Expirée le:', user.expiresAt);
+                            
+                            // Supprimer session expirée
+                            localStorage.removeItem('currentUser');
+                            
+                            // Afficher login avec message
+                            document.getElementById('loginPage').style.display = 'flex';
+                            document.getElementById('mainApp').style.display = 'none';
+                            
+                            alert('⏰ Votre session a expiré (30 jours).\n\nVeuillez vous reconnecter.');
+                            return;
+                        }
+                        
+                        // Session encore valide
+                        const daysLeft = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
+                        console.log('✅ SESSION VALIDE');
+                        console.log('   Expire dans:', daysLeft, 'jour(s)');
+                        console.log('   Expire le:', expirationDate.toLocaleDateString());
+                    } else {
+                        // Ancienne session sans expiration - ajouter 30 jours à partir de maintenant
+                        console.log('⚠️ Session sans date d\'expiration - Ajout automatique');
+                        const expiresAt = new Date();
+                        expiresAt.setDate(expiresAt.getDate() + 30);
+                        user.createdAt = user.createdAt || new Date().toISOString();
+                        user.expiresAt = expiresAt.toISOString();
+                        localStorage.setItem('currentUser', JSON.stringify(user));
+                        console.log('   Nouvelle expiration:', expiresAt.toLocaleDateString());
+                    }
+                    
                     currentUser = user;
                     useSupabase = true;
                     
@@ -1334,9 +1424,27 @@
                     document.getElementById('loginPage').style.display = 'none';
                     document.getElementById('mainApp').style.display = 'block';
                     document.getElementById('user-name').textContent = user.fullName || user.username;
-                    document.getElementById('user-email').textContent = user.email + ' (' + user.role + ')';
+                    document.getElementById('user-email').textContent = user.email + ' (' + (user.role || 'user') + ')';
                     
-                    console.log('✅ CONNECTÉ:', user.username);
+                    console.log('✅ CONNECTÉ AUTOMATIQUEMENT:', user.username);
+                    
+                    // Notification de reconnexion automatique
+                    setTimeout(function() {
+                        const daysLeft = user.expiresAt ? Math.ceil((new Date(user.expiresAt) - new Date()) / (1000 * 60 * 60 * 24)) : 30;
+                        const notification = document.createElement('div');
+                        notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#3b82f6;color:white;padding:20px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.3);z-index:10000;max-width:400px;font-size:14px;';
+                        notification.innerHTML = `
+                            <div style="display:flex;align-items:start;gap:15px;">
+                                <div style="font-size:32px;">🔒</div>
+                                <div>
+                                    <div style="font-weight:bold;font-size:16px;margin-bottom:8px;">Session restaurée</div>
+                                    <div>Bonjour ${user.fullName || user.username} !<br>Votre session expire dans ${daysLeft} jour(s).</div>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(notification);
+                        setTimeout(() => notification.remove(), 4000);
+                    }, 1000);
                     
                     // CHARGER DONNÉES
                     loadFromSupabase()
@@ -1346,6 +1454,7 @@
                             renderMovForm();
                             renderHist();
                             renderDash();
+                            console.log('✅ Application prête');
                         })
                         .catch(function(err) {
                             console.log('⚠️ Erreur Supabase:', err);
