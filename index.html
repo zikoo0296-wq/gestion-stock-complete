@@ -967,6 +967,102 @@
     </div>
 
     <script>
+        // ========== 🧪 TEST localStorage DÈS LE DÉMARRAGE ==========
+        (function() {
+            console.log('');
+            console.log('===========================================');
+            console.log('🧪 TEST localStorage AU DÉMARRAGE');
+            console.log('===========================================');
+            
+            try {
+                // Test d'écriture
+                const testKey = 'ecomlik_test_' + Date.now();
+                const testValue = 'test_' + Math.random();
+                
+                console.log('1️⃣ Test setItem()...');
+                localStorage.setItem(testKey, testValue);
+                console.log('   ✅ setItem() exécuté sans erreur');
+                
+                // Test de lecture immédiate
+                console.log('2️⃣ Test getItem()...');
+                const retrieved = localStorage.getItem(testKey);
+                
+                if (retrieved === testValue) {
+                    console.log('   ✅ getItem() OK - Valeur correspond parfaitement');
+                    
+                    // Test de suppression
+                    console.log('3️⃣ Test removeItem()...');
+                    localStorage.removeItem(testKey);
+                    const afterRemove = localStorage.getItem(testKey);
+                    
+                    if (afterRemove === null) {
+                        console.log('   ✅ removeItem() OK');
+                        console.log('');
+                        console.log('🎉🎉🎉 localStorage FONCTIONNE PARFAITEMENT ! 🎉🎉🎉');
+                        console.log('   La session PEUT être sauvegardée pendant 30 jours');
+                        console.log('===========================================');
+                        console.log('');
+                    } else {
+                        console.error('   ❌ removeItem() ÉCHOUÉ');
+                        console.log('===========================================');
+                    }
+                } else {
+                    console.error('   ❌❌❌ getItem() ÉCHOUÉ !');
+                    console.error('   Valeur attendue:', testValue);
+                    console.error('   Valeur reçue:', retrieved || 'NULL/VIDE');
+                    console.error('');
+                    console.error('   PROBLÈME : localStorage ne retient PAS les données !');
+                    console.log('===========================================');
+                    console.log('');
+                    
+                    // Afficher alerte à l'utilisateur
+                    setTimeout(function() {
+                        alert('⚠️⚠️⚠️ ALERTE CRITIQUE ! ⚠️⚠️⚠️\n\n' +
+                              'localStorage ne fonctionne PAS correctement !\n\n' +
+                              '❌ La session NE POURRA PAS être sauvegardée\n' +
+                              '❌ Vous serez déconnecté à chaque actualisation\n\n' +
+                              'CAUSES POSSIBLES :\n' +
+                              '• Mode navigation privée activé 🕵️\n' +
+                              '• Extension qui bloque localStorage\n' +
+                              '• Paramètres navigateur restrictifs\n\n' +
+                              'SOLUTIONS :\n' +
+                              '1. Désactivez le mode navigation privée\n' +
+                              '2. Désactivez TOUTES vos extensions\n' +
+                              '3. Vérifiez : Settings → Cookies → Allow all\n\n' +
+                              'Appuyez sur F12 pour voir les détails');
+                    }, 1000);
+                }
+            } catch(e) {
+                console.error('');
+                console.error('🚨🚨🚨 ERREUR CRITIQUE ! 🚨🚨🚨');
+                console.error('   localStorage est TOTALEMENT BLOQUÉ !');
+                console.error('   Erreur:', e.message);
+                console.error('   Type:', e.name);
+                console.error('');
+                console.error('   CAUSE PRINCIPALE : Mode navigation privée (99%)');
+                console.log('===========================================');
+                console.log('');
+                
+                // Afficher alerte à l'utilisateur
+                setTimeout(function() {
+                    alert('🚨🚨🚨 ERREUR CRITIQUE ! 🚨🚨🚨\n\n' +
+                          'localStorage est TOTALEMENT BLOQUÉ !\n\n' +
+                          '❌ Impossible de sauvegarder la session\n' +
+                          '❌ Vous SEREZ déconnecté à chaque F5\n\n' +
+                          'Erreur : ' + e.message + '\n\n' +
+                          'CAUSE (99% de chances) :\n' +
+                          '→ MODE NAVIGATION PRIVÉE activé\n\n' +
+                          'SOLUTION OBLIGATOIRE :\n' +
+                          '1. Fermez cette fenêtre\n' +
+                          '2. Ouvrez fenêtre NORMALE :\n' +
+                          '   Chrome : Ctrl+N (PAS Ctrl+Shift+N)\n' +
+                          '   Firefox : Ctrl+N (PAS Ctrl+Shift+P)\n' +
+                          '3. Rouvrez EcomLik dans cette fenêtre\n\n' +
+                          'C\'EST LA SEULE SOLUTION !');
+                }, 1000);
+            }
+        })();
+        
         // ========== CONFIGURATION SUPABASE ==========
         let supabaseClient = null;
         let currentSupabaseUser = null;
