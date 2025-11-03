@@ -1502,12 +1502,120 @@
                 }
             }
             
-            // ÉTAPE 3 : Aucun utilisateur trouvé
+            // ÉTAPE 3 : Essayer Supabase Auth (email + password)
+            if (supabaseClient && supabaseClient.auth) {
+                try {
+                    console.log('🔐 Tentative Supabase Auth (email + password)...');
+                    console.log('   Email:', username); // Le champ username peut contenir l'email
+                    
+                    const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                        email: username, // username peut être un email
+                        password: password
+                    });
+                    
+                    if (authError) {
+                        console.error('❌ Erreur Supabase Auth:', authError.message);
+                    } else if (authData && authData.user) {
+                        console.log('=============================================');
+                        console.log('✅ CONNEXION SUPABASE AUTH RÉUSSIE !');
+                        console.log('   User ID:', authData.user.id);
+                        console.log('   Email:', authData.user.email);
+                        console.log('=============================================');
+                        
+                        // Calculer date d'expiration (30 jours)
+                        const expiresAt = new Date();
+                        expiresAt.setDate(expiresAt.getDate() + 30);
+                        
+                        currentUser = {
+                            id: authData.user.id,
+                            username: authData.user.email,
+                            fullName: authData.user.user_metadata?.full_name || authData.user.email,
+                            email: authData.user.email,
+                            role: 'user',
+                            authType: 'supabase-auth',
+                            createdAt: new Date().toISOString(),
+                            expiresAt: expiresAt.toISOString(),
+                            supabaseSession: {
+                                access_token: authData.session?.access_token,
+                                refresh_token: authData.session?.refresh_token
+                            }
+                        };
+                        currentSupabaseUser = authData.user;
+                        useSupabase = true;
+                        
+                        console.log('💾 SAUVEGARDE SESSION AUTH DANS localStorage...');
+                        console.log('   Données:', JSON.stringify(currentUser, null, 2));
+                        
+                        // SAUVEGARDER SESSION (30 JOURS)
+                        try {
+                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                            console.log('✅ localStorage.setItem() EXÉCUTÉ (AUTH)');
+                            
+                            // VÉRIFICATION IMMÉDIATE
+                            const verification = localStorage.getItem('currentUser');
+                            if (verification) {
+                                console.log('✅✅✅ VÉRIFICATION RÉUSSIE ! SESSION AUTH SAUVEGARDÉE !');
+                                console.log('   Contenu localStorage:', verification.substring(0, 100) + '...');
+                            } else {
+                                console.error('❌❌❌ ÉCHEC ! localStorage VIDE APRÈS SAUVEGARDE !');
+                                alert('⚠️ ERREUR CRITIQUE !\n\nlocalStorage ne sauvegarde pas !\n\nVérifiez :\n- Mode navigation privée ?\n- Extensions bloquantes ?');
+                            }
+                        } catch(e) {
+                            console.error('❌❌❌ ERREUR localStorage.setItem():', e);
+                            alert('⚠️ ERREUR localStorage !\n\n' + e.message + '\n\nMode navigation privée ?');
+                        }
+                        
+                        console.log('✅ Session Supabase Auth sauvegardée (expire dans 30 jours)');
+                        console.log('   Expire le:', expiresAt.toLocaleDateString());
+                        console.log('=============================================');
+                        
+                        // Charger données
+                        await loadFromSupabase();
+                        
+                        // Afficher app
+                        document.getElementById('user-name').textContent = currentUser.fullName;
+                        document.getElementById('user-email').textContent = currentUser.email;
+                        document.getElementById('loginPage').style.display = 'none';
+                        document.getElementById('mainApp').style.display = 'block';
+                        
+                        renderProds();
+                        renderPdv();
+                        renderMovForm();
+                        renderHist();
+                        renderDash();
+                        
+                        console.log('🎉 Connexion Supabase Auth réussie');
+                        
+                        // Notification de session permanente
+                        setTimeout(function() {
+                            const notification = document.createElement('div');
+                            notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:20px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.3);z-index:10000;max-width:400px;font-size:14px;';
+                            notification.innerHTML = `
+                                <div style="display:flex;align-items:start;gap:15px;">
+                                    <div style="font-size:32px;">✅</div>
+                                    <div>
+                                        <div style="font-weight:bold;font-size:16px;margin-bottom:8px;">Connexion réussie !</div>
+                                        <div>Vous restez connecté pendant 30 jours, même après fermeture du navigateur.</div>
+                                    </div>
+                                </div>
+                            `;
+                            document.body.appendChild(notification);
+                            setTimeout(() => notification.remove(), 5000);
+                        }, 500);
+                        
+                        return;
+                    }
+                } catch (error) {
+                    console.error('❌ Erreur Supabase Auth:', error);
+                }
+            }
+            
+            // ÉTAPE 4 : Aucun utilisateur trouvé
             alert('❌ Nom d\'utilisateur ou mot de passe incorrect !');
         }
 
         // ========== SESSION AUTOMATIQUE AU CHARGEMENT ==========
-        window.addEventListener('DOMContentLoaded', function() {
+        window.addEventListener('DOMContentLoaded', async function() {
             console.log('📱 ===========================================');
             console.log('📱 CHARGEMENT PAGE - Vérification session');
             console.log('📱 ===========================================');
@@ -1560,6 +1668,28 @@
                     
                     currentUser = user;
                     useSupabase = true;
+                    
+                    // Si c'est une session Supabase Auth, restaurer la session Auth
+                    if (user.authType === 'supabase-auth' && user.supabaseSession && supabaseClient && supabaseClient.auth) {
+                        console.log('🔐 Restauration session Supabase Auth...');
+                        try {
+                            const { data: authData, error: authError } = await supabaseClient.auth.setSession({
+                                access_token: user.supabaseSession.access_token,
+                                refresh_token: user.supabaseSession.refresh_token
+                            });
+                            
+                            if (authError) {
+                                console.error('⚠️ Erreur restauration Auth:', authError.message);
+                                console.log('   Session locale utilisée à la place');
+                            } else {
+                                console.log('✅ Session Supabase Auth restaurée');
+                                currentSupabaseUser = authData.user;
+                            }
+                        } catch(e) {
+                            console.error('⚠️ Erreur restauration Auth:', e);
+                            console.log('   Session locale utilisée à la place');
+                        }
+                    }
                     
                     // AFFICHER APP
                     document.getElementById('loginPage').style.display = 'none';
