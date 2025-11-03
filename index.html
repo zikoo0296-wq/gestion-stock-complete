@@ -1237,8 +1237,28 @@
                 
                 currentUser = userSession;
                 
+                console.log('💾 SAUVEGARDE SESSION LOCALE DANS localStorage...');
+                console.log('   Données:', JSON.stringify(userSession, null, 2));
+                
                 // SAUVEGARDER SESSION (30 JOURS)
-                localStorage.setItem('currentUser', JSON.stringify(userSession));
+                try {
+                    localStorage.setItem('currentUser', JSON.stringify(userSession));
+                    console.log('✅ localStorage.setItem() EXÉCUTÉ (LOCAL)');
+                    
+                    // VÉRIFICATION IMMÉDIATE
+                    const verification = localStorage.getItem('currentUser');
+                    if (verification) {
+                        console.log('✅✅✅ VÉRIFICATION RÉUSSIE ! SESSION LOCALE SAUVEGARDÉE !');
+                        console.log('   Contenu localStorage:', verification.substring(0, 100) + '...');
+                    } else {
+                        console.error('❌❌❌ ÉCHEC ! localStorage VIDE APRÈS SAUVEGARDE !');
+                        alert('⚠️ ERREUR CRITIQUE !\n\nlocalStorage ne sauvegarde pas !\n\nVérifiez :\n- Mode navigation privée ?\n- Extensions bloquantes ?');
+                    }
+                } catch(e) {
+                    console.error('❌❌❌ ERREUR localStorage.setItem():', e);
+                    alert('⚠️ ERREUR localStorage !\n\n' + e.message + '\n\nMode navigation privée ?');
+                }
+                
                 console.log('✅ Session locale sauvegardée (expire dans 30 jours)');
                 console.log('   Expire le:', expiresAt.toLocaleDateString());
                 
@@ -1298,7 +1318,11 @@
                     }
                     
                     if (data) {
-                        console.log('✅ Utilisateur SUPABASE trouvé:', data.username);
+                        console.log('=============================================');
+                        console.log('✅ UTILISATEUR SUPABASE TROUVÉ');
+                        console.log('   Username:', data.username);
+                        console.log('   Full name:', data.full_name);
+                        console.log('=============================================');
                         
                         // Calculer date d'expiration (30 jours)
                         const expiresAt = new Date();
@@ -1315,10 +1339,31 @@
                         };
                         useSupabase = true;
                         
+                        console.log('💾 SAUVEGARDE SESSION DANS localStorage...');
+                        console.log('   Données:', JSON.stringify(currentUser, null, 2));
+                        
                         // SAUVEGARDER SESSION (30 JOURS)
-                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        try {
+                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                            console.log('✅ localStorage.setItem() EXÉCUTÉ');
+                            
+                            // VÉRIFICATION IMMÉDIATE
+                            const verification = localStorage.getItem('currentUser');
+                            if (verification) {
+                                console.log('✅✅✅ VÉRIFICATION RÉUSSIE ! SESSION SAUVEGARDÉE !');
+                                console.log('   Contenu localStorage:', verification.substring(0, 100) + '...');
+                            } else {
+                                console.error('❌❌❌ ÉCHEC ! localStorage VIDE APRÈS SAUVEGARDE !');
+                                alert('⚠️ ERREUR CRITIQUE !\n\nlocalStorage ne sauvegarde pas !\n\nVérifiez :\n- Mode navigation privée ?\n- Extensions bloquantes ?');
+                            }
+                        } catch(e) {
+                            console.error('❌❌❌ ERREUR localStorage.setItem():', e);
+                            alert('⚠️ ERREUR localStorage !\n\n' + e.message + '\n\nMode navigation privée ?');
+                        }
+                        
                         console.log('✅ Session Supabase sauvegardée (expire dans 30 jours)');
                         console.log('   Expire le:', expiresAt.toLocaleDateString());
+                        console.log('=============================================');
                         
                         // Charger données
                         await loadFromSupabase();
