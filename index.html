@@ -856,7 +856,24 @@
             </div>
             <div class="card">
                 <div class="card-body">
-                    <input type="text" id="bestsellers-search" class="search-input" placeholder="🔍 Rechercher..." style="width:100%;margin-bottom:20px;">
+                    <input type="text" id="bestsellers-search" class="search-input" placeholder="🔍 Rechercher..." style="width:100%;margin-bottom:15px;">
+                    
+                    <!-- FILTRES PAR DATES -->
+                    <div style="display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+                        <div style="flex:1;min-width:200px;">
+                            <label style="display:block;font-weight:bold;margin-bottom:5px;color:#374151;">📅 Date Début</label>
+                            <input type="date" id="bestsellers-date-start" class="form-input" style="width:100%;">
+                        </div>
+                        <div style="flex:1;min-width:200px;">
+                            <label style="display:block;font-weight:bold;margin-bottom:5px;color:#374151;">📅 Date Fin</label>
+                            <input type="date" id="bestsellers-date-end" class="form-input" style="width:100%;">
+                        </div>
+                        <div style="display:flex;gap:10px;align-items:flex-end;">
+                            <button onclick="filterBestsellersByDate()" class="btn-primary" style="padding:10px 20px;">🔍 Filtrer</button>
+                            <button onclick="resetBestsellersFilter()" class="btn-secondary" style="padding:10px 20px;background:#6b7280;">🔄 Réinitialiser</button>
+                        </div>
+                    </div>
+                    
                     <div class="table-container">
                         <table>
                             <thead>
@@ -1771,7 +1788,7 @@
                 document.getElementById('products-pagination').innerHTML = '';
             } else {
                 // PAS DE RECHERCHE: Paginer
-                displayProducts = paginateData([...sortedProducts], currentPage.products);
+                displayProducts = paginateData(sortedProducts, currentPage.products);
                 // Afficher la pagination
                 renderPagination('products-pagination', 'products', sortedProducts.length);
             }
@@ -2610,6 +2627,9 @@
             }
             
             tbody.innerHTML = displayProducts.map(product => {
+                // Calculer le stock total = SOMME de tous les PDV
+                const totalStock = Object.values(product.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                
                 const pdvColumns = pdvs.map(pdv => {
                     const qty = product.pdvStock?.[pdv.id] || 0;
                     return `<td style="text-align:center;">
@@ -2623,7 +2643,7 @@
                     <tr>
                         <td><strong>${product.name}</strong></td>
                         <td>${product.reference}</td>
-                        <td><span class="badge badge-success">${product.quantity || 0}</span></td>
+                        <td><span class="badge badge-success">${totalStock}</span></td>
                         ${pdvColumns}
                     </tr>
                 `;
@@ -2853,11 +2873,41 @@
             const searchValue = document.getElementById('bestsellers-search')?.value.toLowerCase() || '';
             const isSearching = searchValue.length > 0;
             
+            // RÉCUPÉRER LES FILTRES DE DATES
+            const dateStartInput = document.getElementById('bestsellers-date-start')?.value;
+            const dateEndInput = document.getElementById('bestsellers-date-end')?.value;
+            
+            let dateStart = null;
+            let dateEnd = null;
+            
+            if (dateStartInput) {
+                dateStart = new Date(dateStartInput);
+                dateStart.setHours(0, 0, 0, 0);
+            }
+            
+            if (dateEndInput) {
+                dateEnd = new Date(dateEndInput);
+                dateEnd.setHours(23, 59, 59, 999);
+            }
+            
             // Calculer les ventes totales pour chaque produit (Sorties uniquement)
             const salesData = {};
             
             movements.forEach(m => {
                 if (m.type === 'Sortie' || m.type === 'exit' || m.type === 'out') {
+                    // FILTRER PAR DATES si spécifié
+                    if (dateStart || dateEnd) {
+                        const movementDate = new Date(m.date);
+                        
+                        if (dateStart && movementDate < dateStart) {
+                            return; // Ignorer ce mouvement
+                        }
+                        
+                        if (dateEnd && movementDate > dateEnd) {
+                            return; // Ignorer ce mouvement
+                        }
+                    }
+                    
                     const productName = m.productName || 'Produit';
                     if (!salesData[productName]) {
                         salesData[productName] = 0;
@@ -2900,7 +2950,7 @@
             if (!tbody) return;
             
             if (displayBestsellers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucun produit trouvé</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#6b7280;">Aucun produit trouvé pour cette période</td></tr>';
                 return;
             }
             
@@ -2952,6 +3002,21 @@
                 };
                 searchInput.onInputSet = true;
             }
+        }
+        
+        // Fonction pour filtrer par dates
+        function filterBestsellersByDate() {
+            currentPage.bestsellers = 1;
+            renderBestsellers();
+        }
+        
+        // Fonction pour réinitialiser les filtres
+        function resetBestsellersFilter() {
+            document.getElementById('bestsellers-date-start').value = '';
+            document.getElementById('bestsellers-date-end').value = '';
+            document.getElementById('bestsellers-search').value = '';
+            currentPage.bestsellers = 1;
+            renderBestsellers();
         }
         
         // Initialiser currentPage.bestsellers
@@ -3072,6 +3137,7 @@
                         const existing = products.find(p => p.reference === reference);
                         
                         if (existing) {
+                            // Produit existe déjà - FUSIONNER les quantités
                             existing.name = name;
                             existing.realName = realName;
                             existing.conventionalName = conventionalName;
@@ -3080,10 +3146,27 @@
                             existing.repetition = repetition;
                             existing.category = category;
                             existing.brand = brand;
-                            existing.pdvStock = pdvStock;
-                            existing.quantity = totalQty;
+                            
+                            // FUSIONNER pdvStock: ADDITIONNER les quantités par PDV
+                            if (!existing.pdvStock) {
+                                existing.pdvStock = {};
+                            }
+                            
+                            Object.keys(pdvStock).forEach(pdvId => {
+                                if (existing.pdvStock[pdvId]) {
+                                    // PDV existe déjà → ADDITIONNER
+                                    existing.pdvStock[pdvId] += pdvStock[pdvId];
+                                } else {
+                                    // Nouveau PDV → CRÉER
+                                    existing.pdvStock[pdvId] = pdvStock[pdvId];
+                                }
+                            });
+                            
+                            // Recalculer quantity total
+                            existing.quantity = Object.values(existing.pdvStock).reduce((sum, qty) => sum + qty, 0);
+                            
                             updated++;
-                            console.log(`🔄 Produit mis à jour: ${name} (${reference})`);
+                            console.log(`🔄 Produit mis à jour: ${name} (${reference}) - Quantités additionnées`);
                         } else {
                             products.push({
                                 id: Date.now().toString() + Math.random(),
