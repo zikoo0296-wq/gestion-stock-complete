@@ -1532,6 +1532,180 @@
         }
         
         // Fonction pour charger depuis Supabase
+        // ========== DIAGNOSTIC MANUEL DES DONNÉES ==========
+        function runDataDiagnostic() {
+            console.log('🔍 ========================================');
+            console.log('🔍 DIAGNOSTIC DES DONNÉES');
+            console.log('🔍 ========================================');
+            
+            // Compter les doublons
+            const refMap = new Map();
+            const duplicateRefs = [];
+            products.forEach(p => {
+                if (refMap.has(p.reference)) {
+                    duplicateRefs.push(p.reference);
+                } else {
+                    refMap.set(p.reference, p);
+                }
+            });
+            
+            // Compter les produits sans image
+            const withoutImage = products.filter(p => !p.imageUrl || p.imageUrl === '').length;
+            
+            // Compter les produits sans nom
+            const withoutName = products.filter(p => !p.name || p.name.trim() === '').length;
+            
+            // Compter les produits sans référence
+            const withoutRef = products.filter(p => !p.reference || p.reference.trim() === '').length;
+            
+            // Créer le rapport
+            let report = '🔍 RAPPORT DE DIAGNOSTIC\n\n';
+            report += `📊 Total produits : ${products.length}\n\n`;
+            
+            report += '✅ ÉTAT DES DONNÉES:\n';
+            report += `  • Avec image : ${products.length - withoutImage}\n`;
+            report += `  • Sans image : ${withoutImage}\n`;
+            report += `  • Sans nom : ${withoutName}\n`;
+            report += `  • Sans référence : ${withoutRef}\n\n`;
+            
+            if (duplicateRefs.length > 0) {
+                report += `❌ PROBLÈMES DÉTECTÉS:\n`;
+                report += `  • ${duplicateRefs.length} référence(s) en double !\n`;
+                report += `  • Références : ${duplicateRefs.join(', ')}\n\n`;
+                report += `⚠️ Ces doublons peuvent causer des problèmes d'affichage.\n\n`;
+                report += `Voulez-vous les corriger automatiquement ?\n`;
+                report += `(Les doublons seront supprimés, le premier produit sera conservé)`;
+                
+                if (confirm(report)) {
+                    console.log('🧹 Correction des données...');
+                    cleanAndValidateProducts();
+                    save();
+                    renderProds();
+                    renderPdv();
+                    alert('✅ Données corrigées avec succès !\n\nActualisez la page pour voir les changements.');
+                }
+            } else {
+                report += '✅ AUCUN PROBLÈME DÉTECTÉ\n\n';
+                report += 'Toutes les références sont uniques.\n';
+                report += 'Les données semblent cohérentes.';
+                
+                alert(report);
+            }
+            
+            console.log('🔍 ========================================');
+        }
+        
+        // ========== NETTOYAGE ET VALIDATION DES DONNÉES ==========
+        function cleanAndValidateProducts() {
+            console.log('🧹 =================================');
+            console.log('🧹 NETTOYAGE ET VALIDATION DES DONNÉES');
+            console.log('🧹 =================================');
+            
+            // 1. Vérifier les doublons de référence
+            const refMap = new Map();
+            const duplicates = [];
+            
+            products.forEach((p, index) => {
+                if (!p.reference || p.reference.trim() === '') {
+                    console.warn(`⚠️ Produit sans référence à l'index ${index}:`, p.name);
+                    // Générer une référence unique
+                    p.reference = 'REF-' + Date.now() + '-' + index;
+                    console.log(`   → Référence générée: ${p.reference}`);
+                    return;
+                }
+                
+                if (refMap.has(p.reference)) {
+                    console.error(`❌ DOUBLON DÉTECTÉ! Référence ${p.reference}`);
+                    const first = refMap.get(p.reference);
+                    console.log('   Premier produit:', { name: first.name, ref: first.reference, image: first.imageUrl ? 'OUI' : 'NON' });
+                    console.log('   Produit en double:', { name: p.name, ref: p.reference, image: p.imageUrl ? 'OUI' : 'NON' });
+                    duplicates.push(p.reference);
+                } else {
+                    refMap.set(p.reference, p);
+                }
+            });
+            
+            if (duplicates.length > 0) {
+                console.error(`❌ ${duplicates.length} référence(s) en double détectée(s)!`);
+                console.error('   Références concernées:', duplicates);
+                
+                alert(`⚠️ ATTENTION: Données corrompues détectées!\n\n` +
+                      `${duplicates.length} référence(s) en double trouvée(s):\n${duplicates.join(', ')}\n\n` +
+                      `Les doublons seront automatiquement supprimés.\n` +
+                      `Le premier produit de chaque doublon sera conservé.`);
+                
+                // Supprimer les doublons (garder seulement le premier)
+                const uniqueProducts = [];
+                const seenRefs = new Set();
+                
+                products.forEach(p => {
+                    if (!seenRefs.has(p.reference)) {
+                        uniqueProducts.push(p);
+                        seenRefs.add(p.reference);
+                    } else {
+                        console.log(`   🗑️ Suppression doublon: ${p.name} (${p.reference})`);
+                    }
+                });
+                
+                products = uniqueProducts;
+                console.log(`✅ ${products.length} produits uniques conservés après nettoyage`);
+                
+                // Sauvegarder immédiatement pour corriger la BD
+                save();
+            }
+            
+            // 2. Vérifier que chaque produit a toutes les propriétés nécessaires
+            let correctionCount = 0;
+            products.forEach((p, index) => {
+                let corrected = false;
+                
+                if (!p.id || p.id === '') {
+                    p.id = 'prod-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                    console.log(`🔧 ID généré pour ${p.name}: ${p.id}`);
+                    corrected = true;
+                }
+                
+                if (!p.name || p.name.trim() === '') {
+                    p.name = 'Produit ' + (index + 1);
+                    console.log(`🔧 Nom généré pour ${p.reference}: ${p.name}`);
+                    corrected = true;
+                }
+                
+                if (!p.pdvStock) {
+                    p.pdvStock = {};
+                    corrected = true;
+                }
+                
+                // Recalculer quantity basé sur pdvStock
+                const calculatedQty = Object.values(p.pdvStock).reduce((sum, qty) => sum + (parseInt(qty) || 0), 0);
+                if (p.quantity !== calculatedQty) {
+                    console.log(`🔧 Correction quantity pour ${p.name} (${p.reference}): ${p.quantity} → ${calculatedQty}`);
+                    p.quantity = calculatedQty;
+                    corrected = true;
+                }
+                
+                if (corrected) {
+                    correctionCount++;
+                }
+            });
+            
+            if (correctionCount > 0) {
+                console.log(`✅ ${correctionCount} produit(s) corrigé(s)`);
+            }
+            
+            // 3. Afficher un résumé
+            console.log('📊 RÉSUMÉ DES DONNÉES:');
+            console.log(`   Total produits: ${products.length}`);
+            console.log(`   Avec image: ${products.filter(p => p.imageUrl && p.imageUrl !== '').length}`);
+            console.log(`   Sans image: ${products.filter(p => !p.imageUrl || p.imageUrl === '').length}`);
+            
+            console.log('✅ Nettoyage et validation terminés');
+            console.log('🧹 =================================');
+            
+            return products;
+        }
+        
+        // ========== CHARGEMENT DEPUIS SUPABASE ==========
         async function loadFromSupabase() {
             if (!currentSupabaseUser && !currentUser) return;
             
@@ -1587,6 +1761,9 @@
                     // REMPLACER products avec les données de Supabase
                     products = loadedProducts;
                     console.log('✅ Produits chargés:', products.length);
+                    
+                    // NETTOYER ET VALIDER LES DONNÉES
+                    cleanAndValidateProducts();
                 }
                 
                 // Convertir PDV (récupérer l'ID original depuis phone)
@@ -1675,7 +1852,12 @@
             const low = alertProducts.length;
 
             document.getElementById('dash-content').innerHTML = `
-                <input type="text" id="dash-search" class="search-input" placeholder="🔍 Rechercher..." style="width:100%;">
+                <div style="display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+                    <input type="text" id="dash-search" class="search-input" placeholder="🔍 Rechercher..." style="flex:1;">
+                    <button onclick="runDataDiagnostic()" class="btn-primary" style="background:#f59e0b;padding:10px 20px;white-space:nowrap;">
+                        🔍 Diagnostiquer les données
+                    </button>
+                </div>
                 <div class="stats-grid">
                     <div class="stat-card blue"><div class="stat-label">Total Produits</div><div class="stat-value">${total}</div></div>
                     <div class="stat-card green"><div class="stat-label">Stock Total</div><div class="stat-value">${stock}</div></div>
@@ -3186,6 +3368,10 @@
                             console.log(`➕ Nouveau produit: ${name} (${reference})`);
                         }
                     });
+
+                    // NETTOYER ET VALIDER LES DONNÉES APRÈS IMPORT
+                    console.log('🧹 Nettoyage des données après import...');
+                    cleanAndValidateProducts();
 
                     save();
                     renderProds();
