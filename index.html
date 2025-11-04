@@ -3811,6 +3811,75 @@ function doLogin() {
             currentSupabaseUser = result.data; // IMPORTANT: pour que save() fonctionne
             useSupabase = true;
             
+            console.log('=============================================');
+            console.log('✅ CONNEXION TABLE USERS RÉUSSIE (ancien système)');
+            console.log('   Username:', currentUser.username);
+            console.log('=============================================');
+            
+            // ⭐ SAUVEGARDER SESSION DANS localStorage (30 JOURS) ⭐
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 30);
+            
+            const userSession = {
+                id: currentUser.id,
+                username: currentUser.username,
+                fullName: currentUser.full_name || currentUser.username,
+                email: currentUser.email || currentUser.username + '@local',
+                role: currentUser.role || 'user',
+                createdAt: new Date().toISOString(),
+                expiresAt: expiresAt.toISOString(),
+                authType: 'table-users'
+            };
+            
+            console.log('💾 💾 💾 SAUVEGARDE SESSION (ancien système)...');
+            console.log('   Données:', JSON.stringify(userSession, null, 2));
+            
+            try {
+                // TENTATIVE 1
+                localStorage.setItem('currentUser', JSON.stringify(userSession));
+                console.log('✅ Tentative 1: localStorage.setItem() EXÉCUTÉ');
+                
+                // VÉRIFICATION 1
+                const verif1 = localStorage.getItem('currentUser');
+                if (verif1) {
+                    console.log('✅ Vérification 1: SESSION TROUVÉE !');
+                    console.log('   Contenu:', verif1.substring(0, 100) + '...');
+                    
+                    // VÉRIFICATION 2 (après 100ms)
+                    setTimeout(function() {
+                        const verif2 = localStorage.getItem('currentUser');
+                        if (verif2) {
+                            console.log('✅✅ Vérification 2 (100ms): SESSION TOUJOURS LÀ !');
+                        } else {
+                            console.error('❌❌ Vérification 2: SESSION DISPARUE !');
+                            alert('⚠️ ALERTE !\n\nLa session a été effacée après 100ms !\n\nUne extension bloque localStorage !');
+                        }
+                    }, 100);
+                    
+                    // VÉRIFICATION 3 (après 500ms)
+                    setTimeout(function() {
+                        const verif3 = localStorage.getItem('currentUser');
+                        if (verif3) {
+                            console.log('✅✅✅ Vérification 3 (500ms): SESSION TOUJOURS LÀ !');
+                            console.log('🎉🎉🎉 SESSION SAUVEGARDÉE AVEC SUCCÈS !');
+                        } else {
+                            console.error('❌❌❌ Vérification 3: SESSION DISPARUE !');
+                            alert('⚠️ ALERTE !\n\nLa session a été effacée après 500ms !\n\nUne extension ou paramètre efface localStorage !');
+                        }
+                    }, 500);
+                } else {
+                    console.error('❌❌❌ Vérification 1 ÉCHOUÉE ! localStorage VIDE !');
+                    alert('🚨 ERREUR CRITIQUE !\n\nlocalStorage.setItem() ne sauvegarde rien !\n\nMode navigation privée activé ?');
+                }
+                
+                console.log('✅ Session sauvegardée (expire dans 30 jours)');
+                console.log('   Expire le:', expiresAt.toLocaleDateString());
+                console.log('=============================================');
+            } catch(e) {
+                console.error('❌❌❌ ERREUR localStorage.setItem():', e);
+                alert('🚨 ERREUR !\n\nlocalStorage BLOQUÉ !\n\nErreur: ' + e.message);
+            }
+            
             // Charger les données depuis Supabase
             loadFromSupabase().then(function() {
                 document.getElementById('loginPage').style.display = 'none';
@@ -3825,6 +3894,23 @@ function doLogin() {
                 renderDash();
                 
                 console.log('✅ Connexion réussie:', currentUser.username);
+                
+                // Notification de session permanente
+                setTimeout(function() {
+                    const notification = document.createElement('div');
+                    notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:20px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.3);z-index:10000;max-width:400px;font-size:14px;';
+                    notification.innerHTML = `
+                        <div style="display:flex;align-items:start;gap:15px;">
+                            <div style="font-size:32px;">✅</div>
+                            <div>
+                                <div style="font-weight:bold;font-size:16px;margin-bottom:8px;">Connexion réussie !</div>
+                                <div>Vous restez connecté pendant 30 jours, même après fermeture du navigateur.</div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(notification);
+                    setTimeout(() => notification.remove(), 5000);
+                }, 500);
             });
         })
         .catch(function(err) {
