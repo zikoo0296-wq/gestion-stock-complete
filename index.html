@@ -451,10 +451,258 @@
         .badge-success { background: #d1fae5; color: #065f46; }
         .badge-danger { background: #fee2e2; color: #991b1b; }
         .badge-warning { background: #fef3c7; color: #92400e; }
+        
+        /* ========== RESPONSIVE MOBILE ========== */
+        
+        /* Bouton hamburger menu */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1001;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .mobile-menu-btn span {
+            display: block;
+            width: 25px;
+            height: 3px;
+            background: white;
+            margin: 5px 0;
+            border-radius: 2px;
+            transition: 0.3s;
+        }
+        .mobile-menu-btn.active span:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+        .mobile-menu-btn.active span:nth-child(2) {
+            opacity: 0;
+        }
+        .mobile-menu-btn.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+        
+        /* Overlay mobile */
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        .mobile-overlay.show {
+            display: block;
+        }
+        
+        /* Tablettes (768px - 1024px) */
+        @media screen and (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+            }
+            .main-content {
+                margin-left: 240px;
+                padding: 20px;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .form-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        /* Mobile (moins de 768px) */
+        @media screen and (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .sidebar {
+                transform: translateX(-100%);
+                width: 280px;
+                transition: transform 0.3s ease;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 70px 15px 15px 15px;
+            }
+            
+            .top-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .page-title {
+                font-size: 1.5rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .stat-card {
+                padding: 16px;
+            }
+            .stat-value {
+                font-size: 1.6rem;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .card-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 15px;
+            }
+            
+            .card-body {
+                padding: 15px;
+            }
+            
+            .btn {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+                width: 100%;
+                text-align: center;
+            }
+            
+            /* Tableau responsive */
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            table {
+                min-width: 600px;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+                font-size: 0.85rem;
+            }
+            
+            .btn-edit, .btn-delete {
+                padding: 8px 10px;
+                font-size: 0.8rem;
+            }
+            
+            /* Modals responsive */
+            .modal-content {
+                width: 95% !important;
+                max-width: 95% !important;
+                margin: 10px auto !important;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+            
+            /* Custom select responsive */
+            .custom-select-dropdown {
+                max-height: 250px;
+            }
+            
+            /* Login responsive */
+            #loginScreen > div {
+                width: 95% !important;
+                max-width: 400px !important;
+                margin: 20px !important;
+                padding: 25px !important;
+            }
+            
+            /* Images produits */
+            .product-img {
+                width: 40px !important;
+                height: 40px !important;
+            }
+            
+            /* Recherche */
+            .search-input {
+                font-size: 16px; /* Évite le zoom sur iOS */
+            }
+            
+            .form-input, .form-select {
+                font-size: 16px; /* Évite le zoom sur iOS */
+            }
+        }
+        
+        /* Petits mobiles (moins de 480px) */
+        @media screen and (max-width: 480px) {
+            .main-content {
+                padding: 65px 10px 10px 10px;
+            }
+            
+            .page-title {
+                font-size: 1.3rem;
+            }
+            
+            .stat-card {
+                padding: 12px;
+            }
+            .stat-label {
+                font-size: 0.8rem;
+            }
+            .stat-value {
+                font-size: 1.4rem;
+            }
+            
+            .card-title {
+                font-size: 1rem;
+            }
+            
+            .logo-text {
+                font-size: 1.3rem;
+            }
+            
+            .nav-item {
+                padding: 12px 15px;
+                font-size: 0.95rem;
+            }
+            
+            .user-avatar {
+                width: 45px;
+                height: 45px;
+            }
+            
+            .user-name {
+                font-size: 0.95rem;
+            }
+            .user-email {
+                font-size: 0.75rem;
+            }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+    <!-- Script de fallback pour afficher login si le chargement prend trop de temps -->
+    <script>
+        // Fallback: afficher la page de login après 1 seconde maximum
+        setTimeout(function() {
+            var loader = document.getElementById('initialLoader');
+            var login = document.getElementById('loginPage');
+            if (loader && loader.style.display !== 'none') {
+                console.log('⚠️ Fallback: affichage forcé de la page de login');
+                loader.style.display = 'none';
+                if (login) login.style.display = 'flex';
+            }
+        }, 1000);
+    </script>
     <!-- LOADER INITIAL -->
     <div id="initialLoader" style="display:flex;justify-content:center;align-items:center;min-height:100vh;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
         <div style="text-align:center;">
@@ -508,6 +756,17 @@
 
     <!-- APPLICATION PRINCIPALE -->
     <div id="mainApp" style="display:none;">
+    
+    <!-- Bouton Menu Mobile -->
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+    
+    <!-- Overlay Mobile -->
+    <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+    
     <div class="sidebar">
         <div class="sidebar-header">
             <div class="logo">
@@ -519,7 +778,7 @@
             <div class="user-avatar">👤</div>
             <div>
                 <div class="user-name" id="user-name">Utilisateur</div>
-                <div class="user-email" id="user-email">user@example.com</div>
+                <div class="user-email" id="user-email">email@exemple.com</div>
             </div>
         </div>
         <nav>
@@ -1068,33 +1327,48 @@
         let currentSupabaseUser = null;
         let useSupabase = false;
         
-        // Initialiser Supabase si disponible
-        if (typeof supabase !== 'undefined') {
-            try {
-                const SUPABASE_URL = 'https://djnaayhhntopupixzitm.supabase.co';
-                const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbmFheWhobnRvcHVwaXh6aXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NzY0NTIsImV4cCI6MjA3NjU1MjQ1Mn0.AzrxJ7h7SNEgn-i8qgdGYPvoEpWdRohX1E8N_Ko_Gc0';
-                
-                const { createClient } = supabase;
-                supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
-                console.log('✅ Supabase initialisé');
-                
-                // DÉSACTIVER l'auto-reconnexion Supabase Auth
-                // On utilise uniquement la table 'users' pour l'authentification
-                // Toujours afficher la page de connexion
-                document.getElementById('initialLoader').style.display = 'none';
-                document.getElementById('loginPage').style.display = 'flex';
-                console.log('✅ Supabase initialisé - Mode table users uniquement');
-            } catch (error) {
-                console.error('Erreur init Supabase:', error);
-                // En cas d'erreur, afficher quand même la page de connexion
-                document.getElementById('initialLoader').style.display = 'none';
-                document.getElementById('loginPage').style.display = 'flex';
+        // Fonction d'initialisation Supabase
+        function initSupabase() {
+            if (typeof supabase !== 'undefined') {
+                try {
+                    const SUPABASE_URL = 'https://djnaayhhntopupixzitm.supabase.co';
+                    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbmFheWhobnRvcHVwaXh6aXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NzY0NTIsImV4cCI6MjA3NjU1MjQ1Mn0.AzrxJ7h7SNEgn-i8qgdGYPvoEpWdRohX1E8N_Ko_Gc0';
+                    
+                    const { createClient } = supabase;
+                    supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+                    console.log('✅ Supabase initialisé');
+                    return true;
+                } catch (error) {
+                    console.error('Erreur init Supabase:', error);
+                    return false;
+                }
             }
-        } else {
-            // Supabase non disponible, afficher la page de connexion
-            document.getElementById('initialLoader').style.display = 'none';
-            document.getElementById('loginPage').style.display = 'flex';
+            return false;
         }
+        
+        // Afficher la page de connexion
+        function showLoginPage() {
+            var loader = document.getElementById('initialLoader');
+            var login = document.getElementById('loginPage');
+            if (loader) loader.style.display = 'none';
+            if (login) login.style.display = 'flex';
+            console.log('✅ Page de connexion affichée');
+        }
+        
+        // Initialisation immédiate au chargement
+        (function() {
+            // Essayer d'initialiser maintenant
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                initSupabase();
+                showLoginPage();
+            } else {
+                // Sinon attendre le chargement
+                window.addEventListener('load', function() {
+                    initSupabase();
+                    showLoginPage();
+                });
+            }
+        })();
         
         // ========== COMPTES UTILISATEURS - MODIFIEZ ICI ==========
         const USERS = [
@@ -2200,11 +2474,35 @@
             }
         }
 
+        // ========== MENU MOBILE ==========
+        function toggleMobileMenu() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.mobile-overlay');
+            const menuBtn = document.querySelector('.mobile-menu-btn');
+            
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+            menuBtn.classList.toggle('active');
+        }
+        
+        function closeMobileMenu() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.mobile-overlay');
+            const menuBtn = document.querySelector('.mobile-menu-btn');
+            
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+            menuBtn.classList.remove('active');
+        }
+        
         function showSection(sec) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.getElementById(sec).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             event.currentTarget.classList.add('active');
+            
+            // Fermer le menu mobile après sélection
+            closeMobileMenu();
 
             if (sec === 'dashboard') renderDash();
             if (sec === 'products') renderProds();
@@ -3913,13 +4211,3 @@ function doLogin() {
                 }, 500);
             });
         })
-        .catch(function(err) {
-            errDiv.style.display = 'block';
-            errDiv.textContent = 'Erreur: ' + err.message;
-            console.error('Erreur catch:', err);
-        });
-}
-
-</script>
-</body>
-</html>
