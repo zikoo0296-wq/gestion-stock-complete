@@ -2092,20 +2092,65 @@
             try {
                 console.log('📥 Chargement depuis Supabase (TOUS les utilisateurs)...');
                 
-                // Charger TOUS les produits (pas de filtre user_id)
-                const { data: prodsData } = await supabaseClient
-                    .from('products')
-                    .select('*');
+                // Charger TOUS les produits (jusqu'à 20000) avec pagination
+                let prodsData = [];
+                let from = 0;
+                const pageSize = 1000;
+                let hasMore = true;
                 
-                // Charger TOUS les PDV (pas de filtre user_id)
-                const { data: pdvData } = await supabaseClient
-                    .from('points_vente')
-                    .select('*');
+                console.log('📦 Chargement des produits...');
+                while (hasMore && prodsData.length < 20000) {
+                    const { data, error } = await supabaseClient
+                        .from('products')
+                        .select('*')
+                        .range(from, from + pageSize - 1)
+                        .order('id', { ascending: true });
+                    
+                    if (error || !data || data.length === 0) break;
+                    
+                    prodsData = prodsData.concat(data);
+                    console.log(`  ✅ ${prodsData.length} produits chargés...`);
+                    from += pageSize;
+                    hasMore = data.length === pageSize;
+                }
                 
-                // Charger TOUS les mouvements (pas de filtre user_id)
-                const { data: movData } = await supabaseClient
-                    .from('movements')
-                    .select('*');
+                // Charger TOUS les PDV (jusqu'à 5000) avec pagination
+                let pdvData = [];
+                let pdvFrom = 0;
+                let pdvHasMore = true;
+                
+                while (pdvHasMore && pdvData.length < 5000) {
+                    const { data, error } = await supabaseClient
+                        .from('points_vente')
+                        .select('*')
+                        .range(pdvFrom, pdvFrom + pageSize - 1);
+                    
+                    if (error || !data || data.length === 0) break;
+                    
+                    pdvData = pdvData.concat(data);
+                    pdvFrom += pageSize;
+                    pdvHasMore = data.length === pageSize;
+                }
+                
+                // Charger TOUS les mouvements (jusqu'à 50000) avec pagination
+                let movData = [];
+                let movFrom = 0;
+                let movHasMore = true;
+                
+                console.log('📦 Chargement des mouvements...');
+                while (movHasMore && movData.length < 50000) {
+                    const { data, error } = await supabaseClient
+                        .from('movements')
+                        .select('*')
+                        .range(movFrom, movFrom + pageSize - 1)
+                        .order('id', { ascending: false });
+                    
+                    if (error || !data || data.length === 0) break;
+                    
+                    movData = movData.concat(data);
+                    movFrom += pageSize;
+                    movHasMore = data.length === pageSize;
+                }
                 
                 console.log('📥 Données reçues - Produits:', prodsData?.length, '| PDV:', pdvData?.length, '| Mouvements:', movData?.length);
                 
