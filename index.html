@@ -453,63 +453,26 @@
         .badge-warning { background: #fef3c7; color: #92400e; }
     
 /* ========================================
-   📱 RESPONSIVE MOBILE - VERSION AMÉLIORÉE
+   📱 RESPONSIVE MOBILE - VERSION SIMPLE
    ======================================== */
 
-/* Bouton hamburger amélioré */
-.mobile-menu-btn {
-    display: none;
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    z-index: 10000;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    border: none;
-    border-radius: 12px;
-    padding: 15px;
-    cursor: pointer;
-    box-shadow: 0 6px 20px rgba(102,126,234,0.5);
-    transition: all 0.3s ease;
-}
-
-.mobile-menu-btn:active {
-    transform: scale(0.95);
-}
-
-.mobile-menu-btn span {
-    display: block;
-    width: 28px;
-    height: 3px;
-    background: white;
-    margin: 6px 0;
-    border-radius: 3px;
-    transition: 0.3s;
-}
-
 @media (max-width: 768px) {
-    /* MONTRER le bouton hamburger */
-    .mobile-menu-btn {
-        display: block !important;
-    }
-    
-    /* SIDEBAR MOBILE */
+    /* SIDEBAR cachée par défaut */
     .sidebar {
         position: fixed;
-        left: -100%;
+        left: -280px;
         top: 0;
-        width: 85%;
-        max-width: 320px;
+        width: 280px;
         height: 100vh;
-        transition: left 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        transition: left 0.3s ease;
         z-index: 9999;
-        box-shadow: 5px 0 30px rgba(0,0,0,0.3);
     }
     
     .sidebar.open {
         left: 0;
     }
     
-    /* Overlay amélioré */
+    /* OVERLAY */
     .sidebar-overlay {
         display: none;
         position: fixed;
@@ -517,375 +480,117 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0,0,0,0.6);
-        backdrop-filter: blur(2px);
+        background: rgba(0,0,0,0.5);
         z-index: 9998;
-        opacity: 0;
-        transition: opacity 0.3s ease;
     }
     
     .sidebar-overlay.active {
         display: block;
-        opacity: 1;
     }
     
-    /* USER PROFILE dans sidebar plus grand */
-    .user-profile {
-        padding: 25px 20px !important;
+    /* BOUTON HAMBURGER */
+    .mobile-menu-btn {
+        display: block !important;
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 10000;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+        border-radius: 8px;
+        padding: 10px;
+        cursor: pointer;
     }
     
-    .user-avatar {
-        width: 70px !important;
-        height: 70px !important;
-        font-size: 2rem !important;
+    .mobile-menu-btn span {
+        display: block;
+        width: 25px;
+        height: 3px;
+        background: white;
+        margin: 4px 0;
+        border-radius: 2px;
     }
     
-    .user-name {
-        font-size: 1.1rem !important;
-        margin-top: 12px !important;
-    }
-    
-    .user-email {
-        font-size: 0.9rem !important;
-    }
-    
-    /* NAV ITEMS plus grands */
-    .nav-item {
-        padding: 18px 20px !important;
-        font-size: 1.05rem !important;
-        margin: 4px 10px !important;
-        border-radius: 12px !important;
-    }
-    
-    .nav-icon {
-        font-size: 1.4rem !important;
-        margin-right: 15px !important;
-    }
-    
-    /* MAIN CONTENT */
+    /* MAIN CONTENT full width */
     .main-content {
         margin-left: 0 !important;
-        padding: 90px 20px 30px 20px !important;
-        width: 100% !important;
+        padding: 70px 10px 10px 10px !important;
     }
     
     /* TOP BAR */
     .top-bar {
         margin-left: 0 !important;
-        padding: 20px 20px 20px 80px !important;
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        z-index: 999 !important;
+        padding-left: 60px !important;
     }
     
-    .page-title {
-        font-size: 1.4rem !important;
-    }
-    
-    /* STATS CARDS - Version CARDS au lieu de grid */
+    /* STATS en colonne */
     .stats-grid {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 20px !important;
+        grid-template-columns: 1fr !important;
     }
     
-    .stat-card {
-        padding: 25px 20px !important;
-        border-radius: 16px !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-    }
-    
-    .stat-icon {
-        font-size: 2.5rem !important;
-        margin-bottom: 10px !important;
-    }
-    
-    .stat-label {
-        font-size: 1rem !important;
-        margin-bottom: 8px !important;
-    }
-    
-    .stat-value {
-        font-size: 2.5rem !important;
-        font-weight: 900 !important;
-    }
-    
-    /* TABLES → CARDS sur mobile */
-    .table-container table {
-        display: none !important;
-    }
-    
-    /* Container pour les cards produits */
-    .mobile-cards-container {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .mobile-product-card {
-        background: white;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    
-    .mobile-product-card .product-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: start;
-        margin-bottom: 15px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #f3f4f6;
-    }
-    
-    .mobile-product-card .product-name {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #1f2937;
-        flex: 1;
-    }
-    
-    .mobile-product-card .product-qty {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        padding: 8px 15px;
-        border-radius: 8px;
-        font-weight: 700;
-        font-size: 1.1rem;
-        margin-left: 10px;
-    }
-    
-    .mobile-product-card .product-info {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        margin-bottom: 15px;
-    }
-    
-    .mobile-product-card .info-item {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .mobile-product-card .info-label {
-        font-size: 0.75rem;
-        color: #6b7280;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 4px;
-    }
-    
-    .mobile-product-card .info-value {
-        font-size: 0.95rem;
-        color: #1f2937;
-        font-weight: 600;
-    }
-    
-    .mobile-product-card .product-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 15px;
-        padding-top: 15px;
-        border-top: 2px solid #f3f4f6;
-    }
-    
-    .mobile-product-card .product-actions button {
-        flex: 1;
-        padding: 12px !important;
-        font-size: 0.9rem !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        border: none !important;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    
-    /* BUTTONS plus grands et touch-friendly */
-    .btn {
-        padding: 14px 24px !important;
-        font-size: 1rem !important;
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-        min-height: 48px !important;
-    }
-    
-    .btn-primary {
-        box-shadow: 0 4px 12px rgba(102,126,234,0.3) !important;
-    }
-    
-    /* FORMS optimisés */
-    .form-input, .form-select, .custom-select-button {
-        font-size: 16px !important;
-        padding: 14px !important;
-        border-radius: 10px !important;
-        border: 2px solid #e5e7eb !important;
-        min-height: 48px !important;
-    }
-    
-    .form-label {
-        font-size: 0.95rem !important;
-        font-weight: 600 !important;
-        margin-bottom: 8px !important;
-        color: #374151 !important;
-    }
-    
-    .form-group {
-        margin-bottom: 20px !important;
-    }
-    
-    /* MODALS plein écran sur mobile */
-    .modal {
-        padding: 10px !important;
-    }
-    
-    .modal-content {
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        max-height: 95vh !important;
-        overflow-y: auto !important;
-        border-radius: 16px !important;
-    }
-    
-    .modal-header {
-        padding: 20px !important;
-        position: sticky !important;
-        top: 0 !important;
-        background: white !important;
-        z-index: 10 !important;
-    }
-    
-    .modal-title {
-        font-size: 1.3rem !important;
-    }
-    
-    .close-btn {
-        width: 40px !important;
-        height: 40px !important;
-        font-size: 1.5rem !important;
-    }
-    
-    /* CARDS */
-    .card {
-        margin-bottom: 20px !important;
-        border-radius: 16px !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-    }
-    
-    .card-header {
-        padding: 20px !important;
-        border-radius: 16px 16px 0 0 !important;
-    }
-    
-    .card-title {
-        font-size: 1.3rem !important;
-    }
-    
-    .card-body {
-        padding: 20px !important;
-    }
-    
-    /* ACTIONS buttons dans cards */
-    .actions {
-        display: flex !important;
-        gap: 10px !important;
-        flex-wrap: wrap !important;
-    }
-    
-    .actions button {
-        flex: 1 1 calc(50% - 5px) !important;
-        min-width: 140px !important;
-        padding: 12px !important;
-        font-size: 0.95rem !important;
-    }
-    
-    /* PAGINATION optimisée */
-    .pagination {
-        flex-wrap: wrap !important;
-        gap: 10px !important;
-        justify-content: center !important;
-    }
-    
-    .pagination button {
-        min-width: 44px !important;
-        min-height: 44px !important;
-        padding: 10px !important;
-        font-size: 1rem !important;
-        border-radius: 10px !important;
-    }
-    
-    /* FILTERS sur mobile */
-    .filters {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 12px !important;
-        margin-bottom: 20px !important;
-    }
-    
-    .filters input,
-    .filters select,
-    .filters button {
-        width: 100% !important;
-        margin: 0 !important;
-    }
-    
-    /* SEARCH BAR */
-    .search-container input {
-        font-size: 16px !important;
-        padding: 14px !important;
-        border-radius: 10px !important;
-    }
-    
-    /* ANIMATIONS douces */
-    * {
-        -webkit-tap-highlight-color: transparent;
-    }
-    
-    button:active {
-        transform: scale(0.97);
-    }
-    
-    /* Scroll smooth */
-    html {
-        scroll-behavior: smooth;
-    }
-    
-    /* Cacher les scrollbars mais garder scroll */
-    .table-container::-webkit-scrollbar,
-    .modal-content::-webkit-scrollbar {
-        width: 4px;
-        height: 4px;
-    }
-    
-    .table-container::-webkit-scrollbar-thumb,
-    .modal-content::-webkit-scrollbar-thumb {
-        background: #d1d5db;
-        border-radius: 10px;
+    /* TABLES scroll horizontal */
+    .table-container {
+        overflow-x: auto;
     }
 }
 
-/* Cacher le bouton hamburger sur desktop */
 .mobile-menu-btn {
     display: none;
 }
 
-    </style>
+
+/* ========================================
+   📷 FIX IMAGES PRODUITS
+   ======================================== */
+
+/* Image dans la table */
+table tbody tr td:first-child img,
+.product-image {
+    width: 50px !important;
+    height: 50px !important;
+    object-fit: cover !important;
+    border-radius: 8px !important;
+    border: 2px solid #e5e7eb !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    background: white !important;
+}
+
+/* Si l'image ne charge pas, cacher l'icône cassée */
+img[src=""], img:not([src]), img[src="undefined"] {
+    display: none !important;
+}
+
+/* Icône par défaut si pas d'image */
+.product-name-cell {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+.product-placeholder {
+    width: 50px !important;
+    height: 50px !important;
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb) !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.5rem !important;
+    border: 2px solid #e5e7eb !important;
+}
+
+</style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-    <!-- BOUTON MENU MOBILE -->
+    <!-- MENU MOBILE -->
     <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
         <span></span>
         <span></span>
         <span></span>
     </button>
-    
-    <!-- OVERLAY MOBILE -->
     <div class="sidebar-overlay" onclick="closeMobileMenu()"></div>
 
     <!-- LOADER INITIAL -->
@@ -2525,29 +2230,25 @@
             try {
                 console.log('📥 Chargement depuis Supabase (TOUS les utilisateurs)...');
                 
-                // Charger TOUS les produits (jusqu'à 20000) avec pagination
+                // Charger TOUS les produits (jusqu'à 20000)
                 let prodsData = [];
                 let from = 0;
                 const pageSize = 1000;
                 let hasMore = true;
                 
-                console.log('📦 Chargement des produits...');
                 while (hasMore && prodsData.length < 20000) {
                     const { data, error } = await supabaseClient
                         .from('products')
                         .select('*')
-                        .range(from, from + pageSize - 1)
-                        .order('id', { ascending: true });
+                        .range(from, from + pageSize - 1);
                     
                     if (error || !data || data.length === 0) break;
-                    
                     prodsData = prodsData.concat(data);
-                    console.log(`  ✅ ${prodsData.length} produits chargés...`);
                     from += pageSize;
                     hasMore = data.length === pageSize;
                 }
                 
-                // Charger TOUS les PDV (jusqu'à 5000) avec pagination
+                // Charger TOUS les PDV
                 let pdvData = [];
                 let pdvFrom = 0;
                 let pdvHasMore = true;
@@ -2559,27 +2260,23 @@
                         .range(pdvFrom, pdvFrom + pageSize - 1);
                     
                     if (error || !data || data.length === 0) break;
-                    
                     pdvData = pdvData.concat(data);
                     pdvFrom += pageSize;
                     pdvHasMore = data.length === pageSize;
                 }
                 
-                // Charger TOUS les mouvements (jusqu'à 50000) avec pagination
+                // Charger TOUS les mouvements
                 let movData = [];
                 let movFrom = 0;
                 let movHasMore = true;
                 
-                console.log('📦 Chargement des mouvements...');
                 while (movHasMore && movData.length < 50000) {
                     const { data, error } = await supabaseClient
                         .from('movements')
                         .select('*')
-                        .range(movFrom, movFrom + pageSize - 1)
-                        .order('id', { ascending: false });
+                        .range(movFrom, movFrom + pageSize - 1);
                     
                     if (error || !data || data.length === 0) break;
-                    
                     movData = movData.concat(data);
                     movFrom += pageSize;
                     movHasMore = data.length === pageSize;
@@ -4399,31 +4096,17 @@ function doLogin() {
 }
 
 
-// ========================================
-// 📱 MENU MOBILE
-// ========================================
-
+// Menu mobile
 function toggleMobileMenu() {
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    
-    if (sidebar && overlay) {
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('active');
-    }
+    document.querySelector('.sidebar').classList.toggle('open');
+    document.querySelector('.sidebar-overlay').classList.toggle('active');
 }
 
 function closeMobileMenu() {
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    
-    if (sidebar && overlay) {
-        sidebar.classList.remove('open');
-        overlay.classList.remove('active');
-    }
+    document.querySelector('.sidebar').classList.remove('open');
+    document.querySelector('.sidebar-overlay').classList.remove('active');
 }
 
-// Fermer le menu quand on clique sur un lien
 document.addEventListener('DOMContentLoaded', function() {
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(function(item) {
@@ -4433,117 +4116,52 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 // ========================================
-// 📱 MOBILE CARDS - Transformer tables en cards
+// 📷 GESTION DES IMAGES PRODUITS
 // ========================================
 
-function isMobile() {
-    return window.innerWidth <= 768;
-}
-
-function createMobileProductCards() {
-    if (!isMobile()) return;
-    
-    const tableContainer = document.querySelector('#products-section .table-container');
-    if (!tableContainer) return;
-    
-    const table = tableContainer.querySelector('table');
-    if (!table) return;
-    
-    const tbody = table.querySelector('tbody');
-    if (!tbody) return;
-    
-    // Créer le container pour les cards
-    let cardsContainer = tableContainer.querySelector('.mobile-cards-container');
-    if (!cardsContainer) {
-        cardsContainer = document.createElement('div');
-        cardsContainer.className = 'mobile-cards-container';
-        tableContainer.appendChild(cardsContainer);
+// Fonction pour afficher l'image ou le placeholder
+function handleProductImage(imageUrl, productName) {
+    if (!imageUrl || imageUrl === '' || imageUrl === 'undefined') {
+        // Pas d'image : retourner placeholder
+        return '<div class="product-placeholder">📦</div>';
     }
     
-    // Vider le container
-    cardsContainer.innerHTML = '';
-    
-    // Extraire les données des rows
-    const rows = tbody.querySelectorAll('tr');
-    
-    rows.forEach(function(row) {
-        const cells = row.querySelectorAll('td');
-        if (cells.length === 0) return;
-        
-        // Extraire les données
-        const name = cells[0]?.textContent.trim() || '';
-        const reference = cells[1]?.textContent.trim() || '';
-        const barcode = cells[2]?.textContent.trim() || '';
-        const quantity = cells[3]?.textContent.trim() || '0';
-        const repetition = cells[4]?.textContent.trim() || '';
-        const category = cells[5]?.textContent.trim() || '';
-        
-        // Récupérer les boutons d'action
-        const actionsCell = cells[6];
-        const buttons = actionsCell ? actionsCell.querySelectorAll('button') : [];
-        
-        // Créer la card
-        const card = document.createElement('div');
-        card.className = 'mobile-product-card';
-        
-        card.innerHTML = `
-            <div class="product-header">
-                <div class="product-name">${name}</div>
-                <div class="product-qty">${quantity}</div>
-            </div>
-            <div class="product-info">
-                <div class="info-item">
-                    <div class="info-label">Référence</div>
-                    <div class="info-value">${reference}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Code-barres</div>
-                    <div class="info-value">${barcode || '-'}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Répétition</div>
-                    <div class="info-value">${repetition || '-'}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Catégorie</div>
-                    <div class="info-value">${category || '-'}</div>
-                </div>
-            </div>
-            <div class="product-actions"></div>
-        `;
-        
-        // Ajouter les boutons d'action
-        const actionsDiv = card.querySelector('.product-actions');
-        buttons.forEach(function(btn) {
-            const newBtn = btn.cloneNode(true);
-            actionsDiv.appendChild(newBtn);
-        });
-        
-        cardsContainer.appendChild(card);
-    });
+    // Image présente : retourner img
+    return '<img src="' + imageUrl + '" alt="' + productName + '" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div class=\"product-placeholder\">📦</div>\'">';
 }
 
-// Appeler createMobileProductCards après chaque rendu
-const originalRenderProds = renderProds;
-renderProds = function() {
-    originalRenderProds();
-    setTimeout(createMobileProductCards, 100);
-};
+// Modifier renderProds pour inclure les images
+const originalRenderProdsForImages = window.renderProds;
+if (originalRenderProdsForImages) {
+    window.renderProds = function() {
+        originalRenderProdsForImages();
+        
+        // Ajouter les images après le rendu
+        setTimeout(function() {
+            const rows = document.querySelectorAll('#prod-body tr');
+            rows.forEach(function(row, index) {
+                if (index >= filtered.length) return;
+                
+                const product = filtered[index];
+                const nameCell = row.querySelector('td:first-child');
+                
+                if (nameCell && product) {
+                    const currentText = nameCell.textContent;
+                    const imageHtml = handleProductImage(product.imageUrl, product.name);
+                    nameCell.innerHTML = '<div class="product-name-cell">' + imageHtml + '<span>' + currentText + '</span></div>';
+                }
+            });
+        }, 50);
+    };
+}
 
-// Appeler au resize
-let resizeTimer;
-window.addEventListener('resize', function() {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function() {
-        if (isMobile()) {
-            createMobileProductCards();
+// Fix images au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        if (window.renderProds) {
+            window.renderProds();
         }
-    }, 250);
-});
-
-// Appeler au chargement initial
-window.addEventListener('load', function() {
-    setTimeout(createMobileProductCards, 500);
+    }, 1000);
 });
 
 </script>
