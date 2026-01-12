@@ -464,195 +464,52 @@ table thead th:nth-child(4) {
     font-weight: 700 !important;
 }
 
-
-
-/* 📱 RESPONSIVE MOBILE AMÉLIORÉ */
+/* 📱 RESPONSIVE MOBILE */
 @media (max-width: 768px) {
-    /* SIDEBAR */
-    .sidebar { 
-        position: fixed; 
-        left: -280px; 
-        transition: left 0.3s ease; 
-        z-index: 9999;
-        width: 280px !important;
-    }
+    .sidebar { position: fixed; left: -280px; transition: left 0.3s ease; z-index: 9999; width: 280px !important; }
     .sidebar.open { left: 0; }
-    
-    /* OVERLAY */
-    .sidebar-overlay { 
-        display: none; 
-        position: fixed; 
-        top: 0; 
-        left: 0; 
-        width: 100%; 
-        height: 100%; 
-        background: rgba(0,0,0,0.5); 
-        z-index: 9998; 
-    }
+    .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9998; }
     .sidebar-overlay.active { display: block; }
-    
-    /* HAMBURGER */
-    .mobile-menu-btn { 
-        display: block !important; 
-        position: fixed; 
-        top: 15px; 
-        left: 15px; 
-        z-index: 10000; 
-        background: linear-gradient(135deg, #667eea, #764ba2); 
-        border: none; 
-        border-radius: 8px; 
-        padding: 10px; 
-        cursor: pointer; 
-    }
-    .mobile-menu-btn span { 
-        display: block; 
-        width: 25px; 
-        height: 3px; 
-        background: white; 
-        margin: 4px 0; 
-        border-radius: 2px; 
-    }
-    
-    /* MAIN CONTENT */
-    .main-content { 
-        margin-left: 0 !important; 
-        padding: 15px !important;
-        padding-top: 70px !important;
+    .mobile-menu-btn { display: block !important; position: fixed; top: 15px; left: 15px; z-index: 10000; background: linear-gradient(135deg, #667eea, #764ba2); border: none; border-radius: 8px; padding: 10px; cursor: pointer; }
+    .mobile-menu-btn span { display: block; width: 25px; height: 3px; background: white; margin: 4px 0; border-radius: 2px; }
+    .main-content { margin-left: 0 !important; padding: 15px !important; padding-top: 70px !important; width: 100% !important; max-width: 100vw !important; overflow-x: hidden !important; }
+    .top-bar { margin-left: 0 !important; padding: 15px !important; padding-left: 60px !important; width: 100% !important; box-sizing: border-box !important; }
+    .card { margin: 0 !important; width: 100% !important; box-sizing: border-box !important; }
+    .card-header { flex-direction: column !important; gap: 10px !important; }
+    .card-title { font-size: 1.2rem !important; text-align: center; }
+    .actions { display: flex !important; flex-direction: column !important; gap: 8px !important; width: 100% !important; }
+    .actions button { width: 100% !important; margin: 0 !important; font-size: 0.9rem !important; }
+    .stats-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+    #prod-search, input[type="text"], input[type="search"] { width: 100% !important; box-sizing: border-box !important; font-size: 16px !important; padding: 12px !important; margin-bottom: 10px !important; }
+    .table-container { overflow-x: auto !important; width: 100% !important; -webkit-overflow-scrolling: touch !important; }
+    table { min-width: 100% !important; font-size: 0.85rem !important; }
+    table th, table td { padding: 8px 4px !important; font-size: 0.85rem !important; }
+    table img { width: 40px !important; height: 40px !important; }
+    table button { padding: 6px !important; font-size: 1rem !important; min-width: 35px !important; }
+    .pagination { flex-wrap: wrap !important; justify-content: center !important; gap: 5px !important; }
+    .pagination button { padding: 8px 12px !important; font-size: 0.9rem !important; }
+    .modal-content { width: 95% !important; max-width: 95% !important; margin: 10px !important; max-height: 90vh !important; overflow-y: auto !important; }
+    .form-input, .form-select { font-size: 16px !important; width: 100% !important; box-sizing: border-box !important; }
+    * { max-width: 100vw !important; }
+    body { overflow-x: hidden !important; }
+}
+
+/* 🔍 BARRE DE RECHERCHE VISIBLE SUR MOBILE */
+@media (max-width: 768px) {
+    #prod-search {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
         width: 100% !important;
-        max-width: 100vw !important;
-        overflow-x: hidden !important;
+        margin-bottom: 15px !important;
     }
     
-    /* TOP BAR */
-    .top-bar { 
-        margin-left: 0 !important; 
-        padding: 15px !important;
-        padding-left: 60px !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
-    
-    /* CARDS */
-    .card {
-        margin: 0 !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
-    
-    .card-header {
-        flex-direction: column !important;
-        gap: 10px !important;
-    }
-    
-    .card-title {
-        font-size: 1.2rem !important;
-        text-align: center;
-    }
-    
-    /* ACTIONS BUTTONS */
-    .actions {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 8px !important;
-        width: 100% !important;
-    }
-    
-    .actions button {
-        width: 100% !important;
-        margin: 0 !important;
-        font-size: 0.9rem !important;
-    }
-    
-    /* STATS GRID */
-    .stats-grid { 
-        grid-template-columns: 1fr !important;
-        gap: 10px !important;
-    }
-    
-    /* SEARCH INPUT */
-    #prod-search, 
-    input[type="text"],
-    input[type="search"] {
-        width: 100% !important;
-        box-sizing: border-box !important;
-        font-size: 16px !important;
-        padding: 12px !important;
-        margin-bottom: 10px !important;
-    }
-    
-    /* TABLE CONTAINER */
-    .table-container { 
-        overflow-x: auto !important;
-        width: 100% !important;
-        -webkit-overflow-scrolling: touch !important;
-    }
-    
-    /* TABLE */
-    table {
-        min-width: 100% !important;
-        font-size: 0.85rem !important;
-    }
-    
-    table th,
-    table td {
-        padding: 8px 4px !important;
-        font-size: 0.85rem !important;
-    }
-    
-    /* IMAGES PLUS PETITES */
-    table img {
-        width: 40px !important;
-        height: 40px !important;
-    }
-    
-    /* BUTTONS DANS TABLE */
-    table button {
-        padding: 6px !important;
-        font-size: 1rem !important;
-        min-width: 35px !important;
-    }
-    
-    /* PAGINATION */
-    .pagination {
-        flex-wrap: wrap !important;
-        justify-content: center !important;
-        gap: 5px !important;
-    }
-    
-    .pagination button {
-        padding: 8px 12px !important;
-        font-size: 0.9rem !important;
-    }
-    
-    /* MODALS */
-    .modal-content {
-        width: 95% !important;
-        max-width: 95% !important;
-        margin: 10px !important;
-        max-height: 90vh !important;
-        overflow-y: auto !important;
-    }
-    
-    /* FORMS */
-    .form-input,
-    .form-select {
-        font-size: 16px !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
-    
-    /* FIX WIDTH */
-    * {
-        max-width: 100vw !important;
-    }
-    
-    body {
-        overflow-x: hidden !important;
+    .card-body > #prod-search {
+        order: -1 !important;
     }
 }
 
 .mobile-menu-btn { display: none; }
-
 
 </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1314,41 +1171,40 @@ table thead th:nth-child(4) {
         // ========== FONCTION DE CONVERSION URL GOOGLE DRIVE ==========
         function convertGoogleDriveUrl(url) {
             if (!url) return '';
-            
             url = url.toString().trim();
             
-            // Si c'est déjà au bon format thumbnail, retourner tel quel
-            if (url.includes('drive.google.com/thumbnail')) {
+            // Si c'est déjà une URL directe (pas Google Drive), retourner tel quel
+            if (!url.includes('drive.google.com')) {
                 return url;
             }
             
-            // Extraire l'ID du lien Google Drive
+            // Extraire l'ID Google Drive
             let fileId = '';
             
-            // Format: https://drive.google.com/file/d/ID/view
-            if (url.includes('/file/d/')) {
-                const match = url.match(/\/file\/d\/([^\/]+)/);
+            // Format 1: /file/d/ID/
+            let match = url.match(/\/file\/d\/([^\/\?]+)/);
+            if (match) fileId = match[1];
+            
+            // Format 2: ?id=ID ou &id=ID
+            if (!fileId) {
+                match = url.match(/[?&]id=([^&]+)/);
                 if (match) fileId = match[1];
             }
             
-            // Format: https://drive.google.com/open?id=ID
-            else if (url.includes('open?id=')) {
-                const match = url.match(/open\?id=([^&]+)/);
+            // Format 3: /thumbnail?id=ID
+            if (!fileId) {
+                match = url.match(/thumbnail\?id=([^&]+)/);
                 if (match) fileId = match[1];
             }
             
-            // Format: https://drive.google.com/uc?export=view&id=ID ou id=ID&export=view
-            else if (url.includes('drive.google.com') && url.includes('id=')) {
-                const match = url.match(/[?&]id=([^&]+)/);
-                if (match) fileId = match[1];
-            }
-            
-            // Si on a trouvé un ID, retourner l'URL directe
+            // Si ID trouvé, retourner format thumbnail
             if (fileId) {
-                return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
+                // Nettoyer l'ID (enlever caractères bizarres)
+                fileId = fileId.replace(/[^a-zA-Z0-9_-]/g, '');
+                return `https://lh3.googleusercontent.com/d/${fileId}=w400`;
             }
             
-            // Sinon retourner l'URL originale
+            // Fallback: retourner URL originale
             return url;
         }
         
