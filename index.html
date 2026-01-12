@@ -452,145 +452,39 @@
         .badge-danger { background: #fee2e2; color: #991b1b; }
         .badge-warning { background: #fef3c7; color: #92400e; }
     
-/* ========================================
-   📱 RESPONSIVE MOBILE - VERSION SIMPLE
-   ======================================== */
+/* 📊 Stock Total un peu plus grand */
+table tbody tr td:nth-child(4) span.badge {
+    font-size: 1.3rem !important;
+    font-weight: 700 !important;
+    padding: 6px 14px !important;
+}
+table thead th:nth-child(4) {
+    text-align: center !important;
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+}
 
+
+/* 📱 RESPONSIVE MOBILE */
 @media (max-width: 768px) {
-    /* SIDEBAR cachée par défaut */
-    .sidebar {
-        position: fixed;
-        left: -280px;
-        top: 0;
-        width: 280px;
-        height: 100vh;
-        transition: left 0.3s ease;
-        z-index: 9999;
-    }
-    
-    .sidebar.open {
-        left: 0;
-    }
-    
-    /* OVERLAY */
-    .sidebar-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        z-index: 9998;
-    }
-    
-    .sidebar-overlay.active {
-        display: block;
-    }
-    
-    /* BOUTON HAMBURGER */
-    .mobile-menu-btn {
-        display: block !important;
-        position: fixed;
-        top: 15px;
-        left: 15px;
-        z-index: 10000;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        border: none;
-        border-radius: 8px;
-        padding: 10px;
-        cursor: pointer;
-    }
-    
-    .mobile-menu-btn span {
-        display: block;
-        width: 25px;
-        height: 3px;
-        background: white;
-        margin: 4px 0;
-        border-radius: 2px;
-    }
-    
-    /* MAIN CONTENT full width */
-    .main-content {
-        margin-left: 0 !important;
-        padding: 70px 10px 10px 10px !important;
-    }
-    
-    /* TOP BAR */
-    .top-bar {
-        margin-left: 0 !important;
-        padding-left: 60px !important;
-    }
-    
-    /* STATS en colonne */
-    .stats-grid {
-        grid-template-columns: 1fr !important;
-    }
-    
-    /* TABLES scroll horizontal */
-    .table-container {
-        overflow-x: auto;
-    }
+    .sidebar { position: fixed; left: -280px; transition: left 0.3s ease; z-index: 9999; }
+    .sidebar.open { left: 0; }
+    .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9998; }
+    .sidebar-overlay.active { display: block; }
+    .mobile-menu-btn { display: block !important; position: fixed; top: 15px; left: 15px; z-index: 10000; background: linear-gradient(135deg, #667eea, #764ba2); border: none; border-radius: 8px; padding: 10px; cursor: pointer; }
+    .mobile-menu-btn span { display: block; width: 25px; height: 3px; background: white; margin: 4px 0; border-radius: 2px; }
+    .main-content { margin-left: 0 !important; padding: 70px 10px 10px 10px !important; }
+    .top-bar { margin-left: 0 !important; padding-left: 60px !important; }
+    .stats-grid { grid-template-columns: 1fr !important; }
+    .table-container { overflow-x: auto; }
 }
-
-.mobile-menu-btn {
-    display: none;
-}
-
-
-/* ========================================
-   📷 FIX IMAGES PRODUITS
-   ======================================== */
-
-/* Image dans la table */
-table tbody tr td:first-child img,
-.product-image {
-    width: 50px !important;
-    height: 50px !important;
-    object-fit: cover !important;
-    border-radius: 8px !important;
-    border: 2px solid #e5e7eb !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
-    background: white !important;
-}
-
-/* Si l'image ne charge pas, cacher l'icône cassée */
-img[src=""], img:not([src]), img[src="undefined"] {
-    display: none !important;
-}
-
-/* Icône par défaut si pas d'image */
-.product-name-cell {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-}
-
-.product-placeholder {
-    width: 50px !important;
-    height: 50px !important;
-    background: linear-gradient(135deg, #f3f4f6, #e5e7eb) !important;
-    border-radius: 8px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 1.5rem !important;
-    border: 2px solid #e5e7eb !important;
-}
+.mobile-menu-btn { display: none; }
 
 </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-
-    <!-- MENU MOBILE -->
-    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
-        <span></span>
-        <span></span>
-        <span></span>
-    </button>
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><span></span><span></span><span></span></button>
     <div class="sidebar-overlay" onclick="closeMobileMenu()"></div>
 
     <!-- LOADER INITIAL -->
@@ -730,9 +624,9 @@ img[src=""], img:not([src]), img[src="undefined"] {
                                     <th style="width:40px;"><input type="checkbox" id="select-all-checkbox" onchange="toggleAllProducts(this.checked)"></th>
                                     <th>Image</th>
                                     <th>Nom</th>
+                                    <th>Stock Total</th>
                                     <th>Référence</th>
                                     <th>Barcode</th>
-                                    <th>Stock Total</th>
                                     <th>Répétition</th>
                                     <th>Actions</th>
                                 </tr>
@@ -2552,9 +2446,9 @@ img[src=""], img:not([src]), img[src="undefined"] {
                     <td style="text-align:center;"><input type="checkbox" class="product-checkbox" data-product-id="${p.id}"></td>
                     <td style="text-align:center;">${imgHtml}</td>
                     <td><strong>${p.name}</strong></td>
+                    <td style="text-align:center;"><span class="badge badge-success">${totalStock}</span></td>
                     <td>${p.reference}</td>
                     <td>${p.barcode || '-'}</td>
-                    <td><span class="badge badge-success">${totalStock}</span></td>
                     <td>${p.repetition || '-'}</td>
                     <td>
                         <button onclick="editProduct('${p.id}')" class="btn-edit">✏️</button>
@@ -4096,72 +3990,18 @@ function doLogin() {
 }
 
 
-// Menu mobile
 function toggleMobileMenu() {
     document.querySelector('.sidebar').classList.toggle('open');
     document.querySelector('.sidebar-overlay').classList.toggle('active');
 }
-
 function closeMobileMenu() {
     document.querySelector('.sidebar').classList.remove('open');
     document.querySelector('.sidebar-overlay').classList.remove('active');
 }
-
 document.addEventListener('DOMContentLoaded', function() {
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(function(item) {
+    document.querySelectorAll('.nav-item').forEach(function(item) {
         item.addEventListener('click', closeMobileMenu);
     });
-});
-
-
-// ========================================
-// 📷 GESTION DES IMAGES PRODUITS
-// ========================================
-
-// Fonction pour afficher l'image ou le placeholder
-function handleProductImage(imageUrl, productName) {
-    if (!imageUrl || imageUrl === '' || imageUrl === 'undefined') {
-        // Pas d'image : retourner placeholder
-        return '<div class="product-placeholder">📦</div>';
-    }
-    
-    // Image présente : retourner img
-    return '<img src="' + imageUrl + '" alt="' + productName + '" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div class=\"product-placeholder\">📦</div>\'">';
-}
-
-// Modifier renderProds pour inclure les images
-const originalRenderProdsForImages = window.renderProds;
-if (originalRenderProdsForImages) {
-    window.renderProds = function() {
-        originalRenderProdsForImages();
-        
-        // Ajouter les images après le rendu
-        setTimeout(function() {
-            const rows = document.querySelectorAll('#prod-body tr');
-            rows.forEach(function(row, index) {
-                if (index >= filtered.length) return;
-                
-                const product = filtered[index];
-                const nameCell = row.querySelector('td:first-child');
-                
-                if (nameCell && product) {
-                    const currentText = nameCell.textContent;
-                    const imageHtml = handleProductImage(product.imageUrl, product.name);
-                    nameCell.innerHTML = '<div class="product-name-cell">' + imageHtml + '<span>' + currentText + '</span></div>';
-                }
-            });
-        }, 50);
-    };
-}
-
-// Fix images au chargement
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-        if (window.renderProds) {
-            window.renderProds();
-        }
-    }, 1000);
 });
 
 </script>
