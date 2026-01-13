@@ -523,46 +523,7 @@ table thead th:nth-child(4) {
     }
 }
 
-/* 🔍 FIX RECHERCHE MOBILE */
-@media (max-width: 768px) {
-    #prod-search {
-        height: 45px !important;
-        line-height: normal !important;
-        padding: 12px 15px !important;
-        font-size: 16px !important;
-        background-color: #ffffff !important;
-        border: 2px solid #d1d5db !important;
-        border-radius: 8px !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        color: #1f2937 !important;
-        -webkit-text-fill-color: #1f2937 !important;
-    }
-    
-    #prod-search::placeholder {
-        color: #9ca3af !important;
-        opacity: 1 !important;
-    }
-    
-    /* S'assurer que le tbody est visible */
-    #prod-body {
-        display: table-row-group !important;
-        visibility: visible !important;
-    }
-    
-    /* Fix table */
-    table tbody tr {
-        display: table-row !important;
-    }
-    
-    table tbody tr td {
-        display: table-cell !important;
-        visibility: visible !important;
-    }
-}
+
 
 
 /* 🖼️ IMAGES PRODUITS DANS FORMULAIRES */
@@ -581,6 +542,115 @@ table thead th:nth-child(4) {
     #trans-product-image {
         width: 100% !important;
         grid-column: 1 / -1 !important;
+    }
+}
+
+
+/* ========================================
+   🔍 RECHERCHE MOBILE - FIX COMPLET
+   ======================================== */
+@media (max-width: 768px) {
+    /* BARRE DE RECHERCHE */
+    #prod-search {
+        display: block !important;
+        width: 100% !important;
+        height: 50px !important;
+        min-height: 50px !important;
+        padding: 14px 16px !important;
+        font-size: 16px !important;
+        line-height: 22px !important;
+        
+        /* Couleurs */
+        background: #ffffff !important;
+        color: #000000 !important;
+        border: 3px solid #3b82f6 !important;
+        border-radius: 10px !important;
+        
+        /* Fix iOS */
+        -webkit-appearance: none !important;
+        -webkit-text-fill-color: #000000 !important;
+        opacity: 1 !important;
+        
+        /* Box model */
+        box-sizing: border-box !important;
+        margin: 0 0 20px 0 !important;
+        
+        /* Position */
+        position: relative !important;
+        z-index: 10 !important;
+    }
+    
+    #prod-search:focus {
+        outline: none !important;
+        border-color: #2563eb !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    }
+    
+    #prod-search::placeholder {
+        color: #6b7280 !important;
+        opacity: 1 !important;
+        font-size: 16px !important;
+    }
+    
+    /* CONTAINER DE RECHERCHE */
+    .card-body {
+        padding: 15px !important;
+    }
+    
+    /* TABLE RESPONSIVE */
+    .table-container {
+        width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        display: block !important;
+    }
+    
+    /* TABLE */
+    table {
+        width: 100% !important;
+        display: table !important;
+        border-collapse: collapse !important;
+    }
+    
+    table thead {
+        display: table-header-group !important;
+    }
+    
+    table tbody {
+        display: table-row-group !important;
+    }
+    
+    table tr {
+        display: table-row !important;
+    }
+    
+    table th,
+    table td {
+        display: table-cell !important;
+        padding: 10px 6px !important;
+        font-size: 13px !important;
+        vertical-align: middle !important;
+    }
+    
+    /* FORCER AFFICHAGE */
+    #prod-body,
+    #prod-body tr,
+    #prod-body td {
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* IMAGES DANS TABLE */
+    table img {
+        width: 45px !important;
+        height: 45px !important;
+        display: block !important;
+    }
+    
+    /* PAGINATION */
+    #products-pagination {
+        margin-top: 20px !important;
+        text-align: center !important;
     }
 }
 
