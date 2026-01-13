@@ -464,6 +464,20 @@ table thead th:nth-child(4) {
     font-weight: 700 !important;
 }
 
+/* 🔍 BARRE DE RECHERCHE VISIBLE SUR MOBILE */
+@media (max-width: 768px) {
+    #prod-search {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 100% !important;
+        margin-bottom: 15px !important;
+    }
+    .card-body > #prod-search {
+        order: -1 !important;
+    }
+}
+
 /* 📱 RESPONSIVE MOBILE */
 @media (max-width: 768px) {
     .sidebar { position: fixed; left: -280px; transition: left 0.3s ease; z-index: 9999; width: 280px !important; }
@@ -490,22 +504,83 @@ table thead th:nth-child(4) {
     .pagination button { padding: 8px 12px !important; font-size: 0.9rem !important; }
     .modal-content { width: 95% !important; max-width: 95% !important; margin: 10px !important; max-height: 90vh !important; overflow-y: auto !important; }
     .form-input, .form-select { font-size: 16px !important; width: 100% !important; box-sizing: border-box !important; }
-    * { max-width: 100vw !important; }
+    body, .main-content, .card { max-width: 100vw !important; }
     body { overflow-x: hidden !important; }
+    
+    /* Fix input recherche */
+    #prod-search {
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        background: white !important;
+        color: #000 !important;
+        border: 2px solid #e5e7eb !important;
+    }
+    
+    /* Fix affichage texte */
+    input, textarea, select {
+        -webkit-text-size-adjust: 100% !important;
+        color: #000 !important;
+    }
 }
 
-/* 🔍 BARRE DE RECHERCHE VISIBLE SUR MOBILE */
+/* 🔍 FIX RECHERCHE MOBILE */
 @media (max-width: 768px) {
     #prod-search {
+        height: 45px !important;
+        line-height: normal !important;
+        padding: 12px 15px !important;
+        font-size: 16px !important;
+        background-color: #ffffff !important;
+        border: 2px solid #d1d5db !important;
+        border-radius: 8px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
         display: block !important;
         visibility: visible !important;
         opacity: 1 !important;
-        width: 100% !important;
-        margin-bottom: 15px !important;
+        color: #1f2937 !important;
+        -webkit-text-fill-color: #1f2937 !important;
     }
     
-    .card-body > #prod-search {
-        order: -1 !important;
+    #prod-search::placeholder {
+        color: #9ca3af !important;
+        opacity: 1 !important;
+    }
+    
+    /* S'assurer que le tbody est visible */
+    #prod-body {
+        display: table-row-group !important;
+        visibility: visible !important;
+    }
+    
+    /* Fix table */
+    table tbody tr {
+        display: table-row !important;
+    }
+    
+    table tbody tr td {
+        display: table-cell !important;
+        visibility: visible !important;
+    }
+}
+
+
+/* 🖼️ IMAGES PRODUITS DANS FORMULAIRES */
+#mov-product-image,
+#mov-entry-product-image,
+#trans-product-image {
+    padding: 15px;
+    background: #f9fafb;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+@media (max-width: 768px) {
+    #mov-product-image,
+    #mov-entry-product-image,
+    #trans-product-image {
+        width: 100% !important;
+        grid-column: 1 / -1 !important;
     }
 }
 
@@ -708,6 +783,12 @@ table thead th:nth-child(4) {
                                 </div>
                             </div>
                             
+                            <!-- Image produit sélectionné (Entrée) -->
+                            <div id="mov-entry-product-image" style="display:none;margin-top:15px;text-align:center;grid-column:1/-1;">
+                                <img id="mov-entry-img" src="" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:3px solid #10b981;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                                <p style="margin-top:8px;font-weight:600;color:#059669;">✓ Produit sélectionné</p>
+                            </div>
+                            
                             <!-- POUR NOUVEAU PRODUIT: Champs Référence + Nom -->
                             <div class="form-group" id="mov-new-reference-group" style="display:none;">
                                 <label class="form-label">Référence *</label>
@@ -717,6 +798,12 @@ table thead th:nth-child(4) {
                             <div class="form-group" id="mov-new-name-group" style="display:none;">
                                 <label class="form-label">Nom du produit *</label>
                                 <input type="text" id="mov-new-name" class="form-input" placeholder="Ex: Coca Cola 1L">
+                            </div>
+                            
+                            <!-- Image produit sélectionné (Sortie) -->
+                            <div id="mov-product-image" style="display:none;margin-top:15px;text-align:center;grid-column:1/-1;">
+                                <img id="mov-img" src="" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:3px solid #10b981;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                                <p style="margin-top:8px;font-weight:600;color:#059669;">✓ Produit sélectionné</p>
                             </div>
                             
                             <!-- POUR SORTIE: Sélecteur produit -->
@@ -799,6 +886,13 @@ table thead th:nth-child(4) {
                                     <input type="hidden" id="trans-product" required>
                                 </div>
                             </div>
+                            
+                            <!-- Image produit sélectionné (Transfert) -->
+                            <div id="trans-product-image" style="display:none;margin-top:15px;text-align:center;grid-column:1/-1;padding:15px;background:#f9fafb;border-radius:8px;">
+                                <img id="trans-img" src="" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:3px solid #f59e0b;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                                <p style="margin-top:8px;font-weight:600;color:#d97706;">✓ Produit sélectionné</p>
+                            </div>
+                            
                             <div class="form-group">
                                 <label class="form-label">De (Source) *</label>
                                 <select id="trans-from" class="form-select" required>
@@ -1172,39 +1266,18 @@ table thead th:nth-child(4) {
         function convertGoogleDriveUrl(url) {
             if (!url) return '';
             url = url.toString().trim();
-            
-            // Si c'est déjà une URL directe (pas Google Drive), retourner tel quel
-            if (!url.includes('drive.google.com')) {
-                return url;
-            }
-            
-            // Extraire l'ID Google Drive
+            if (!url.includes('drive.google.com')) return url;
             let fileId = '';
-            
-            // Format 1: /file/d/ID/
             let match = url.match(/\/file\/d\/([^\/\?]+)/);
             if (match) fileId = match[1];
-            
-            // Format 2: ?id=ID ou &id=ID
             if (!fileId) {
                 match = url.match(/[?&]id=([^&]+)/);
                 if (match) fileId = match[1];
             }
-            
-            // Format 3: /thumbnail?id=ID
-            if (!fileId) {
-                match = url.match(/thumbnail\?id=([^&]+)/);
-                if (match) fileId = match[1];
-            }
-            
-            // Si ID trouvé, retourner format thumbnail
             if (fileId) {
-                // Nettoyer l'ID (enlever caractères bizarres)
                 fileId = fileId.replace(/[^a-zA-Z0-9_-]/g, '');
                 return `https://lh3.googleusercontent.com/d/${fileId}=w400`;
             }
-            
-            // Fallback: retourner URL originale
             return url;
         }
         
@@ -2629,6 +2702,20 @@ table thead th:nth-child(4) {
             
             // Render la liste complète
             renderMovEntryList();
+            
+            // Afficher l'image du produit
+            const product = products.find(p => p.id === id);
+            const imgDiv = document.getElementById('mov-entry-product-image');
+            const imgEl = document.getElementById('mov-entry-img');
+            
+            if (product && product.imageUrl) {
+                const imgUrl = convertGoogleDriveUrl(product.imageUrl);
+                imgEl.src = imgUrl;
+                imgEl.onerror = function() { imgDiv.style.display = 'none'; };
+                imgDiv.style.display = 'block';
+            } else {
+                imgDiv.style.display = 'none';
+            }
         }
 
         function openModal(id) {
@@ -2863,6 +2950,20 @@ table thead th:nth-child(4) {
             document.getElementById('mov-select-btn').textContent = label;
             document.getElementById('mov-dropdown').classList.remove('show');
             document.getElementById('mov-select-btn').classList.remove('open');
+            
+            // Afficher l'image du produit
+            const product = products.find(p => p.id === id);
+            const imgDiv = document.getElementById('mov-product-image');
+            const imgEl = document.getElementById('mov-img');
+            
+            if (product && product.imageUrl) {
+                const imgUrl = convertGoogleDriveUrl(product.imageUrl);
+                imgEl.src = imgUrl;
+                imgEl.onerror = function() { imgDiv.style.display = 'none'; };
+                imgDiv.style.display = 'block';
+            } else {
+                imgDiv.style.display = 'none';
+            }
         }
 
         // Custom Select Dropdown pour Transferts
@@ -2912,6 +3013,20 @@ table thead th:nth-child(4) {
             document.getElementById('trans-select-btn').textContent = label;
             document.getElementById('trans-dropdown').classList.remove('show');
             document.getElementById('trans-select-btn').classList.remove('open');
+            
+            // Afficher l'image du produit
+            const product = products.find(p => p.id === id);
+            const imgDiv = document.getElementById('trans-product-image');
+            const imgEl = document.getElementById('trans-img');
+            
+            if (product && product.imageUrl) {
+                const imgUrl = convertGoogleDriveUrl(product.imageUrl);
+                imgEl.src = imgUrl;
+                imgEl.onerror = function() { imgDiv.style.display = 'none'; };
+                imgDiv.style.display = 'block';
+            } else {
+                imgDiv.style.display = 'none';
+            }
         }
 
         // Fermer les dropdowns en cliquant ailleurs
