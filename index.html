@@ -789,7 +789,15 @@ table thead th:nth-child(4) {
             <div class="card">
                 <div class="card-body">
                     <div style="display:flex;gap:10px;margin-bottom:15px;align-items:center;">
-                        <input type="text" id="prod-search" class="search-input" placeholder="🔍 Rechercher par nom, référence, barcode..." style="flex:1;">
+                        <input type="text" 
+                       id="prod-search" 
+                       class="form-input" 
+                       placeholder="🔍 Rechercher..." 
+                       autocomplete="off"
+                       autocorrect="off"
+                       autocapitalize="off"
+                       spellcheck="false"
+                       style="display:block !important; width:100% !important; height:50px !important; font-size:16px !important; padding:14px !important; background:#fff !important; color:#000 !important; border:3px solid #3b82f6 !important; border-radius:10px !important; margin-bottom:20px !important; -webkit-appearance:none !important; box-sizing:border-box !important;">
                         <button class="btn btn-primary" onclick="selectAllProducts()" style="white-space:nowrap;">☑️ Tout sélectionner</button>
                         <button class="btn" onclick="deleteSelectedProducts()" style="background:#ef4444;white-space:nowrap;">🗑️ Supprimer sélection</button>
                     </div>
@@ -4220,5 +4228,41 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
+
+<script>
+// FORCER l'affichage de la recherche et des résultats sur mobile
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('prod-search');
+    const prodBody = document.getElementById('prod-body');
+    
+    if (searchInput) {
+        // Forcer le style
+        searchInput.style.cssText = 'display:block !important; width:100% !important; height:50px !important; font-size:16px !important; padding:14px !important; background:#fff !important; color:#000 !important; border:3px solid #3b82f6 !important; border-radius:10px !important; margin-bottom:20px !important; -webkit-appearance:none !important; box-sizing:border-box !important; -webkit-text-fill-color:#000 !important;';
+        
+        console.log('✅ Recherche mobile forcée');
+    }
+    
+    if (prodBody) {
+        // Forcer tbody visible
+        prodBody.style.cssText = 'display:table-row-group !important; visibility:visible !important; opacity:1 !important;';
+        console.log('✅ Table produits forcée visible');
+    }
+    
+    // Sur mobile, vérifier après chaque input
+    if (window.innerWidth <= 768 && searchInput) {
+        searchInput.addEventListener('input', function() {
+            setTimeout(function() {
+                const rows = document.querySelectorAll('#prod-body tr');
+                rows.forEach(function(row) {
+                    row.style.display = 'table-row';
+                    row.style.visibility = 'visible';
+                });
+                console.log('✅ ' + rows.length + ' produits affichés');
+            }, 100);
+        });
+    }
+});
+</script>
+
 </body>
 </html>
