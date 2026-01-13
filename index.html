@@ -4256,7 +4256,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 rows.forEach(function(row) {
                     row.style.display = 'table-row';
                     row.style.visibility = 'visible';
-                });
+                
+    
+    // EVENT LISTENER pour la recherche
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            console.log('🔍 Recherche:', this.value);
+            renderProds();
+        });
+        console.log('✅ Event listener recherche ajouté');
+    }
+});
                 console.log('✅ ' + rows.length + ' produits affichés');
             }, 100);
         });
