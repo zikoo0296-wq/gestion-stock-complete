@@ -654,6 +654,24 @@ table thead th:nth-child(4) {
     }
 }
 
+
+/* 🔍 FORCER BARRE RECHERCHE VISIBLE MOBILE */
+@media (max-width: 768px) {
+    #prod-search {
+        display: block !important;
+        visibility: visible !important;
+        width: 100% !important;
+        height: 50px !important;
+        font-size: 16px !important;
+        padding: 14px !important;
+        margin-bottom: 15px !important;
+        background: white !important;
+        color: black !important;
+        border: 2px solid #3b82f6 !important;
+        box-sizing: border-box !important;
+    }
+}
+
 .mobile-menu-btn { display: none; }
 
 </style>
@@ -788,18 +806,22 @@ table thead th:nth-child(4) {
             <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none;" onchange="handleImport(event)">
             <div class="card">
                 <div class="card-body">
-                    <div style="display:flex;gap:10px;margin-bottom:15px;align-items:center;">
+                    <!-- Barre de recherche -->
+                    <div style="margin-bottom:15px;">
                         <input type="text" 
-                       id="prod-search" 
-                       class="form-input" 
-                       placeholder="🔍 Rechercher..." 
-                       autocomplete="off"
-                       autocorrect="off"
-                       autocapitalize="off"
-                       spellcheck="false"
-                       style="display:block !important; width:100% !important; height:50px !important; font-size:16px !important; padding:14px !important; background:#fff !important; color:#000 !important; border:3px solid #3b82f6 !important; border-radius:10px !important; margin-bottom:20px !important; -webkit-appearance:none !important; box-sizing:border-box !important;">
-                        <button class="btn btn-primary" onclick="selectAllProducts()" style="white-space:nowrap;">☑️ Tout sélectionner</button>
-                        <button class="btn" onclick="deleteSelectedProducts()" style="background:#ef4444;white-space:nowrap;">🗑️ Supprimer sélection</button>
+                               id="prod-search" 
+                               placeholder="🔍 Rechercher par nom, référence, barcode..." 
+                               autocomplete="off"
+                               autocorrect="off"
+                               autocapitalize="off"
+                               spellcheck="false"
+                               style="display:block; width:100%; height:50px; font-size:16px; padding:14px; background:#fff; color:#000; border:2px solid #3b82f6; border-radius:8px; box-sizing:border-box; -webkit-appearance:none;">
+                    </div>
+                    
+                    <!-- Boutons d'action -->
+                    <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;">
+                        <button class="btn btn-primary" onclick="selectAllProducts()">☑️ Tout sélectionner</button>
+                        <button class="btn" onclick="deleteSelectedProducts()" style="background:#ef4444;">🗑️ Supprimer sélection</button>
                     </div>
                     <div class="table-container">
                         <table>
@@ -4258,13 +4280,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.style.visibility = 'visible';
                 
     
-    // EVENT LISTENER pour la recherche
+    // EVENT LISTENER pour la recherche avec DEBOUNCE (évite le lag)
+    let searchTimeout;
     if (searchInput) {
         searchInput.addEventListener('input', function() {
-            console.log('🔍 Recherche:', this.value);
-            renderProds();
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function() {
+                console.log('🔍 Recherche:', document.getElementById('prod-search').value);
+                renderProds();
+            }, 300); // Attendre 300ms après le dernier caractère
         });
-        console.log('✅ Event listener recherche ajouté');
+        console.log('✅ Event listener recherche avec debounce ajouté');
     }
 });
                 console.log('✅ ' + rows.length + ' produits affichés');
