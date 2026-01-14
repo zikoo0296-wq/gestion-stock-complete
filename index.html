@@ -3254,6 +3254,38 @@ table thead th:nth-child(4) {
                     products.push(product);
                     console.log('✅ Nouveau produit créé:', productName, reference);
                     
+                    // SAUVEGARDER IMMÉDIATEMENT dans Supabase
+                    try {
+                        const userId = '00000000-0000-0000-0000-000000000001';
+                        const productData = {
+                            user_id: userId,
+                            real_name: productName,
+                            conventional_name: '',
+                            reference: reference,
+                            barcode: '',
+                            quantity: 0,
+                            min_stock: 0,
+                            category: '',
+                            brand: '',
+                            warehouse: '{}',
+                            image: ''
+                        };
+                        
+                        const { data, error } = await supabaseClient
+                            .from('products')
+                            .insert([productData])
+                            .select();
+                        
+                        if (error) {
+                            console.error('❌ Erreur sauvegarde nouveau produit:', error);
+                            alert('⚠️ Produit créé localement mais erreur Supabase: ' + error.message);
+                        } else {
+                            console.log('✅ Nouveau produit sauvegardé dans Supabase:', data);
+                        }
+                    } catch (err) {
+                        console.error('❌ Exception sauvegarde produit:', err);
+                    }
+                    
                 } else {
                     // PRODUIT EXISTANT
                     product = products.find(p => p.id === selectedProductId);
