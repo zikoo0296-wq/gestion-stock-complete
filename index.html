@@ -887,6 +887,10 @@ table thead th:nth-child(4) {
                             <div id="mov-entry-product-image" style="display:none;margin-top:15px;text-align:center;grid-column:1/-1;">
                                 <img id="mov-entry-img" src="" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:3px solid #10b981;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
                                 <p style="margin-top:8px;font-weight:600;color:#059669;">✓ Produit sélectionné</p>
+                                <div id="mov-entry-stock-info" style="margin-top:10px;padding:10px;background:#ecfdf5;border-radius:8px;display:inline-block;">
+                                    <p style="margin:0;font-size:14px;color:#065f46;"><strong>Stock Total:</strong> <span id="mov-entry-stock-total" style="font-size:18px;font-weight:700;color:#059669;">0</span></p>
+                                    <p id="mov-entry-stock-pdv" style="margin:5px 0 0 0;font-size:13px;color:#047857;"></p>
+                                </div>
                             </div>
                             
                             <!-- POUR NOUVEAU PRODUIT: Champs Référence + Nom -->
@@ -904,6 +908,10 @@ table thead th:nth-child(4) {
                             <div id="mov-product-image" style="display:none;margin-top:15px;text-align:center;grid-column:1/-1;">
                                 <img id="mov-img" src="" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:3px solid #10b981;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
                                 <p style="margin-top:8px;font-weight:600;color:#059669;">✓ Produit sélectionné</p>
+                                <div id="mov-stock-info" style="margin-top:10px;padding:10px;background:#ecfdf5;border-radius:8px;display:inline-block;">
+                                    <p style="margin:0;font-size:14px;color:#065f46;"><strong>Stock Total:</strong> <span id="mov-stock-total" style="font-size:18px;font-weight:700;color:#059669;">0</span></p>
+                                    <p id="mov-stock-pdv" style="margin:5px 0 0 0;font-size:13px;color:#047857;"></p>
+                                </div>
                             </div>
                             
                             <!-- POUR SORTIE: Sélecteur produit -->
@@ -2808,13 +2816,33 @@ table thead th:nth-child(4) {
             const imgDiv = document.getElementById('mov-entry-product-image');
             const imgEl = document.getElementById('mov-entry-img');
             
-            if (product && product.imageUrl) {
-                const imgUrl = convertGoogleDriveUrl(product.imageUrl);
-                imgEl.src = imgUrl;
-                imgEl.onerror = function() { imgDiv.style.display = 'none'; };
-                imgDiv.style.display = 'block';
-            } else {
-                imgDiv.style.display = 'none';
+            if (product) {
+                // IMAGE
+                if (product.imageUrl) {
+                    const imgUrl = convertGoogleDriveUrl(product.imageUrl);
+                    imgEl.src = imgUrl;
+                    imgEl.onerror = function() { imgDiv.style.display = 'none'; };
+                    imgDiv.style.display = 'block';
+                } else {
+                    imgDiv.style.display = 'none';
+                }
+                
+                // STOCK ACTUEL
+                const totalStock = Object.values(product.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                let stockHtml = `<div id="mov-entry-stock-info" style="text-align:center;margin-top:10px;padding:10px;background:#dbeafe;border:2px solid #3b82f6;border-radius:8px;">
+                    <p style="margin:0;font-size:14px;color:#1d4ed8;font-weight:600;">📦 Stock Actuel: <span style="font-size:18px;font-weight:700;">${totalStock}</span></p>
+                </div>`;
+                
+                // Supprimer ancien affichage stock s'il existe
+                const oldStock = document.getElementById('mov-entry-stock-info');
+                if (oldStock) oldStock.remove();
+                
+                // Ajouter après l'image
+                if (imgDiv.nextSibling) {
+                    imgDiv.parentNode.insertBefore(document.createRange().createContextualFragment(stockHtml), imgDiv.nextSibling);
+                } else {
+                    imgDiv.parentNode.appendChild(document.createRange().createContextualFragment(stockHtml));
+                }
             }
         }
 
@@ -3051,18 +3079,49 @@ table thead th:nth-child(4) {
             document.getElementById('mov-dropdown').classList.remove('show');
             document.getElementById('mov-select-btn').classList.remove('open');
             
-            // Afficher l'image du produit
+            // Trouver le produit
             const product = products.find(p => p.id === id);
+            
+            // Afficher l'image du produit
             const imgDiv = document.getElementById('mov-product-image');
             const imgEl = document.getElementById('mov-img');
             
-            if (product && product.imageUrl) {
-                const imgUrl = convertGoogleDriveUrl(product.imageUrl);
-                imgEl.src = imgUrl;
-                imgEl.onerror = function() { imgDiv.style.display = 'none'; };
-                imgDiv.style.display = 'block';
-            } else {
-                imgDiv.style.display = 'none';
+            if (product) {
+                // IMAGE
+                if (product.imageUrl) {
+                    const imgUrl = convertGoogleDriveUrl(product.imageUrl);
+                    imgEl.src = imgUrl;
+                    imgEl.onerror = function() { imgDiv.style.display = 'none'; };
+                    imgDiv.style.display = 'block';
+                } else {
+                    imgDiv.style.display = 'none';
+                }
+                
+                // STOCK DISPONIBLE
+                const totalStock = Object.values(product.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                let stockHtml = `<div id="mov-stock-info" style="text-align:center;margin-top:10px;padding:10px;background:#f0fdf4;border:2px solid #10b981;border-radius:8px;">
+                    <p style="margin:0;font-size:14px;color:#059669;font-weight:600;">📦 Stock Total: <span style="font-size:18px;font-weight:700;">${totalStock}</span></p>`;
+                
+                // Afficher le détail par PDV
+                const pdvId = document.getElementById('mov-pdv').value;
+                if (pdvId && product.pdvStock && product.pdvStock[pdvId]) {
+                    const pdv = pdvs.find(p => p.id === pdvId);
+                    const pdvName = pdv ? pdv.name : 'PDV sélectionné';
+                    stockHtml += `<p style="margin:5px 0 0 0;font-size:13px;color:#047857;">📍 ${pdvName}: <strong>${product.pdvStock[pdvId]}</strong></p>`;
+                }
+                
+                stockHtml += `</div>`;
+                
+                // Supprimer ancien affichage stock s'il existe
+                const oldStock = document.getElementById('mov-stock-info');
+                if (oldStock) oldStock.remove();
+                
+                // Ajouter après l'image
+                if (imgDiv.nextSibling) {
+                    imgDiv.parentNode.insertBefore(document.createRange().createContextualFragment(stockHtml), imgDiv.nextSibling);
+                } else {
+                    imgDiv.parentNode.appendChild(document.createRange().createContextualFragment(stockHtml));
+                }
             }
         }
 
@@ -3114,18 +3173,49 @@ table thead th:nth-child(4) {
             document.getElementById('trans-dropdown').classList.remove('show');
             document.getElementById('trans-select-btn').classList.remove('open');
             
-            // Afficher l'image du produit
+            // Trouver le produit
             const product = products.find(p => p.id === id);
+            
+            // Afficher l'image du produit
             const imgDiv = document.getElementById('trans-product-image');
             const imgEl = document.getElementById('trans-img');
             
-            if (product && product.imageUrl) {
-                const imgUrl = convertGoogleDriveUrl(product.imageUrl);
-                imgEl.src = imgUrl;
-                imgEl.onerror = function() { imgDiv.style.display = 'none'; };
-                imgDiv.style.display = 'block';
-            } else {
-                imgDiv.style.display = 'none';
+            if (product) {
+                // IMAGE
+                if (product.imageUrl) {
+                    const imgUrl = convertGoogleDriveUrl(product.imageUrl);
+                    imgEl.src = imgUrl;
+                    imgEl.onerror = function() { imgDiv.style.display = 'none'; };
+                    imgDiv.style.display = 'block';
+                } else {
+                    imgDiv.style.display = 'none';
+                }
+                
+                // STOCK DISPONIBLE
+                const totalStock = Object.values(product.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                let stockHtml = `<div id="trans-stock-info" style="text-align:center;margin-top:10px;padding:10px;background:#fef3c7;border:2px solid #f59e0b;border-radius:8px;">
+                    <p style="margin:0;font-size:14px;color:#d97706;font-weight:600;">📦 Stock Total: <span style="font-size:18px;font-weight:700;">${totalStock}</span></p>`;
+                
+                // Afficher le stock du PDV source
+                const fromPdvId = document.getElementById('trans-from').value;
+                if (fromPdvId && product.pdvStock && product.pdvStock[fromPdvId]) {
+                    const pdv = pdvs.find(p => p.id === fromPdvId);
+                    const pdvName = pdv ? pdv.name : 'Source';
+                    stockHtml += `<p style="margin:5px 0 0 0;font-size:13px;color:#b45309;">📍 ${pdvName}: <strong>${product.pdvStock[fromPdvId]}</strong></p>`;
+                }
+                
+                stockHtml += `</div>`;
+                
+                // Supprimer ancien affichage stock s'il existe
+                const oldStock = document.getElementById('trans-stock-info');
+                if (oldStock) oldStock.remove();
+                
+                // Ajouter après l'image
+                if (imgDiv.nextSibling) {
+                    imgDiv.parentNode.insertBefore(document.createRange().createContextualFragment(stockHtml), imgDiv.nextSibling);
+                } else {
+                    imgDiv.parentNode.appendChild(document.createRange().createContextualFragment(stockHtml));
+                }
             }
         }
 
