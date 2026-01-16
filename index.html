@@ -4483,5 +4483,144 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+
+<script>
+// =========================================
+// SYSTÈME MULTI-UTILISATEUR TEMPS RÉEL
+// =========================================
+
+let lastUpdateTime = Date.now();
+let autoRefreshInterval = null;
+let isRefreshing = false;
+
+// Indicateur de dernière mise à jour
+function addLastUpdateIndicator() {
+    const topBar = document.querySelector('.top-bar');
+    if (topBar && !document.getElementById('last-update-indicator')) {
+        const indicator = document.createElement('div');
+        indicator.id = 'last-update-indicator';
+        indicator.style.cssText = 'position:fixed;bottom:20px;right:20px;background:rgba(0,0,0,0.8);color:#fff;padding:10px 15px;border-radius:8px;font-size:12px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+        indicator.innerHTML = '🔄 Synchronisé';
+        document.body.appendChild(indicator);
+    }
+}
+
+// Mettre à jour l'indicateur
+function updateIndicator(status, color) {
+    const indicator = document.getElementById('last-update-indicator');
+    if (indicator) {
+        indicator.innerHTML = status;
+        indicator.style.background = color;
+        setTimeout(function() {
+            indicator.style.background = 'rgba(0,0,0,0.8)';
+        }, 2000);
+    }
+}
+
+// Fonction de refresh automatique
+async function autoRefreshData() {
+    if (isRefreshing) return; // Éviter les appels multiples
+    
+    isRefreshing = true;
+    
+    try {
+        console.log('🔄 Auto-refresh en cours...');
+        updateIndicator('🔄 Mise à jour...', 'rgba(59, 130, 246, 0.9)');
+        
+        // Recharger depuis Supabase
+        if (typeof loadFromSupabase === 'function') {
+            await loadFromSupabase();
+            
+            // Mettre à jour l'affichage selon la section active
+            const activeSection = document.querySelector('.section.active');
+            if (activeSection) {
+                const sectionId = activeSection.id;
+                
+                if (sectionId === 'products' && typeof renderProds === 'function') {
+                    renderProds();
+                } else if (sectionId === 'pdv' && typeof renderPdv === 'function') {
+                    renderPdv();
+                } else if (sectionId === 'history' && typeof renderHist === 'function') {
+                    renderHist();
+                }
+            }
+            
+            lastUpdateTime = Date.now();
+            console.log('✅ Auto-refresh terminé');
+            updateIndicator('✅ Synchronisé', 'rgba(16, 185, 129, 0.9)');
+        }
+    } catch (error) {
+        console.error('❌ Erreur auto-refresh:', error);
+        updateIndicator('❌ Erreur sync', 'rgba(239, 68, 68, 0.9)');
+    } finally {
+        isRefreshing = false;
+    }
+}
+
+// Démarrer l'auto-refresh
+function startAutoRefresh(intervalSeconds = 30) {
+    // Ne pas démarrer si déjà actif
+    if (autoRefreshInterval) return;
+    
+    console.log(`🔄 Auto-refresh activé (toutes les ${intervalSeconds}s)`);
+    
+    // Ajouter l'indicateur
+    addLastUpdateIndicator();
+    
+    // Refresh toutes les X secondes
+    autoRefreshInterval = setInterval(function() {
+        autoRefreshData();
+    }, intervalSeconds * 1000);
+}
+
+// Arrêter l'auto-refresh
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        console.log('⏸️ Auto-refresh arrêté');
+    }
+}
+
+// Refresh manuel
+function manualRefresh() {
+    console.log('🔄 Refresh manuel déclenché');
+    autoRefreshData();
+}
+
+// Démarrer automatiquement après le chargement
+window.addEventListener('load', function() {
+    // Attendre 5 secondes après le chargement initial
+    setTimeout(function() {
+        startAutoRefresh(30); // Refresh toutes les 30 secondes
+    }, 5000);
+});
+
+// Ajouter un bouton de refresh manuel dans la top-bar
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        const topBars = document.querySelectorAll('.top-bar');
+        topBars.forEach(function(topBar) {
+            if (!topBar.querySelector('.manual-refresh-btn')) {
+                const refreshBtn = document.createElement('button');
+                refreshBtn.className = 'btn btn-primary manual-refresh-btn';
+                refreshBtn.innerHTML = '🔄 Actualiser';
+                refreshBtn.onclick = manualRefresh;
+                refreshBtn.style.cssText = 'margin-left:10px;';
+                topBar.appendChild(refreshBtn);
+            }
+        });
+    }, 2000);
+});
+
+// Refresh avant les actions critiques
+window.refreshBeforeAction = async function() {
+    console.log('🔄 Refresh avant action critique...');
+    await autoRefreshData();
+};
+
+console.log('✅ Système multi-utilisateur activé');
+</script>
+
 </body>
 </html>
