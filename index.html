@@ -3395,6 +3395,28 @@ table thead th:nth-child(4) {
                 product.pdvStock[pdvId] += quantity;
                 product.quantity = (product.quantity || 0) + quantity;
                 
+                // METTRE À JOUR LE STOCK DANS SUPABASE IMMÉDIATEMENT
+                try {
+                    const totalStock = Object.values(product.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                    const warehouseJson = JSON.stringify(product.pdvStock || {});
+                    
+                    const { error: updateError } = await supabaseClient
+                        .from('products')
+                        .update({
+                            quantity: totalStock,
+                            warehouse: warehouseJson
+                        })
+                        .eq('reference', product.reference);
+                    
+                    if (updateError) {
+                        console.error('❌ Erreur mise à jour stock:', updateError);
+                    } else {
+                        console.log('✅ Stock mis à jour dans Supabase:', product.name, '→', totalStock);
+                    }
+                } catch (err) {
+                    console.error('❌ Exception update stock:', err);
+                }
+                
                 // Enregistrer dans movements
                 const newMovement = {
                     id: Date.now().toString(),
@@ -3456,6 +3478,28 @@ table thead th:nth-child(4) {
                 // Retirer du stock
                 product.pdvStock[pdvId] -= quantity;
                 product.quantity = (product.quantity || 0) - quantity;
+                
+                // METTRE À JOUR LE STOCK DANS SUPABASE IMMÉDIATEMENT
+                try {
+                    const totalStock = Object.values(product.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                    const warehouseJson = JSON.stringify(product.pdvStock || {});
+                    
+                    const { error: updateError } = await supabaseClient
+                        .from('products')
+                        .update({
+                            quantity: totalStock,
+                            warehouse: warehouseJson
+                        })
+                        .eq('reference', product.reference);
+                    
+                    if (updateError) {
+                        console.error('❌ Erreur mise à jour stock:', updateError);
+                    } else {
+                        console.log('✅ Stock mis à jour dans Supabase:', product.name, '→', totalStock);
+                    }
+                } catch (err) {
+                    console.error('❌ Exception update stock:', err);
+                }
                 
                 // Enregistrer dans movements
                 const newMovement = {
