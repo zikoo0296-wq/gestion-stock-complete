@@ -3457,7 +3457,7 @@ table thead th:nth-child(4) {
                 // Sauvegarder dans Supabase immédiatement
                 await saveMovementToSupabase(newMovement);
                 
-                await save();
+                // ✅ PAS de save() ici car UPDATE a déjà mis à jour le stock
                 
                 // RAFRAÎCHIR
                 if (document.getElementById('history').classList.contains('active')) {
@@ -3547,7 +3547,7 @@ table thead th:nth-child(4) {
                 // Sauvegarder dans Supabase immédiatement
                 await saveMovementToSupabase(newMovement);
                 
-                await save();
+                // ✅ PAS de save() ici car UPDATE a déjà mis à jour le stock
                 
                 // RAFRAÎCHIR
                 if (document.getElementById('history').classList.contains('active')) {
@@ -4561,6 +4561,8 @@ document.addEventListener('DOMContentLoaded', function() {
 let lastUpdateTime = Date.now();
 let autoRefreshInterval = null;
 let isRefreshing = false;
+let isUserEditing = false; // Protection contre sync pendant édition
+let editingTimeout = null;
 
 // Indicateur de dernière mise à jour
 function addLastUpdateIndicator() {
@@ -4589,6 +4591,13 @@ function updateIndicator(status, color) {
 // Fonction de refresh automatique
 async function autoRefreshData() {
     if (isRefreshing) return; // Éviter les appels multiples
+    
+    // ⚠️ NE PAS SYNC SI L'UTILISATEUR EST EN TRAIN D'ÉDITER
+    if (isUserEditing) {
+        console.log('⏸️ Sync pausé - Utilisateur en édition');
+        updateIndicator('⏸️ Sync pausé', 'rgba(245, 158, 11, 0.9)');
+        return;
+    }
     
     isRefreshing = true;
     
@@ -4687,6 +4696,95 @@ window.refreshBeforeAction = async function() {
     console.log('🔄 Refresh avant action critique...');
     await autoRefreshData();
 };
+
+
+// =========================================
+// DÉTECTION ÉDITION UTILISATEUR
+// =========================================
+
+// Fonction pour marquer que l'utilisateur édite
+function startEditing() {
+    isUserEditing = true;
+    clearTimeout(editingTimeout);
+    console.log('✏️ Mode édition activé');
+    updateIndicator('✏️ Édition...', 'rgba(245, 158, 11, 0.9)');
+    
+    // Après 30 secondes sans activité, reprendre le sync
+    editingTimeout = setTimeout(function() {
+        stopEditing();
+    }, 30000);
+}
+
+// Fonction pour arrêter le mode édition
+function stopEditing() {
+    isUserEditing = false;
+    clearTimeout(editingTimeout);
+    console.log('✅ Mode édition désactivé');
+    updateIndicator('✅ Synchronisé', 'rgba(16, 185, 129, 0.9)');
+}
+
+// Ajouter des listeners sur tous les formulaires
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        // Tous les inputs, selects, textareas
+        const formInputs = document.querySelectorAll('input:not([type="checkbox"]), select, textarea');
+        
+        formInputs.forEach(function(input) {
+            // Quand on commence à taper
+            input.addEventListener('focus', function() {
+                startEditing();
+            });
+            
+            input.addEventListener('input', function() {
+                startEditing();
+            });
+        });
+        
+        // Tous les modals
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(function(modal) {
+            // Observer quand un modal s'ouvre
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (modal.style.display === 'flex' || modal.classList.contains('show')) {
+                        startEditing();
+                    } else {
+                        stopEditing();
+                    }
+                });
+            });
+            
+            observer.observe(modal, { attributes: true, attributeFilter: ['style', 'class'] });
+        });
+        
+        // Quand on ferme un modal (boutons annuler)
+        const cancelButtons = document.querySelectorAll('[onclick*="closeModal"]');
+        cancelButtons.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                setTimeout(stopEditing, 500);
+            });
+        });
+        
+        console.log('✅ Protection édition activée sur', formInputs.length, 'champs');
+    }, 2000);
+});
+
+// Arrêter édition après submit
+const originalOpenModal = window.openModal;
+if (typeof originalOpenModal === 'function') {
+    window.openModal = function(modalId) {
+        startEditing();
+        return originalOpenModal(modalId);
+    };
+}
+
+const originalCloseModal = window.closeModal;
+if (typeof originalCloseModal === 'function') {
+    window.closeModal = function(modalId) {
+        stopEditing();
+        return originalCloseModal(modalId);
+    };
+}
 
 console.log('✅ Système multi-utilisateur activé');
 </script>
