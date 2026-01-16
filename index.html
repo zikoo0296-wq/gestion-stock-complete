@@ -3393,28 +3393,39 @@ table thead th:nth-child(4) {
                 
                 // Ajouter au stock
                 product.pdvStock[pdvId] += quantity;
-                product.quantity = (product.quantity || 0) + quantity;
+                const newTotalStock = Object.values(product.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                product.quantity = newTotalStock;
+                
+                console.log('📊 Stock AVANT update:', product.name, '→', newTotalStock);
+                console.log('📊 pdvStock:', JSON.stringify(product.pdvStock));
                 
                 // METTRE À JOUR LE STOCK DANS SUPABASE IMMÉDIATEMENT
                 try {
-                    const totalStock = Object.values(product.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                    const userId = '00000000-0000-0000-0000-000000000001';
                     const warehouseJson = JSON.stringify(product.pdvStock || {});
                     
-                    const { error: updateError } = await supabaseClient
+                    console.log('🔄 UPDATE Supabase pour référence:', product.reference);
+                    
+                    const { data: updateData, error: updateError } = await supabaseClient
                         .from('products')
                         .update({
-                            quantity: totalStock,
+                            user_id: userId,
+                            quantity: newTotalStock,
                             warehouse: warehouseJson
                         })
-                        .eq('reference', product.reference);
+                        .eq('reference', product.reference)
+                        .select();
                     
                     if (updateError) {
-                        console.error('❌ Erreur mise à jour stock:', updateError);
+                        console.error('❌ Erreur UPDATE stock:', updateError);
+                        alert('⚠️ Erreur mise à jour stock: ' + updateError.message);
                     } else {
-                        console.log('✅ Stock mis à jour dans Supabase:', product.name, '→', totalStock);
+                        console.log('✅ Stock UPDATE réussi dans Supabase:', updateData);
+                        console.log('✅', product.name, '→ Nouveau stock:', newTotalStock);
                     }
                 } catch (err) {
                     console.error('❌ Exception update stock:', err);
+                    alert('⚠️ Exception: ' + err.message);
                 }
                 
                 // Enregistrer dans movements
@@ -3477,25 +3488,31 @@ table thead th:nth-child(4) {
                 
                 // Retirer du stock
                 product.pdvStock[pdvId] -= quantity;
-                product.quantity = (product.quantity || 0) - quantity;
+                const newTotalStock = Object.values(product.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                product.quantity = newTotalStock;
+                
+                console.log('📊 Stock AVANT update (sortie):', product.name, '→', newTotalStock);
                 
                 // METTRE À JOUR LE STOCK DANS SUPABASE IMMÉDIATEMENT
                 try {
-                    const totalStock = Object.values(product.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                    const userId = '00000000-0000-0000-0000-000000000001';
                     const warehouseJson = JSON.stringify(product.pdvStock || {});
                     
-                    const { error: updateError } = await supabaseClient
+                    const { data: updateData, error: updateError } = await supabaseClient
                         .from('products')
                         .update({
-                            quantity: totalStock,
+                            user_id: userId,
+                            quantity: newTotalStock,
                             warehouse: warehouseJson
                         })
-                        .eq('reference', product.reference);
+                        .eq('reference', product.reference)
+                        .select();
                     
                     if (updateError) {
-                        console.error('❌ Erreur mise à jour stock:', updateError);
+                        console.error('❌ Erreur UPDATE stock (sortie):', updateError);
+                        alert('⚠️ Erreur mise à jour stock: ' + updateError.message);
                     } else {
-                        console.log('✅ Stock mis à jour dans Supabase:', product.name, '→', totalStock);
+                        console.log('✅ Stock UPDATE réussi (sortie):', updateData);
                     }
                 } catch (err) {
                     console.error('❌ Exception update stock:', err);
