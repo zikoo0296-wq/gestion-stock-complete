@@ -942,11 +942,11 @@ table thead th:nth-child(4) {
                                 <input type="number" id="mov-quantity" class="form-input" min="1" required>
                             </div>
                             
-                            <!-- Mode de paiement - SEULEMENT pour SORTIE -->
+                            <!-- Mode de paiement - SEULEMENT pour SORTIE (OPTIONNEL) -->
                             <div class="form-group" id="mov-payment-group" style="display:none;">
-                                <label class="form-label">Mode de Paiement *</label>
+                                <label class="form-label">Mode de Paiement</label>
                                 <select id="mov-payment" class="form-select">
-                                    <option value="">Sélectionner...</option>
+                                    <option value="">Sélectionner (optionnel)...</option>
                                     <option value="Espèce">Espèce</option>
                                     <option value="Virement">Virement</option>
                                 </select>
@@ -3234,6 +3234,16 @@ table thead th:nth-child(4) {
         function toggleMovementType() {
             const type = document.getElementById('mov-type').value;
             
+            // CACHER TOUTES LES IMAGES ET INFOS STOCK
+            document.getElementById('mov-product-image').style.display = 'none';
+            document.getElementById('mov-entry-product-image').style.display = 'none';
+            
+            // RÉINITIALISER LES VALEURS
+            document.getElementById('mov-entry-product').value = '';
+            document.getElementById('mov-product').value = '';
+            document.getElementById('mov-entry-select-btn').textContent = 'Sélectionner ou créer un produit...';
+            document.getElementById('mov-select-btn').textContent = 'Sélectionner un produit...';
+            
             // Groupes de champs
             const entryProductGroup = document.getElementById('mov-entry-product-group');
             const newReferenceGroup = document.getElementById('mov-new-reference-group');
@@ -3464,10 +3474,10 @@ table thead th:nth-child(4) {
             } else if (type === 'out') {
                 // ==================== SORTIE ====================
                 productId = document.getElementById('mov-product').value;
-                const payment = document.getElementById('mov-payment').value;
+                const payment = document.getElementById('mov-payment').value || 'Non spécifié';
                 
-                if (!productId || !payment) {
-                    alert('❌ Veuillez sélectionner un produit et un mode de paiement');
+                if (!productId) {
+                    alert('❌ Veuillez sélectionner un produit');
                     return;
                 }
                 
@@ -3928,6 +3938,65 @@ table thead th:nth-child(4) {
         }
         
         // ========== PRODUITS LES PLUS VENDUS ==========
+        
+        // Fonction pour afficher le dashboard avec triage quantité DESC
+        function renderDashboardHighStock() {
+            const container = document.getElementById('high-stock-products');
+            if (!container) return;
+            
+            // Trier par quantité décroissante
+            const sortedProducts = [...products].sort((a, b) => {
+                const stockA = Object.values(a.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                const stockB = Object.values(b.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                return stockB - stockA; // Plus haute quantité en premier
+            });
+            
+            // Prendre les 10 premiers
+            const top10 = sortedProducts.slice(0, 10);
+            
+            container.innerHTML = top10.map(p => {
+                const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                return `<tr>
+                    <td><strong>${p.name}</strong></td>
+                    <td>${p.reference}</td>
+                    <td><span class="badge badge-success" style="font-size:1.2rem;">${totalStock}</span></td>
+                </tr>`;
+            }).join('');
+        }
+        
+        // Fonction pour afficher les alertes stock (sous le seuil)
+        function renderLowStockAlerts() {
+            const container = document.getElementById('low-stock-alerts');
+            if (!container) return;
+            
+            // Filtrer les produits avec stock < min_stock (seuil)
+            const lowStockProducts = products.filter(p => {
+                const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                const minStock = parseInt(p.repetition) || 10;
+                return totalStock < minStock && totalStock >= 0;
+            }).sort((a, b) => {
+                const stockA = Object.values(a.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                const stockB = Object.values(b.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                return stockA - stockB; // Plus bas en premier
+            });
+            
+            if (lowStockProducts.length === 0) {
+                container.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#10b981;">✅ Aucune alerte stock</td></tr>';
+                return;
+            }
+            
+            container.innerHTML = lowStockProducts.map(p => {
+                const totalStock = Object.values(p.pdvStock || {}).reduce((sum, qty) => sum + qty, 0);
+                const minStock = parseInt(p.repetition) || 10;
+                return `<tr>
+                    <td><strong>${p.name}</strong></td>
+                    <td>${p.reference}</td>
+                    <td><span class="badge badge-danger">${totalStock}</span></td>
+                    <td><span class="badge" style="background:#f59e0b;">${minStock}</span></td>
+                </tr>`;
+            }).join('');
+        }
+
         function renderBestsellers() {
             const searchValue = document.getElementById('bestsellers-search')?.value.toLowerCase() || '';
             const isSearching = searchValue.length > 0;
@@ -4592,7 +4661,7 @@ function manualRefresh() {
 window.addEventListener('load', function() {
     // Attendre 5 secondes après le chargement initial
     setTimeout(function() {
-        startAutoRefresh(30); // Refresh toutes les 30 secondes
+        startAutoRefresh(10); // Refresh toutes les 10 secondes
     }, 5000);
 });
 
